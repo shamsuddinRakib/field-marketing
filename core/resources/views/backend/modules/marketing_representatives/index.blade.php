@@ -79,7 +79,7 @@
             onLoad: function($modal) {
                 $modal.find('.js-branch-select').each(function() {
                     const $select = $(this);
-                    if ($select.hasClass('select2-hidden-accessible')) return;
+                    if ($select.hasClass('select2-hidden-accessible')) $select.select2('destroy');
                     $select.select2({
                         dropdownParent: $modal,
                         width: '100%',
@@ -98,7 +98,7 @@
                 });
                 $modal.find('.js-upazila-select').each(function() {
                     const $select = $(this);
-                    if ($select.hasClass('select2-hidden-accessible')) return;
+                    if ($select.hasClass('select2-hidden-accessible')) $select.select2('destroy');
                     $select.select2({
                         dropdownParent: $modal,
                         width: '100%',
@@ -113,14 +113,14 @@
                             }),
                             processResults: data => data
                         }
-                    }).on('select2:select', function(e) {
+                    }).off('select2:select').on('select2:select', function(e) {
                         const item = e.params.data;
                         const $form = $select.closest('form');
                         $form.find('[name="district_id"]').val(item.district_id || '');
                         $form.find('[name="division_id"]').val(item.division_id || '');
                         $form.find('[name="district_name"]').val(item.district_name || '');
                         $form.find('[name="division_name"]').val(item.division_name || '');
-                    }).on('select2:clear', function() {
+                    }).off('select2:clear').on('select2:clear', function() {
                         const $form = $select.closest('form');
                         $form.find(
                             '[name="district_id"], [name="division_id"], [name="district_name"], [name="division_name"]'

@@ -79,7 +79,7 @@ class BookReturnController extends Controller
                 'us.name as representative_name',
                 'mr.employee_id as representative_employee_id',
                 'p.name as product_name',
-                DB::raw('COALESCE(i.institution_name, i.name) as institution_name')
+                'i.institution_name as institution_name'
             );
 
         $total = (clone $query)->count('book_returns.id');
@@ -88,7 +88,7 @@ class BookReturnController extends Controller
             $query->where(function ($builder) use ($search) {
                 $builder->where('us.name', 'like', "%{$search}%")
                     ->orWhere('mr.employee_id', 'like', "%{$search}%")
-                    ->orWhere(DB::raw('COALESCE(i.institution_name, i.name)'), 'like', "%{$search}%")
+                    ->orWhere('i.institution_name', 'like', "%{$search}%")
                     ->orWhere('p.name', 'like', "%{$search}%")
                     ->orWhere('book_returns.note', 'like', "%{$search}%")
                     ->orWhere('book_returns.status', 'like', "%{$search}%")

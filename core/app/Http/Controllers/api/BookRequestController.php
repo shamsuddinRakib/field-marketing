@@ -28,7 +28,9 @@ class BookRequestController extends Controller
     //     ]);
     // }
 
-
+    /**
+     * Return all requests that authenticated user has made with pagination and optional status filter
+     */
     public function index(Request $request)
     {
         $mr = MarketingRepresentative::where('user_id', auth()->id())

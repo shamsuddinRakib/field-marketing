@@ -36,7 +36,7 @@
                         </a>
                         <a href="#" class="btn btn-sm btn-primary AjaxModal"
                             data-ajax-modal="{{ route('marketing-representative.marketing-representatives.editModal', $representative->id) }}"
-                            data-size="lg" data-onsuccess="MarketingRepresentativesIndex.onSaved">
+                            data-size="lg" data-onload="MarketingRepresentativesIndex.onLoad" data-onsuccess="MarketingRepresentativesIndex.onSaved">
                             <iconify-icon icon="lucide:edit" class="me-1"></iconify-icon> Edit
                         </a>
                     </div>
@@ -163,11 +163,58 @@
 
 @section('script')
     <script>
-        window.MarketingRepresentativesIndex = {
-            onSaved: function(res) {
-                if (res?.id) {
-                    window.location.reload();
-                }
+        window.MarketingRepresentativesIndex = window.MarketingRepresentativesIndex || {};
+        window.MarketingRepresentativesIndex.onLoad = function($modal) {
+            $modal.find('.js-branch-select').each(function() {
+                const $select = $(this);
+                if ($select.hasClass('select2-hidden-accessible')) $select.select2('destroy');
+                $select.select2({
+                    dropdownParent: $modal,
+                    width: '100%',
+                    placeholder: 'Select branch',
+                    allowClear: true,
+                    ajax: {
+                        url: "{{ route('org.branches.select2') }}",
+                        dataType: 'json',
+                        delay: 200,
+                        data: params => ({ q: params.term || '' }),
+                        processResults: data => data
+                    }
+                });
+            });
+            $modal.find('.js-upazila-select').each(function() {
+                const $select = $(this);
+                if ($select.hasClass('select2-hidden-accessible')) $select.select2('destroy');
+                $select.select2({
+                    dropdownParent: $modal,
+                    width: '100%',
+                    placeholder: 'Select upazila',
+                    allowClear: true,
+                    ajax: {
+                        url: "{{ route('marketing-representative.marketing-representatives.upazilas.select2') }}",
+                        dataType: 'json',
+                        delay: 200,
+                        data: params => ({ q: params.term || '' }),
+                        processResults: data => data
+                    }
+                }).off('select2:select').on('select2:select', function(e) {
+                    const item = e.params.data;
+                    const $form = $select.closest('form');
+                    $form.find('[name="district_id"]').val(item.district_id || '');
+                    $form.find('[name="division_id"]').val(item.division_id || '');
+                    $form.find('[name="district_name"]').val(item.district_name || '');
+                    $form.find('[name="division_name"]').val(item.division_name || '');
+                }).off('select2:clear').on('select2:clear', function() {
+                    const $form = $select.closest('form');
+                    $form.find('[name="district_id"], [name="division_id"], [name="district_name"], [name="division_name"]').val('');
+                });
+            });
+        };
+        window.MarketingRepresentativesIndex.onSaved = function(res) {
+            if (res?.id) {
+                window.location.reload();
+            } else {
+                window.location.reload();
             }
         };
     </script>

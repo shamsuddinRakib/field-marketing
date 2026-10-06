@@ -22,14 +22,11 @@ class MarketingRepresentative extends Model
         'district_id',
         'division_id',
         'address',
-        'territory',
-        'assigned_institutions',
         'status',
     ];
 
     protected $casts = [
         'password' => 'hashed',
-        'assigned_institutions' => 'integer',
         'status' => 'boolean',
     ];
 

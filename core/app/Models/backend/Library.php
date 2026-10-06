@@ -10,7 +10,6 @@ class Library extends Model
     use SoftDeletes;
 
     protected $fillable = [
-        'name',
         'library_name',
         'code',
         'email',

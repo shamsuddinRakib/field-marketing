@@ -50,7 +50,7 @@ class TeacherController extends Controller
 
         $query = Teacher::query()
             ->leftJoin('institutions as i', 'i.id', '=', 'teachers.institution_id')
-            ->select('teachers.*', 'i.institution_name as inst_name', 'i.name as inst_name2', \Illuminate\Support\Facades\DB::raw("COALESCE(i.institution_name, i.name) as institution_name"));
+            ->select('teachers.*', 'i.institution_name as inst_name',  \Illuminate\Support\Facades\DB::raw("COALESCE(i.institution_name) as institution_name"));
 
         $total = (clone $query)->count('teachers.id');
 
@@ -63,7 +63,7 @@ class TeacherController extends Controller
                     ->orWhere('teachers.subject', 'like', "%{$search}%")
                     ->orWhere('teachers.class_name', 'like', "%{$search}%")
                     ->orWhere('i.institution_name', 'like', "%{$search}%")
-                    ->orWhere('i.name', 'like', "%{$search}%")
+              
                     ->orWhere('i.code', 'like', "%{$search}%");
             });
         }
@@ -152,12 +152,10 @@ class TeacherController extends Controller
             ->when($term !== '', function ($q) use ($term) {
                 $q->where(function ($b) use ($term) {
                     $b->where('institution_name', 'like', "%{$term}%")
-                      ->orWhere('name', 'like', "%{$term}%")
                       ->orWhere('code', 'like', "%{$term}%");
                 });
             })
             ->orderBy('institution_name')
-            ->orderBy('name')
             ->limit(30)
             ->get();
 

@@ -26,12 +26,15 @@ class MarketingRepresentativeController extends Controller
 
     public function editModal(MarketingRepresentative $representative)
     {
+        $representative->load(['user', 'branch', 'upazila', 'district', 'division']);
+
         return view('backend.modules.marketing_representatives.edit_modal', compact('representative'));
     }
 
     public function listAjax(Request $request)
     {
-        $columns = ['id', 'name', 'employee_id', 'mobile', 'email', 'organization', 'branch_name', 'upazila_name', 'status'];
+        // index must match the DataTable column order in index.blade.php
+        $columns = ['id', 'name', 'mobile', 'email', 'organization', 'branch_name', 'upazila_name', 'status', 'actions'];
         $draw = (int) $request->input('draw');
         $start = (int) $request->input('start', 0);
         $length = (int) $request->input('length', 10);
@@ -68,7 +71,17 @@ class MarketingRepresentativeController extends Controller
 
         $filtered = (clone $query)->count('marketing_representatives.id');
         $orderColumn = $columns[$orderIndex] ?? 'id';
-        $query->orderBy($orderColumn === 'branch_name' ? 'b.name' : ($orderColumn === 'upazila_name' ? 'u.upazila_name' : 'marketing_representatives.' . $orderColumn), $orderDirection);
+        // name / mobile / email live in the `users` table, not in marketing_representatives
+        $orderBy = match ($orderColumn) {
+            'name' => 'us.name',
+            'mobile' => 'us.phone',
+            'email' => 'us.email',
+            'branch_name' => 'b.name',
+            'upazila_name' => 'u.upazila_name',
+            'actions' => 'marketing_representatives.id',
+            default => 'marketing_representatives.' . $orderColumn,
+        };
+        $query->orderBy($orderBy, $orderDirection);
 
         $data = $query->skip($start)->take($length)->get()->map(function ($representative) {
             $status = $representative->status
@@ -87,7 +100,7 @@ class MarketingRepresentativeController extends Controller
 
             $actions = '<div class="d-inline-flex align-items-center justify-content-end gap-1 w-100">'
                 . '<a href="' . $showUrl . '" class="w-32-px h-32-px rounded-circle d-inline-flex align-items-center justify-content-center bg-info-focus text-info-main" title="View"><iconify-icon icon="lucide:eye"></iconify-icon></a>'
-                . '<a href="#" class="w-32-px h-32-px rounded-circle d-inline-flex align-items-center justify-content-center bg-success-focus text-success-main AjaxModal" data-ajax-modal="' . $editUrl . '" data-size="lg" data-onsuccess="MarketingRepresentativesIndex.onSaved" title="Edit"><iconify-icon icon="lucide:edit"></iconify-icon></a>'
+                . '<a href="#" class="w-32-px h-32-px rounded-circle d-inline-flex align-items-center justify-content-center bg-success-focus text-success-main AjaxModal" data-ajax-modal="' . $editUrl . '" data-size="lg" data-onload="MarketingRepresentativesIndex.onLoad" data-onsuccess="MarketingRepresentativesIndex.onSaved" title="Edit"><iconify-icon icon="lucide:edit"></iconify-icon></a>'
                 . '<a href="#" class="w-32-px h-32-px rounded-circle d-inline-flex align-items-center justify-content-center bg-danger-focus text-danger-main btn-representative-delete" data-url="' . $deleteUrl . '" title="Delete"><iconify-icon icon="mdi:delete"></iconify-icon></a>'
                 . '</div>';
 
@@ -130,30 +143,38 @@ class MarketingRepresentativeController extends Controller
     {
         $data = $this->validated($request);
 
-        $representative = DB::transaction(function () use ($data) {
+        try {
+            $representative = DB::transaction(function () use ($data) {
 
-            $user = User::create([
-                'name' => $data['name'],
-                'email' => $data['email'] ?? null,
-                'phone' => $data['mobile'] ?? null,
-                'username' => $data['employee_id'],
-                'password' => Hash::make($data['password']),
-                'role_id' => $this->marketingRepresentativeRoleId(),
-                'branch_id' => $data['branch_id'] ?? null,
-                'status' => $data['status'],
-            ]);
+                $user = User::create([
+                    'name' => $data['name'],
+                    'email' => $data['email'] ?? null,
+                    'phone' => $data['mobile'] ?? null,
+                    'username' => $data['employee_id'],
+                    'password' => Hash::make($data['password']),
+                    'role_id' => $this->marketingRepresentativeRoleId(),
+                    'branch_id' => $data['branch_id'] ?? null,
+                    'status' => $data['status'],
+                ]);
 
-            unset(
-                $data['name'],
-                $data['email'],
-                $data['mobile'],
-                $data['password']
-            );
+                unset(
+                    $data['name'],
+                    $data['email'],
+                    $data['mobile'],
+                    $data['password']
+                );
 
-            $data['user_id'] = $user->id;
+                $data['user_id'] = $user->id;
 
-            return MarketingRepresentative::create($data);
-        });
+                return MarketingRepresentative::create($data);
+            });
+        } catch (\Throwable $e) {
+            report($e);
+
+            return response()->json([
+                'msg' => 'Could not save the marketing representative. Please check the data and try again.',
+            ], 500);
+        }
 
         return response()->json([
             'ok' => true,
@@ -166,34 +187,44 @@ class MarketingRepresentativeController extends Controller
     {
         $data = $this->validated($request, $representative);
 
-        DB::transaction(function () use ($data, $representative) {
+        try {
+            DB::transaction(function () use ($data, $representative) {
 
-            $user = $representative->user;
+                $user = $representative->user;
 
-            $userData = [
-                'name' => $data['name'],
-                'email' => $data['email'] ?? null,
-                'phone' => $data['mobile'] ?? null,
-                'username' => $data['employee_id'],
-                'branch_id' => $data['branch_id'] ?? null,
-                'status' => $data['status'],
-            ];
+                $userData = [
+                    'name' => $data['name'],
+                    'email' => $data['email'] ?? null,
+                    'phone' => $data['mobile'] ?? null,
+                    'username' => $data['employee_id'],
+                    'branch_id' => $data['branch_id'] ?? null,
+                    'status' => $data['status'],
+                ];
 
-            if (!empty($data['password'])) {
-                $userData['password'] = $data['password'];
-            }
+                if (!empty($data['password'])) {
+                    $userData['password'] = Hash::make($data['password']);
+                }
 
-            $user->update($userData);
+                if ($user) {
+                    $user->update($userData);
+                }
 
-            unset(
-                $data['name'],
-                $data['email'],
-                $data['mobile'],
-                $data['password']
-            );
+                unset(
+                    $data['name'],
+                    $data['email'],
+                    $data['mobile'],
+                    $data['password']
+                );
 
-            $representative->update($data);
-        });
+                $representative->update($data);
+            });
+        } catch (\Throwable $e) {
+            report($e);
+
+            return response()->json([
+                'msg' => 'Could not update the marketing representative. Please check the data and try again.',
+            ], 500);
+        }
 
         return response()->json([
             'ok' => true,
@@ -217,9 +248,18 @@ class MarketingRepresentativeController extends Controller
     
     public function destroy(MarketingRepresentative $representative)
     {
-      $user = User::find(39);
+        DB::transaction(function () use ($representative) {
 
-      return $user;
+            if ($representative->user) {
+                $representative->user->update([
+                    'status' => 0,
+                ]);
+
+                $representative->user->delete();
+            }
+
+            $representative->delete();
+        });
 
         return response()->json([
             'ok' => true,
@@ -227,28 +267,6 @@ class MarketingRepresentativeController extends Controller
         ]);
     }
 
-    public function select2(Request $request)
-    {
-        $term = trim($request->input('q', ''));
-        $users = MarketingRepresentative::with('user')
-        ->whereHas('user', function ($query) use ($term) {
-            $query->where('name', 'like', "%{$term}%")
-                  ->orWhere('email', 'like', "%{$term}%")
-                  ->orWhere('phone', 'like', "%{$term}%");
-        })
-        ->limit(20)
-        ->get();
-
-        return response()->json(['results' => $users->map(function ($mr) {
-          
-
-            return [
-                'id' => $mr->user_id,
-                'text' => $mr->user->name,
-                
-            ];
-        })->values()]);
-    }
     public function upazilasSelect2(Request $request)
     {
         $term = trim($request->input('q', ''));
@@ -275,27 +293,56 @@ class MarketingRepresentativeController extends Controller
 
     private function validated(Request $request, ?MarketingRepresentative $representative = null): array
     {
+        // users table has unique index on email / phone / username -> must be validated
+        // otherwise MySQL throws 1062 and the request ends with a 500 error.
+        $userId = $representative?->user_id;
+
         $data = $request->validate([
             'name' => ['required', 'string', 'max:150'],
-            'employee_id' => ['required', 'string', 'max:100', Rule::unique('marketing_representatives', 'employee_id')->ignore($representative?->id)],
+            'employee_id' => [
+                'required',
+                'string',
+                'max:100',
+                Rule::unique('marketing_representatives', 'employee_id')->ignore($representative?->id),
+                Rule::unique('users', 'username')->ignore($userId),
+            ],
             'password' => [$representative ? 'nullable' : 'required', 'string', 'min:8', 'confirmed'],
-            'mobile' => ['nullable', 'string', 'max:50'],
-            'email' => ['nullable', 'email', 'max:191'],
+            'mobile' => ['nullable', 'string', 'max:50', Rule::unique('users', 'phone')->ignore($userId)],
+            'email' => ['nullable', 'email', 'max:191', Rule::unique('users', 'email')->ignore($userId)],
             'organization' => ['nullable', 'string', 'max:191'],
             'branch_id' => ['nullable', 'integer', 'exists:branches,id'],
             'upazila_id' => ['nullable', 'integer', 'exists:upazilas,id'],
             'district_id' => ['nullable', 'integer', 'exists:districts,district_id'],
             'division_id' => ['nullable', 'integer', 'exists:divisions,id'],
             'address' => ['nullable', 'string', 'max:1000'],
-            'territory' => ['nullable', 'string', 'max:150'],
             'status' => ['required', 'boolean'],
         ]);
 
-        if (empty($data['password'])) {
+        if (empty($data['password'] ?? null)) {
             unset($data['password']);
         }
 
         return $data;
+    }
+
+    public function select2()
+    {
+        $term = trim(request('q', ''));
+        $representatives = MarketingRepresentative::with('user')
+            ->when($term !== '', fn($query) => $query->whereHas('user', fn($q) => $q->where('name', 'like', "%{$term}%")))
+            ->orderBy('id', 'desc')
+            ->limit(30)
+            ->get();
+
+        return response()->json(['results' => $representatives->map(function ($representative) {
+            return [
+                'id' => $representative->user->id,
+                'text' => $representative->user?->name ?? 'N/A',
+                'employee_id' => $representative->employee_id,
+                'mobile' => $representative->user?->phone ?? null,
+                'email' => $representative->user?->email ?? null,
+            ];
+        })->values()]);
     }
 
     private function marketingRepresentativeRoleId(): int

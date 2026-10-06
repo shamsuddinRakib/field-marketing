@@ -3,8 +3,6 @@
 namespace App\Http\Controllers\backend;
 
 use App\Http\Controllers\Controller;
-use App\Models\backend\District;
-use App\Models\backend\Division;
 use App\Models\backend\Institution;
 use App\Models\backend\Upazila;
 use Illuminate\Http\Request;
@@ -26,10 +24,8 @@ class InstitutionController extends Controller
     public function editModal(Institution $institution)
     {
         $institution->loadMissing(['upazila', 'district', 'division']);
-        $divisions = Division::orderBy('name')->get(['id', 'name']);
-        $districts = District::orderBy('district_name')->get(['district_id', 'district_name', 'district_division_id']);
 
-        return view('backend.modules.institutions.edit_modal', compact('institution', 'divisions', 'districts'));
+        return view('backend.modules.institutions.edit_modal', compact('institution'));
     }
 
     public function listAjax(Request $request)
@@ -44,7 +40,7 @@ class InstitutionController extends Controller
             ]);
         }
 
-        $columns = ['id', 'name', 'code', 'email', 'phone', 'upazila_name', 'district_name', 'division_name', 'address', 'status'];
+        $columns = ['id', 'institution_name', 'code', 'email', 'phone', 'upazila_name', 'district_name', 'division_name', 'address', 'status'];
         $draw = (int) $request->input('draw');
         $start = (int) $request->input('start', 0);
         $length = (int) $request->input('length', 10);
@@ -62,8 +58,7 @@ class InstitutionController extends Controller
 
         if ($search !== '') {
             $query->where(function ($builder) use ($search) {
-                $builder->where('institutions.name', 'like', "%{$search}%")
-                    ->orWhere('institutions.institution_name', 'like', "%{$search}%")
+                $builder->where('institutions.institution_name', 'like', "%{$search}%")
                     ->orWhere('institutions.code', 'like', "%{$search}%")
                     ->orWhere('institutions.email', 'like', "%{$search}%")
                     ->orWhere('institutions.phone', 'like', "%{$search}%")
@@ -83,8 +78,6 @@ class InstitutionController extends Controller
             'division_name' => 'div.name',
         ];
         $orderBy = $orderMap[$orderColumn] ?? 'institutions.' . $orderColumn;
-        // fallback for name alias
-        if ($orderColumn === 'name') $orderBy = 'institutions.name';
         $query->orderBy($orderBy, $orderDirection);
 
         $data = $query->skip($start)->take($length)->get()->map(function ($institution) {
@@ -104,7 +97,7 @@ class InstitutionController extends Controller
                 . '<a href="#" class="w-32-px h-32-px rounded-circle d-inline-flex align-items-center justify-content-center bg-danger-focus text-danger-main btn-institution-delete" data-url="' . $deleteUrl . '" title="Delete"><iconify-icon icon="mdi:delete"></iconify-icon></a>'
                 . '</div>';
 
-            $institutionName = $institution->institution_name ?: $institution->name;
+            $institutionName = $institution->institution_name;
 
             return [
                 (int) $institution->id,
@@ -190,17 +183,15 @@ class InstitutionController extends Controller
             ->when($term !== '', function ($q) use ($term) {
                 $q->where(function ($b) use ($term) {
                     $b->where('institution_name', 'like', "%{$term}%")
-                      ->orWhere('name', 'like', "%{$term}%")
                       ->orWhere('code', 'like', "%{$term}%");
                 });
             })
             ->orderBy('institution_name')
-            ->orderBy('name')
             ->limit(30)
             ->get();
 
         return response()->json(['results' => $institutions->map(function ($inst) {
-            $name = $inst->institution_name ?: $inst->name;
+            $name = $inst->institution_name;
             return [
                 'id' => $inst->id,
                 'text' => $name . ($inst->code ? " ({$inst->code})" : ''),
@@ -211,8 +202,7 @@ class InstitutionController extends Controller
     private function validated(Request $request, ?Institution $institution = null): array
     {
         $data = $request->validate([
-            'name' => ['nullable', 'string', 'max:191'],
-            'institution_name' => ['required_without:name', 'nullable', 'string', 'max:191'],
+            'institution_name' => ['required', 'string', 'max:191'],
             'code' => ['nullable', 'string', 'max:100', Rule::unique('institutions', 'code')->ignore($institution?->id)],
             'email' => ['nullable', 'email', 'max:191'],
             'phone' => ['nullable', 'string', 'max:50'],
@@ -222,11 +212,6 @@ class InstitutionController extends Controller
             'address' => ['nullable', 'string', 'max:1000'],
             'status' => ['required', 'boolean'],
         ]);
-
-        // Normalize name field
-        if (empty($data['name']) && !empty($data['institution_name'])) {
-            $data['name'] = $data['institution_name'];
-        }
 
         return $data;
     }

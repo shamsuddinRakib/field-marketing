@@ -10,7 +10,6 @@ class Institution extends Model
     use SoftDeletes;
 
     protected $fillable = [
-        'name',
         'institution_name',
         'code',
         'email',

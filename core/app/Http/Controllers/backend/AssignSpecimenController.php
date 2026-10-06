@@ -92,7 +92,7 @@ class AssignSpecimenController extends Controller
                 $b->id,
                 $nameCol,
                 $b->teacher ? 'Teacher' : ($b->library ? 'Library' : ''),
-                $b->teacher?->teacher_name ?? $b->library?->name ?? '-',
+                $b->teacher?->teacher_name ?? $b->library?->library_name ?? '-',
                 $b->product->name,
                 $b->quantity,
                 $b->note,

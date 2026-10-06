@@ -3,8 +3,6 @@
 namespace App\Http\Controllers\backend;
 
 use App\Http\Controllers\Controller;
-use App\Models\backend\District;
-use App\Models\backend\Division;
 use App\Models\backend\Library;
 use App\Models\backend\Upazila;
 use Illuminate\Http\Request;
@@ -25,10 +23,9 @@ class LibraryController extends Controller
 
     public function editModal(Library $library)
     {
-        $divisions = Division::orderBy('name')->get(['id', 'name']);
-        $districts = District::orderBy('district_name')->get(['district_id', 'district_name', 'district_division_id']);
+        $library->loadMissing(['upazila', 'district', 'division']);
 
-        return view('backend.modules.libraries.edit_modal', compact('library', 'divisions', 'districts'));
+        return view('backend.modules.libraries.edit_modal', compact('library'));
     }
 
     public function listAjax(Request $request)
@@ -61,7 +58,6 @@ class LibraryController extends Controller
         if ($search !== '') {
             $query->where(function ($builder) use ($search) {
                 $builder->where('libraries.library_name', 'like', "%{$search}%")
-                    ->orWhere('libraries.name', 'like', "%{$search}%")
                     ->orWhere('libraries.code', 'like', "%{$search}%")
                     ->orWhere('libraries.email', 'like', "%{$search}%")
                     ->orWhere('libraries.phone', 'like', "%{$search}%")
@@ -101,7 +97,7 @@ class LibraryController extends Controller
                 . '<a href="#" class="w-32-px h-32-px rounded-circle d-inline-flex align-items-center justify-content-center bg-danger-focus text-danger-main btn-library-delete" data-url="' . $deleteUrl . '" title="Delete"><iconify-icon icon="mdi:delete"></iconify-icon></a>'
                 . '</div>';
 
-            $libraryName = $library->library_name ?: $library->name;
+            $libraryName = $library->library_name;
 
             return [
                 (int) $library->id,
@@ -187,17 +183,15 @@ class LibraryController extends Controller
             ->when($term !== '', function ($q) use ($term) {
                 $q->where(function ($b) use ($term) {
                     $b->where('library_name', 'like', "%{$term}%")
-                      ->orWhere('name', 'like', "%{$term}%")
                       ->orWhere('code', 'like', "%{$term}%");
                 });
             })
             ->orderBy('library_name')
-            ->orderBy('name')
             ->limit(30)
             ->get();
 
         return response()->json(['results' => $libraries->map(function ($lib) {
-            $name = $lib->library_name ?: $lib->name;
+            $name = $lib->library_name;
             return [
                 'id' => $lib->id,
                 'text' => $name . ($lib->code ? " ({$lib->code})" : ''),
@@ -208,8 +202,7 @@ class LibraryController extends Controller
     private function validated(Request $request, ?Library $library = null): array
     {
         $data = $request->validate([
-            'name' => ['nullable', 'string', 'max:191'],
-            'library_name' => ['required_without:name', 'nullable', 'string', 'max:191'],
+            'library_name' => ['required', 'string', 'max:191'],
             'code' => ['nullable', 'string', 'max:100', Rule::unique('libraries', 'code')->ignore($library?->id)],
             'email' => ['nullable', 'email', 'max:191'],
             'phone' => ['required', 'string', 'max:50'],
@@ -219,10 +212,6 @@ class LibraryController extends Controller
             'address' => ['nullable', 'string', 'max:1000'],
             'status' => ['required', 'boolean'],
         ]);
-
-        if (empty($data['name']) && !empty($data['library_name'])) {
-            $data['name'] = $data['library_name'];
-        }
 
         return $data;
     }
