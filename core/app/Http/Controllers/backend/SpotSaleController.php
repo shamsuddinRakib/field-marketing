@@ -31,7 +31,7 @@ class SpotSaleController extends Controller
             ->with([
                 'user:id,name',
                 'teacher:id,teacher_name',
-                'library:id,name,library_name',
+                'library:id,library_name',
                 'items.product:id,name',
             ])
             // NOTE: withSum() must come AFTER select() — select() replaces
@@ -60,15 +60,15 @@ class SpotSaleController extends Controller
         foreach ($rows as $b) {
             $type = $b->teacher_id ? 'teacher' : ($b->library_id ? 'library' : '—');
             $typeBadge = $type === 'teacher'
-                ? '<span class="badge text-sm fw-semibold bg-light-primary px-12 py-6 radius-4">Teacher</span>'
+                ? '<span class="badge text-sm fw-semibold bg-primary px-12 py-6 radius-4">Teacher</span>'
                 : ($type === 'library'
-                    ? '<span class="badge text-sm fw-semibold bg-light-info px-12 py-6 radius-4">Library</span>'
+                    ? '<span class="badge text-sm fw-semibold bg-info px-12 py-6 radius-4">Library</span>'
                     : '—');
 
             $customer = $b->teacher_id
                 ? e(optional($b->teacher)->teacher_name ?? ('#'.$b->teacher_id))
                 : ($b->library_id
-                    ? e(optional($b->library)->library_name ?: optional($b->library)->name ?? ('#'.$b->library_id))
+                    ? e(optional($b->library)->library_name ?? ('#'.$b->library_id))
                     : '—');
 
             $statusBadge = $b->status === 'approved'
