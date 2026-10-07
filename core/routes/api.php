@@ -17,6 +17,7 @@ use App\Http\Controllers\api\OrderController;
 use App\Http\Controllers\api\ProductController;
 use App\Http\Controllers\api\ProfileController;
 use App\Http\Controllers\api\MrAuthController;
+use App\Http\Controllers\api\SpotSaleController;
 use Illuminate\Http\Request;
 
 
@@ -107,5 +108,12 @@ Route::prefix('mr')->name('api.mr.')->group(function () {
         //Fund_distribution
         Route::get('/fund-distributions', [FundDistributionController::class, 'index'])->name('fund-distributions.index');
         Route::get('/fund-distributions/{id}', [FundDistributionController::class, 'show'])->name('fund-distributions.show');
+
+        //spot sale
+        Route::get('/spot-sales', [SpotSaleController::class, 'index'])->name('spot-sales.index');
+        Route::get('/spot-sales/{id}', [SpotSaleController::class, 'show'])->name('spot-sales.show');
+        Route::post('/spot-sales', [SpotSaleController::class, 'create'])->name('spot-sales.create');
+        Route::put('/spot-sales/{id}', [SpotSaleController::class, 'update'])->name('spot-sales.update');
+        Route::delete('/spot-sales/{id}', [SpotSaleController::class, 'destroy'])->name('spot-sales.destroy');
     });
 });
