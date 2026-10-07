@@ -7,6 +7,7 @@ use App\Http\Controllers\api\BookReturnController;
 use App\Http\Controllers\api\CategoryController;
 use App\Http\Controllers\api\CouponController;
 use App\Http\Controllers\api\DailyVisitController;
+use App\Http\Controllers\api\DashboardController;
 use App\Http\Controllers\api\ExpenseCategoryController;
 use App\Http\Controllers\api\ExpenseController;
 use App\Http\Controllers\api\FundDistributionController;
@@ -67,6 +68,9 @@ Route::prefix('mr')->name('api.mr.')->group(function () {
         Route::put('/credentials', [MrAuthController::class, 'updateCredentials'])->name('credentials.update');
 
         Route::post('/logout', [MrAuthController::class, 'logout'])->name('logout');
+
+        //Dashboard
+        Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard.index');
 
         // Daily Visit for MR
         Route::get('/daily-visits', [DailyVisitController::class, 'index'])->name('daily-visits.index');
