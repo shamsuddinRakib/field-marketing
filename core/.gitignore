@@ -41,3 +41,6 @@ core/composer.lock
 # Homestead
 Homestead.json
 Homestead.yaml
+
+
+/project-log.md
