@@ -232,6 +232,15 @@
                                         </a>
                                     </li>
                                 @endperm
+                                @perm('locations.map')
+                                    <li>
+                                        <a class="{{ Route::is('locations.map') ? 'active' : '' }}"
+                                            href="{{ route('locations.map') }}">
+                                            <iconify-icon icon="solar:map-point-wave-bold-duotone" class="menu-icon"></iconify-icon>
+                                            <span>MR Map List</span>
+                                        </a>
+                                    </li>
+                                @endperm
                                 @perm('product-distribution.index')
                                     <li>
                                         <a class="{{ Route::is('product-distribution.index') ? 'active' : '' }}"

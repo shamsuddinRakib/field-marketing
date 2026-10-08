@@ -81,9 +81,11 @@ class DailyVisitController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'teacher_id' => ['required', 'integer', 'exists:teachers,id'],
+            'teacher_id' => ['nullable', 'integer', 'exists:teachers,id'],
             'library_id' => ['nullable', 'integer', 'exists:libraries,id'],
-            'visit_date' => ['required', 'date'],
+            'visit_date' => ['required', 'date_format:Y-m-d'],
+            'latitude' => ['nullable', 'numeric'],
+            'longitude' => ['nullable', 'numeric'],
             'status' => ['required', 'string'],
             'note' => ['nullable', 'string'],
         ]);
@@ -106,6 +108,8 @@ class DailyVisitController extends Controller
             'teacher_id' => $request->teacher_id,
             'library_id' => $request->library_id,
             'visit_date' => $request->visit_date,
+            'latitude' => $request->latitude,
+            'longitude' => $request->longitude,
             'status' => $request->status,
             'note' => $request->note,
         ]);

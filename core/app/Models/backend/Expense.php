@@ -47,8 +47,8 @@ class Expense extends Model
         return $this->belongsTo(DailyVisit::class, 'daily_visit_id');
     }
 
-    public function journalEntry()
-    {
-        return $this->morphOne(JournalEntry::class, 'source');
-    }
+    // public function journalEntry()
+    // {
+    //     return $this->morphOne(JournalEntry::class, 'source');
+    // }
 }

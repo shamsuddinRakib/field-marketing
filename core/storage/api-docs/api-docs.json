@@ -7,7 +7,7 @@
     },
     "servers": [
         {
-            "url": "http://localhost/field-marketing/api",
+            "url": "http://10.10.10.111/field-marketing/api",
             "description": "Local development server"
         }
     ],
@@ -446,7 +446,7 @@
                             "type": "string",
                             "format": "date"
                         },
-                        "example": "2025-01-15"
+                        "example": "2026-08-15"
                     },
                     {
                         "name": "month",
@@ -456,7 +456,7 @@
                         "schema": {
                             "type": "string"
                         },
-                        "example": "2025-01"
+                        "example": "2026-09"
                     },
                     {
                         "name": "from_date",
@@ -466,7 +466,7 @@
                             "type": "string",
                             "format": "date"
                         },
-                        "example": "2025-01-01"
+                        "example": "2026-09-01"
                     },
                     {
                         "name": "to_date",
@@ -476,7 +476,7 @@
                             "type": "string",
                             "format": "date"
                         },
-                        "example": "2025-01-31"
+                        "example": "2026-01-31"
                     },
                     {
                         "name": "page",
@@ -2278,17 +2278,17 @@
                     },
                     "library_id": {
                         "type": "integer",
-                        "example": 1,
+                        "example": null,
                         "nullable": true
                     },
                     "visit_date": {
                         "type": "string",
                         "format": "date",
-                        "example": "2025-01-15"
+                        "example": "2026-10-09"
                     },
                     "status": {
                         "type": "string",
-                        "example": "visited"
+                        "example": "pending"
                     },
                     "note": {
                         "type": "string",

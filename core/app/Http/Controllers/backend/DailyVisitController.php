@@ -45,7 +45,7 @@ class DailyVisitController extends Controller
 
         $data = [];
         foreach ($rows as $b) {
-            $nameCol = '<strong>' . e($b->user->name) . '</strong>';
+            $nameCol = '<strong>' . e($b->user->name ?? '-') . '</strong>';
             // $b->load('teacher');
             // dd($b);
 
@@ -90,7 +90,7 @@ class DailyVisitController extends Controller
                 $b->id,
                 $nameCol,
                 $b->teacher ? 'Teacher' : 'Library',
-                $b->teacher?->teacher_name ?? $b->library?->name ?? '-',
+                $b->teacher?->teacher_name ?? $b->library?->library_name ?? '-',
                 $b->note,
                 $statusBadge
                 // $actions,
@@ -144,7 +144,7 @@ class DailyVisitController extends Controller
             'results' => $results->map(function ($item) {
                 $text = $item->teacher
                     ? $item->teacher->teacher_name . ' - ' . ($item->teacher->institution?->institution_name ?? '-')
-                    : ($item->library?->name ?? '-');
+                    : ($item->library?->library_name ?? '-');
                 return [
                     'id' => $item->id,
                     'text' => $text . ' - ' . Carbon::parse($item->created_at)->format('d M Y h:i A'),
