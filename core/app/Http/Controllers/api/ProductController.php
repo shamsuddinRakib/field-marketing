@@ -67,6 +67,37 @@ class ProductController extends Controller
         return response()->json(['success' => true, 'data' => $products]);
     }
 
+    /**
+     * Lightweight active product list for dropdowns (delivery / distribution forms).
+     */
+    public function dropdown(Request $request)
+    {
+        $query = Product::query()
+            ->select(['id', 'name', 'slug', 'sku', 'price', 'mrp', 'thumbnail_image', 'brand_id', 'category_id'])
+            ->where('is_active', 1)
+            ->where('parent_id', null);
+
+        if ($request->filled('is_sellable')) {
+            $query->where('is_sellable', $request->boolean('is_sellable'));
+        }
+
+        if ($request->filled('search')) {
+            $search = $request->input('search');
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('sku', 'like', "%{$search}%");
+            });
+        }
+
+        $products = $query->orderBy('name')->get();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Products fetched successfully.',
+            'data' => $products,
+        ]);
+    }
+
     public function show(Request $request, $slug)
     {
         $product = Product::with(['category', 'children.size', 'children.color', 'specifications'])->where('slug', $slug)->where('is_active', 1)->first();
