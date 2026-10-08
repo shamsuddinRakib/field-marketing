@@ -115,6 +115,10 @@ class SpotSaleController extends Controller
             return response()->json(['success' => false, 'message' => 'Spot sale not found'], 404);
         }
 
+        if($spotSale->status === 'approved'){
+            return response()->json(['success' => false, 'message' => 'Approved spot sale cannot be updated'], 400);
+        }
+
         //fetch all products and then calculate total 
         $products = \App\Models\backend\Product::whereIn('id', $data['product_id'])->get();
         $total = 0;

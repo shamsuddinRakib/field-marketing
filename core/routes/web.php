@@ -389,6 +389,7 @@ Route::middleware(['web', 'auth', 'perm', 'branchscope'])->group(function () {
         Route::post('teachers/list', [TeacherController::class, 'listAjax'])->name('teachers.list.ajax');
         Route::get('teachers/create-modal', [TeacherController::class, 'createModal'])->name('teachers.createModal');
         Route::get('teachers/institutions-select2', [TeacherController::class, 'institutionsSelect2'])->name('teachers.institutions.select2');
+        Route::get('teachers/select2', [TeacherController::class, 'select2'])->name('teachers.select2');
         Route::post('teachers', [TeacherController::class, 'store'])->name('teachers.store');
         Route::get('teachers/{teacher}/edit-modal', [TeacherController::class, 'editModal'])->whereNumber('teacher')->name('teachers.editModal');
         Route::put('teachers/{teacher}', [TeacherController::class, 'update'])->whereNumber('teacher')->name('teachers.update');

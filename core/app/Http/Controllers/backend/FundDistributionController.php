@@ -12,14 +12,14 @@ use Illuminate\Support\Facades\DB;
 
 class FundDistributionController extends Controller
 {
-       public function index()
+    public function index()
     {
         return view('backend.modules.fund_distribution.index');
     }
 
     public function listAjax(Request $request)
     {
-        $columns   = ['id', 'user_id', 'amount','created_at', 'note', 'status'];
+        $columns   = ['id', 'user_id', 'amount', 'created_at', 'note', 'status'];
         $draw      = (int) $request->input('draw');
         $start     = (int) $request->input('start', 0);
         $length    = (int) $request->input('length', 10);
@@ -96,7 +96,7 @@ class FundDistributionController extends Controller
                 Carbon::parse($b->created_at)->format('d F Y'),
                 $b->note,
                 $statusBadge,
-                $b->status==='delivered'?'N/A': $actions,
+                $b->status === 'delivered' ? 'N/A' : $actions,
             ];
         }
 
@@ -170,15 +170,25 @@ class FundDistributionController extends Controller
     }
 
 
-    public function updateStatus(FundDistribution $fundDistribution)
+    public function updateStatus(FundDistribution $fundDistribution, Request $req)
     {
         // dd($fundDistribution);
-         if($fundDistribution->status==='delivered'){
-                return response()->json(['ok' => false, 'msg' => ['Delivered record cannot be updated']],402);
-            }
+        $data = $req->validate([
+            'status'     => ['required', 'string', 'in:pending,delivered'],
+        ]);
 
-        $distribution = DB::transaction(function () use ($fundDistribution) {
-           
+        if ($fundDistribution->status === 'pending' && $data['status'] === 'pending') {
+            return response()->json(['ok' => true, 'msg' => ['Updated Successfully']]);
+        }
+
+        if ($fundDistribution->status === 'delivered') {
+            return response()->json(['ok' => false, 'msg' => ['Delivered record cannot be updated']], 402);
+        }
+
+
+
+        DB::beginTransaction();
+        try {
             $stock = CurrentFund::where('user_id', $fundDistribution->user_id)
                 ->first();
 
@@ -200,12 +210,17 @@ class FundDistributionController extends Controller
             ]);
 
             // return $distribution;
-        });
+            DB::commit();
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['ok' => false, 'msg' => ['Something went wrong. Please try again.']], 500);
+        }
+
+
 
         $fundDistribution->status = 'delivered';
         $fundDistribution->save();
 
         return response()->json(['success' => true, 'msg' => 'Status Updated Successfully']);
     }
-
 }
