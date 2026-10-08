@@ -45,7 +45,7 @@ class DailyVisitController extends Controller
 
         $data = [];
         foreach ($rows as $b) {
-            $nameCol = '<strong>' . e($b->user->name) . '</strong>';
+            $nameCol = '<strong>' . e($b->user->name ?? '-') . '</strong>';
             // $b->load('teacher');
             // dd($b);
 

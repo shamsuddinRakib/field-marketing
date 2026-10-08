@@ -62,6 +62,7 @@ use App\Http\Controllers\backend\ReportModuleController;
 use App\Http\Controllers\backend\MarketingRepresentativeController;
 use App\Http\Controllers\backend\InstitutionController;
 use App\Http\Controllers\backend\LibraryController;
+use App\Http\Controllers\backend\MrLocationController;
 use App\Http\Controllers\backend\ProductDistributionController;
 use App\Http\Controllers\backend\SubjectController;
 use App\Http\Controllers\backend\TeacherController;
@@ -228,8 +229,12 @@ Route::middleware(['web', 'auth', 'perm', 'branchscope'])->group(function () {
         Route::delete('marketing-representatives/{representative}', [MarketingRepresentativeController::class, 'destroy'])->whereNumber('representative')->name('marketing-representatives.destroy');
     });
 
-    // institution
+    //MR Maps
+    Route::prefix('mr-location')->name('locations.')->group(function () {
+        Route::get('map', [MrLocationController::class, 'map'])->name('map');
+    });
 
+    // institution
     Route::prefix('institution')->name('institution.')->group(function () {
         Route::get('institutions', [InstitutionController::class, 'index'])->name('institutions.index');
         Route::post('institutions/list', [InstitutionController::class, 'listAjax'])->name('institutions.list.ajax');
@@ -241,6 +246,7 @@ Route::middleware(['web', 'auth', 'perm', 'branchscope'])->group(function () {
         Route::put('institutions/{institution}', [InstitutionController::class, 'update'])->whereNumber('institution')->name('institutions.update');
         Route::delete('institutions/{institution}', [InstitutionController::class, 'destroy'])->whereNumber('institution')->name('institutions.destroy');
     });
+
     Route::prefix('teacher')->name('teacher.')->group(function () {
         Route::get('teachers', [TeacherController::class, 'index'])->name('teachers.index');
         Route::post('teachers/list', [TeacherController::class, 'listAjax'])->name('teachers.list.ajax');
@@ -277,9 +283,6 @@ Route::middleware(['web', 'auth', 'perm', 'branchscope'])->group(function () {
         Route::put('libraries/{library}', [LibraryController::class, 'update'])->whereNumber('library')->name('libraries.update');
         Route::delete('libraries/{library}', [LibraryController::class, 'destroy'])->whereNumber('library')->name('libraries.destroy');
     });
-
-
-
 
     Route::prefix('product-distributions')->name('product-distribution.')->group(function () {
         Route::get('/', [ProductDistributionController::class, 'index'])->name('index');
@@ -328,6 +331,7 @@ Route::middleware(['web', 'auth', 'perm', 'branchscope'])->group(function () {
         Route::post('/status-modal/{assignSpecimen}', [AssignSpecimenController::class, 'updateStatus'])->name('updateStatus');
         Route::delete('/{assignSpecimen}', [AssignSpecimenController::class, 'destroy'])->name('destroy');
     });
+
     // fund request
     Route::prefix('fund-request')->name('fund-request.')->group(function () {
         Route::get('/', [FundRequestController::class, 'index'])->name('index');
@@ -342,7 +346,6 @@ Route::middleware(['web', 'auth', 'perm', 'branchscope'])->group(function () {
     });
 
     // Book Request Management
-
     Route::prefix('book-request')->name('book-request.')->group(function () {
         Route::get('book-requests', [BookRequestController::class, 'index'])->name('book-requests.index');
         Route::post('book-requests/list', [BookRequestController::class, 'listAjax'])->name('book-requests.list.ajax');
@@ -356,7 +359,6 @@ Route::middleware(['web', 'auth', 'perm', 'branchscope'])->group(function () {
     });
 
     // Book Return Management
-
     Route::prefix('book-return')->name('book-return.')->group(function () {
         Route::get('book-returns', [BookReturnController::class, 'index'])->name('book-returns.index');
         Route::post('book-returns/list', [BookReturnController::class, 'listAjax'])->name('book-returns.list.ajax');
@@ -369,10 +371,7 @@ Route::middleware(['web', 'auth', 'perm', 'branchscope'])->group(function () {
         Route::delete('book-returns/{bookReturn}', [BookReturnController::class, 'destroy'])->whereNumber('bookReturn')->name('book-returns.destroy');
     });
 
-
-
     // teacher
-
     Route::prefix('institution')->name('institution.')->group(function () {
         Route::get('institutions', [InstitutionController::class, 'index'])->name('institutions.index');
         Route::post('institutions/list', [InstitutionController::class, 'listAjax'])->name('institutions.list.ajax');
@@ -384,6 +383,7 @@ Route::middleware(['web', 'auth', 'perm', 'branchscope'])->group(function () {
         Route::put('institutions/{institution}', [InstitutionController::class, 'update'])->whereNumber('institution')->name('institutions.update');
         Route::delete('institutions/{institution}', [InstitutionController::class, 'destroy'])->whereNumber('institution')->name('institutions.destroy');
     });
+
     Route::prefix('teacher')->name('teacher.')->group(function () {
         Route::get('teachers', [TeacherController::class, 'index'])->name('teachers.index');
         Route::post('teachers/list', [TeacherController::class, 'listAjax'])->name('teachers.list.ajax');
@@ -541,7 +541,7 @@ Route::middleware(['web', 'auth', 'perm', 'branchscope'])->group(function () {
         Route::get('expense/{expense}', [ExpenseController::class, 'show'])->name('show');
         Route::delete('expense/{expense}', [ExpenseController::class, 'destroy'])->name('destroy');
         Route::get('expense/select2/type', [ExpenseController::class, 'select2'])->name('select2');
-        Route::get('expenses/{expense}/invoice',[ExpenseController::class, 'invoice'])->name('invoice');
+        Route::get('expenses/{expense}/invoice', [ExpenseController::class, 'invoice'])->name('invoice');
     });
 
     // Spot Sale Management
