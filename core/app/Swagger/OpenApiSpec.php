@@ -10,7 +10,9 @@ use OpenApi\Attributes as OA;
     description: 'API documentation for the Field Marketing Management System'
 )]
 #[OA\Server(
-    url: 'http://localhost/field-marketing/api',
+    // url: 'http://localhost/field-marketing/api',
+    url: 'http://10.10.10.111/field-marketing/api',
+
     description: 'Local development server'
 )]
 #[OA\SecurityScheme(

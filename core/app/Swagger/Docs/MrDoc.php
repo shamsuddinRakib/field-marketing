@@ -117,10 +117,10 @@ class MrDoc
         security: [['bearerAuth' => []]],
         tags: ['MR DailyVisit'],
         parameters: [
-            new OA\Parameter(name: 'date', in: 'query', required: false, schema: new OA\Schema(type: 'string', format: 'date'), example: '2025-01-15'),
-            new OA\Parameter(name: 'month', in: 'query', required: false, schema: new OA\Schema(type: 'string'), example: '2025-01', description: 'YYYY-MM'),
-            new OA\Parameter(name: 'from_date', in: 'query', required: false, schema: new OA\Schema(type: 'string', format: 'date'), example: '2025-01-01'),
-            new OA\Parameter(name: 'to_date', in: 'query', required: false, schema: new OA\Schema(type: 'string', format: 'date'), example: '2025-01-31'),
+            new OA\Parameter(name: 'date', in: 'query', required: false, schema: new OA\Schema(type: 'string', format: 'date'), example: '2026-08-15'),
+            new OA\Parameter(name: 'month', in: 'query', required: false, schema: new OA\Schema(type: 'string'), example: '2026-09', description: 'YYYY-MM'),
+            new OA\Parameter(name: 'from_date', in: 'query', required: false, schema: new OA\Schema(type: 'string', format: 'date'), example: '2026-09-01'),
+            new OA\Parameter(name: 'to_date', in: 'query', required: false, schema: new OA\Schema(type: 'string', format: 'date'), example: '2026-01-31'),
             new OA\Parameter(name: 'page', in: 'query', required: false, schema: new OA\Schema(type: 'integer'), example: 1),
         ],
         responses: [
