@@ -111,9 +111,17 @@ class DailyVisitController extends Controller
     }
 
 
-    public function updateStatus(DailyVisit $dailyVisit)
+    public function updateStatus(DailyVisit $dailyVisit, Request $req)
     {
         // dd($fundDistribution);
+         $data = $req->validate([ 
+            'status'     => ['required', 'string', 'in:pending,delivered'],
+        ]);
+
+        if($dailyVisit->status==='pending' && $data['status']==='pending'){
+            return response()->json(['ok' => true, 'msg' => ['Updated Successfully']]);
+        }
+        
         if ($dailyVisit->status === 'approved') {
             return response()->json(['ok' => false, 'msg' => ['Approved record cannot be updated']], 402);
         }

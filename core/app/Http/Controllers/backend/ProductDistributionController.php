@@ -97,7 +97,7 @@ class ProductDistributionController extends Controller
                 $b->quantity,
                 $b->note,
                 $statusBadge,
-                $b->status==='delivered'?'N/A': $actions,
+                $b->status === 'delivered' ? 'N/A' : $actions,
             ];
         }
 
@@ -148,8 +148,13 @@ class ProductDistributionController extends Controller
             'product_id'      => ['required', 'string', 'max:50'],
             'quantity'     => ['required', 'integer'],
             'note'     => ['nullable', 'string', 'max:150'],
+            'status'     => ['required', 'string', 'in:pending,delivered'],
 
         ]);
+
+        if ($productDistribution->status === 'delivered') {
+            return response()->json(['ok' => false, 'msg' => ['Delivered record cannot be updated']], 402);
+        }
 
         $productDistribution->update($data);
 
@@ -174,14 +179,24 @@ class ProductDistributionController extends Controller
     }
 
 
-    public function updateStatus(ProductDistribution $productDistribution)
+    public function updateStatus(ProductDistribution $productDistribution, Request $req)
     {
-         if($productDistribution->status==='delivered'){
-                return response()->json(['ok' => false, 'msg' => ['Delivered record cannot be updated']],402);
-            }
+        $data = $req->validate([
+            'status'     => ['required', 'string', 'in:pending,delivered'],
+        ]);
 
-        $distribution = DB::transaction(function () use ($productDistribution) {
-           
+        if ($productDistribution->status === 'pending' && $data['status'] === 'pending') {
+            return response()->json(['ok' => true, 'msg' => ['Updated Successfully']]);
+        }
+
+        if ($productDistribution->status === 'delivered') {
+            return response()->json(['ok' => false, 'msg' => ['Delivered record cannot be updated']], 402);
+        }
+
+
+
+        DB::beginTransaction();
+        try {
             $stock = CurrentStock::where('user_id', $productDistribution->user_id)
                 ->where('product_id', $productDistribution->product_id)
                 ->first();
@@ -206,13 +221,19 @@ class ProductDistributionController extends Controller
             ]);
 
             // return $distribution;
-        });
+            DB::commit();
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['ok' => false, 'msg' => ['Something went wrong. Please try again.']], 500);
+        }
+
 
         $productDistribution->status = 'delivered';
         $productDistribution->save();
 
         return response()->json(['success' => true, 'msg' => 'Status Updated Successfully']);
     }
+
 
     // public function editModal(ProductType $productType)
     // {

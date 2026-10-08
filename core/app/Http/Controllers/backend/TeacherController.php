@@ -168,6 +168,27 @@ class TeacherController extends Controller
         })->values()]);
     }
 
+    public function select2(Request $request)
+    {
+        $term = trim($request->input('q', ''));
+        $query = Teacher::query()
+            ->when($term !== '', function ($q) use ($term) {
+                $q->where('teacher_name', 'like', "%{$term}%")
+                  ->orWhere('phone', 'like', "%{$term}%");
+            })
+            ->orderBy('teacher_name')
+            ->limit(30);
+
+        $teachers = $query->get();
+
+        return response()->json(['results' => $teachers->map(function ($teacher) {
+            return [
+                'id' => $teacher->id,
+                'text' => $teacher->teacher_name . ($teacher->phone ? " ({$teacher->phone})" : ''),
+            ];
+        })->values()]);
+    }
+
     private function validated(Request $request, ?Teacher $teacher = null): array
     {
         $data = $request->validate([

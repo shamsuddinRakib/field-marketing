@@ -30,7 +30,7 @@
        <div class="col-md-6 mb-20 d-none" id="teacher_div">
          <label class="form-label text-sm mb-8">Teacher<span class="text-danger">*</span></label>
          <select class="form-control form-control-sm  js-s2-ajax" name="visitable_id" id="teacher"
-                                data-url="{{ route('teacher.teachers.institutions.select2') }}" data-placeholder="Select Teacher">
+                                data-url="{{ route('teacher.teachers.select2') }}" data-placeholder="Select Teacher">
 
           </select>
         <div class="invalid-feedback d-block teacher_id-error" style="display:none"></div>

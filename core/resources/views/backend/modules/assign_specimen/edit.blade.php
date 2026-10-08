@@ -33,7 +33,7 @@
        <div class="col-md-6 mb-20 {{$assignSpecimen->teacher_id?'':'d-none'}}" id="teacher_div">
          <label class="form-label text-sm mb-8">Teacher<span class="text-danger">*</span></label>
          <select class="form-control form-control-sm  js-s2-ajax" name="visitable_id" id="teacher"
-                                data-url="{{ route('teacher.teachers.institutions.select2') }}" data-placeholder="Select Teacher">
+                                data-url="{{ route('teacher.teachers.select2') }}" data-placeholder="Select Teacher">
             @if($assignSpecimen->teacher)
                      <option value="{{$assignSpecimen->teacher_id}}" selected>{{$assignSpecimen->teacher->teacher_name}}</option>
         @endif
