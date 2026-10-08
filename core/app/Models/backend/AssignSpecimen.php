@@ -25,6 +25,10 @@ class AssignSpecimen extends Model
     {
         return $this->belongsTo(Library::class);
     }
+    public function institution()
+    {
+        return $this->belongsTo(Institution::class);
+    }
     public function product()
     {
         return $this->belongsTo(Product::class);

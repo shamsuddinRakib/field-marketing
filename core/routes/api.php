@@ -16,7 +16,11 @@ use App\Http\Controllers\api\OfferController;
 use App\Http\Controllers\api\WebsiteSettingController;
 use App\Http\Controllers\api\OrderController;
 use App\Http\Controllers\api\ProductController;
+use App\Http\Controllers\api\AssignSpecimenController;
 use App\Http\Controllers\api\ProfileController;
+use App\Http\Controllers\api\TeacherController;
+use App\Http\Controllers\api\LibraryController;
+use App\Http\Controllers\api\InstitutionController;
 use App\Http\Controllers\api\MrAuthController;
 use App\Http\Controllers\api\SpotSaleController;
 use Illuminate\Http\Request;
@@ -100,6 +104,20 @@ Route::prefix('mr')->name('api.mr.')->group(function () {
         Route::get('/book-returns/{id}', [BookReturnController::class, 'show'])->name('book-returns.show');
         Route::put('/book-returns/{id}', [BookReturnController::class, 'update'])->name('book-returns.update');
         Route::delete('/book-returns/{id}', [BookReturnController::class, 'destroy'])->name('book-returns.destroy');
+
+
+        //Assign specimen (product delivery against teacher / library)
+        Route::get('/assign-specimens', [AssignSpecimenController::class, 'index'])->name('assign-specimens.index');
+        Route::post('/assign-specimens', [AssignSpecimenController::class, 'store'])->name('assign-specimens.store');
+        Route::get('/assign-specimens/{id}', [AssignSpecimenController::class, 'show'])->name('assign-specimens.show');
+        Route::put('/assign-specimens/{id}', [AssignSpecimenController::class, 'update'])->name('assign-specimens.update');
+        Route::delete('/assign-specimens/{id}', [AssignSpecimenController::class, 'destroy'])->name('assign-specimens.destroy');
+
+        //Dropdowns for delivery entry
+        Route::get('/teachers', [TeacherController::class, 'index'])->name('teachers.index');
+        Route::get('/libraries', [LibraryController::class, 'index'])->name('libraries.index');
+        Route::get('/institutions', [InstitutionController::class, 'index'])->name('institutions.index');
+        Route::get('/delivery-products', [ProductController::class, 'dropdown'])->name('delivery-products.index');
 
 
         //Fund_request
