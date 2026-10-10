@@ -23,7 +23,7 @@ class MrLocationController extends Controller
                 ->first();
         }
 
-        return view('backend.modules.mr_locations.map', compact(
+        return view('backend.modules.locations.map', compact(
             'mrs',
             'location'
         ));
