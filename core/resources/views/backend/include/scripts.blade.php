@@ -547,7 +547,7 @@
                         window.Swal && Swal.fire({
                             icon: 'error',
                             title: 'Failed',
-                            text:  xhr.responseJSON.msg?xhr.responseJSON.msg:'something went wrong'
+                            text: xhr.responseJSON?.msg || xhr.responseJSON?.message || 'Something went wrong'
                         });
                     }
                 })
