@@ -37,8 +37,6 @@
                         <div class="invalid-feedback d-block user_id-error" style="display:none"></div>
                     </div> -->
 
-                </div>
-
                     <div class="col-md-6">
                         <label class="form-label text-sm">Expense Name <span class="text-danger">*</span></label>
                         <input type="text" name="name" class="form-control form-control-sm radius-8"
