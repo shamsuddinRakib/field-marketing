@@ -90,6 +90,7 @@ Route::prefix('mr')->name('api.mr.')->group(function () {
         Route::delete('/expense-categories/{id}', [ExpenseCategoryController::class, 'destroy'])->name('expense-categories.destroy');
 
         //Expense
+        Route::get('/expenses', [ExpenseController::class, 'index'])->name('expenses.index');
         Route::post('/expenses', [ExpenseController::class, 'store'])->name('expenses.store');
 
         //Book_request

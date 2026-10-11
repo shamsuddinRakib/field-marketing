@@ -169,7 +169,7 @@ class ExpenseController extends Controller
         $data = $req->validate([
             'name'                        => 'required|string|max:255',
             'user_id'                     => 'required|integer|exists:users,id',
-            'daily_visit_id'                => 'required|integer|exists:daily_visits,id',
+            // 'daily_visit_id'                => 'required|integer|exists:daily_visits,id',
             'expense_date'                => 'required|date',
             'reference'                   => 'nullable|string|max:255',
             'description'                 => 'nullable|string|max:255',
@@ -199,7 +199,7 @@ class ExpenseController extends Controller
 
             /* ================= EXPENSE ================= */
             $expense = Expense::create([
-                'daily_visit_id' => $data['daily_visit_id'] ,
+                // 'daily_visit_id' => $data['daily_visit_id'] ,
                 'posted_at'    => now(),
                 'name'         => $data['name'],
                 'expense_date' => $data['expense_date'],
@@ -270,7 +270,7 @@ class ExpenseController extends Controller
             'items.category:id,name',
             'dailyVisit.user:id,name',
             'dailyVisit.teacher:id,teacher_name',
-            'dailyVisit.library:id,name',
+            'dailyVisit.library:id,library_name',
             // 'payment.paymentType:id,name',
         ]);
 
@@ -298,7 +298,7 @@ class ExpenseController extends Controller
 
         $data = $req->validate([
             'user_id'                     => 'required|integer|exists:users,id',
-            'daily_visit_id'              => 'required|integer|exists:daily_visits,id',
+            // 'daily_visit_id'              => 'required|integer|exists:daily_visits,id',
             'name'                        => 'required|string|max:255',
             'expense_date'                => 'required|date',
             'reference'                   => 'nullable|string|max:255',
@@ -327,7 +327,7 @@ class ExpenseController extends Controller
 
             /* ================= UPDATE EXPENSE ================= */
             $expense->update([
-                'daily_visit_id' => $data['daily_visit_id'],
+                // 'daily_visit_id' => $data['daily_visit_id'],
                 'name'           => $data['name'],
                 'invoice_no'     => $data['invoice_no'] ?? null,
                 'posted_at'      => $data['posted_at'] ?? null,
