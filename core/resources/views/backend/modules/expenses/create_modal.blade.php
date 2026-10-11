@@ -39,12 +39,19 @@
 
                 </div>
 
-                <div class="row g-3">
                     <div class="col-md-6">
                         <label class="form-label text-sm">Expense Name <span class="text-danger">*</span></label>
                         <input type="text" name="name" class="form-control form-control-sm radius-8"
                             placeholder="e.g. Office Monthly Expense" required>
                     </div>
+                </div>
+
+                <div class="row g-3">
+                    {{-- <div class="col-md-6">
+                        <label class="form-label text-sm">Expense Name <span class="text-danger">*</span></label>
+                        <input type="text" name="name" class="form-control form-control-sm radius-8"
+                            placeholder="e.g. Office Monthly Expense" required>
+                    </div> --}}
 
                     <div class="col-md-6">
                         <label class="form-label text-sm">Expense Date <span class="text-danger">*</span></label>
@@ -58,7 +65,7 @@
                             accept=".jpg,.jpeg,.png,.pdf,.doc,.docx">
                     </div>
 
-                    <div class="col-md-6">
+                    <div class="col-md-12 mb-20">
                         <label class="form-label text-sm">Description</label>
                         <input type="text" name="description" class="form-control form-control-sm radius-8"
                             placeholder="Optional note">

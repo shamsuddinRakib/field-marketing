@@ -259,7 +259,7 @@ class ExpenseController extends Controller
             'items.category:id,name',
             'dailyVisit.user:id,name',
             'dailyVisit.teacher:id,teacher_name',
-            'dailyVisit.library:id,name',
+            'dailyVisit.library:id,library_name',
             // 'payment.paymentType:id,name',
         ]);
 
