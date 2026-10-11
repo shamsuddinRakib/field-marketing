@@ -57,8 +57,8 @@
                 <label class="form-check-label">S.L</label>
               </div>
             </th>
-            <th>Expense</th>
-            <th>Reference</th>
+            <th>Representative</th>
+            <th>Expense Reason</th>
             <th>Expense Type</th>
             <th>Description</th>
             <th>Attachment</th>

@@ -27,7 +27,7 @@
                         </select>
                         <div class="invalid-feedback d-block user_id-error" style="display:none"></div>
                     </div>
-                    {{-- <div class="col-md-6 mb-20">
+                    <!-- <div class="col-md-6 mb-20">
 
                         <label class="form-label text-sm mb-8">Select Visit <span class="text-danger">*</span></label>
                         <select class="form-control form-control-sm  js-s2-ajax" name="daily_visit_id" id="visit"
@@ -35,7 +35,9 @@
 
                         </select>
                         <div class="invalid-feedback d-block user_id-error" style="display:none"></div>
-                    </div> --}}
+                    </div> -->
+
+                </div>
 
                     <div class="col-md-6">
                         <label class="form-label text-sm">Expense Name <span class="text-danger">*</span></label>
@@ -163,7 +165,7 @@
 <script>
     window.EXPENSE_INVOICE_URL = "{{ route('expenses.invoice', ':id') }}";
     window.ExpenseIndex = {
-        onSaved: function(res) {
+        onSaved: function (res) {
 
             // 🔹 Table reload
             if ($.fn.DataTable) {
@@ -178,31 +180,20 @@
         }
     };
 
-    // $('#user').on('change', function() {
-    //     const userId = $(this).val();
-    //     const $visitSelect = $('#visit');
-    //     console.log('Selected user_id:', userId);
 
 
-    //     if (userId) {
-    //         const newUrl = "{{ route('daily-visit.select2') }}?user_id=" + encodeURIComponent(userId);
-    //         window.S2.ajax($visitSelect, newUrl);
-
-    //     }
-    // });
-
-    (function() {
+    (function () {
 
         const $table = $('#expenseItemsTable tbody');
         let rowIndex = 1;
 
         /* ================= ADD ROW ================= */
-        $('#btnAddExpenseItem').on('click', function() {
+        $('#btnAddExpenseItem').on('click', function () {
 
             const $firstRow = $table.find('tr:first');
 
             // 1️⃣ destroy select2 before cloning
-            $firstRow.find('.select2-hidden-accessible').each(function() {
+            $firstRow.find('.select2-hidden-accessible').each(function () {
                 $(this).select2('destroy');
             });
 
@@ -210,7 +201,7 @@
             const $row = $firstRow.clone();
 
             // 3️⃣ fix name & clear values
-            $row.find('input, select').each(function() {
+            $row.find('input, select').each(function () {
                 const name = $(this).attr('name');
                 if (!name) return;
 
@@ -229,7 +220,7 @@
         });
 
         /* ================= REMOVE ROW ================= */
-        $table.on('click', '.btnRemoveRow', function() {
+        $table.on('click', '.btnRemoveRow', function () {
             if ($table.find('tr').length === 1) return;
             $(this).closest('tr').remove();
             calculateTotal();
@@ -240,7 +231,7 @@
 
         function calculateTotal() {
             let total = 0;
-            $('.expense-amount').each(function() {
+            $('.expense-amount').each(function () {
                 total += parseFloat($(this).val() || 0);
             });
 
@@ -249,13 +240,13 @@
         }
 
         // Form submit handlers
-        $('#btnSaveDraft').on('click', function() {
+        $('#btnSaveDraft').on('click', function () {
 
             $('#expenseStatus').val('draft');
             $('#expenseCreateForm').submit();
         });
 
-        $('#btnPostExpense').on('click', function() {
+        $('#btnPostExpense').on('click', function () {
             // Check if branch is selected
 
             $('#expenseStatus').val('posted');

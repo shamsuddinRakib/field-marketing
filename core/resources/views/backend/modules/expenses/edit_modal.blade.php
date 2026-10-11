@@ -30,23 +30,7 @@
                         <div class="invalid-feedback d-block user_id-error" style="display:none"></div>
                     </div>
 
-                    {{-- <div class="col-md-6 mb-20">
-                        <label class="form-label text-sm mb-8">Select Visit <span class="text-danger">*</span></label>
-                        <select class="form-control form-control-sm js-s2-ajax" name="daily_visit_id" id="visit"
-                            data-url="{{ route('daily-visit.select2') }}" data-placeholder="Select Daily Visit">
-                            @if ($expense->dailyVisit)
-                                <option value="{{ $expense->dailyVisit->id }}" selected>
-                                    {{ $expense->dailyVisit->teacher?->teacher_name ?? $expense->dailyVisit->library?->name ?? 'Daily Visit' }}
-                                </option>
-                            @endif
-                        </select>
-                        <div class="invalid-feedback d-block user_id-error" style="display:none"></div>
-                    </div> --}}
-                    <div class="col-md-6">
-                        <label class="form-label text-sm">Expense Name <span class="text-danger">*</span></label>
-                        <input type="text" name="name" class="form-control form-control-sm radius-8"
-                            value="{{ $expense->name }}" required>
-                    </div>
+                   
                 </div>
 
                 <div class="row g-3">
@@ -216,15 +200,7 @@
         }
     };
 
-    // $('#user').on('change', function() {
-    //     const userId = $(this).val();
-    //     const $visitSelect = $('#visit');
-
-    //     if (userId) {
-    //         const newUrl = "{{ route('daily-visit.select2') }}?user_id=" + encodeURIComponent(userId);
-    //         window.S2.ajax($visitSelect, newUrl);
-    //     }
-    // });
+  
 
     (function() {
 

@@ -24,21 +24,21 @@ class ExpenseController extends Controller
 
     public function listAjax(Request $request)
     {
-        $draw      = (int) $request->input('draw');
-        $start     = (int) $request->input('start', 0);
-        $length    = (int) $request->input('length', 10);
-        $orderDir  = strtolower($request->input('order.0.dir', 'desc')) === 'asc' ? 'asc' : 'desc';
+        $draw = (int) $request->input('draw');
+        $start = (int) $request->input('start', 0);
+        $length = (int) $request->input('length', 10);
+        $orderDir = strtolower($request->input('order.0.dir', 'desc')) === 'asc' ? 'asc' : 'desc';
         $searchVal = trim($request->input('search.value', ''));
         $branchAll = BranchScope::isAll();
-        $branchId  = current_branch_id();
+        $branchId = current_branch_id();
 
         $base = Expense::query()
-            ->with(['items.category:id,name'])
-            ->select(['id', 'name', 'reference', 'description', 'total_amount', 'status', 'attachment']);
+            ->with(['items.category:id,name', 'user:id,name'])
+            ->select(['id','user_id', 'name', 'reference', 'description', 'total_amount', 'status', 'attachment']);
 
-        if (! $branchAll && $branchId) {
+        if (!$branchAll && $branchId) {
             $base->where('branch_id', $branchId);
-        } elseif (! $branchAll && ! $branchId) {
+        } elseif (!$branchAll && !$branchId) {
             $base->whereRaw('1 = 0');
         }
 
@@ -125,8 +125,8 @@ class ExpenseController extends Controller
             // ---------------- TABLE ROW ----------------
             $data[] = [
                 $b->id,
+                e($b->user->name ?? '—'),
                 '<strong>' . e($b->name) . '</strong>',
-                e($b->reference ?? '—'),
                 e($categories ?: '—'),
                 e($b->description ?? '—'),
                 $attachmentCell,
@@ -137,10 +137,10 @@ class ExpenseController extends Controller
         }
 
         return response()->json([
-            'draw'                 => $draw,
-            'iTotalRecords'        => $total,
+            'draw' => $draw,
+            'iTotalRecords' => $total,
             'iTotalDisplayRecords' => $filtered,
-            'aaData'               => $data,
+            'aaData' => $data,
         ]);
     }
 
@@ -155,43 +155,32 @@ class ExpenseController extends Controller
 
     public function store(Request $req)
     {
-        // return $req->all();
-        // $branchId = current_branch_id();
-
-        // 🔒 Check if branch is properly selected
-        // if (!$branchId || $branchId === 0) {
-        //     return response()->json([
-        //         'ok'  => false,
-        //         'msg' => 'Please select a branch first',
-        //     ], 422);
-        // }
-
+        
         $data = $req->validate([
-            'name'                        => 'required|string|max:255',
-            'user_id'                     => 'required|integer|exists:users,id',
-            // 'daily_visit_id'                => 'required|integer|exists:daily_visits,id',
-            'expense_date'                => 'required|date',
-            'reference'                   => 'nullable|string|max:255',
-            'description'                 => 'nullable|string|max:255',
+            'name' => 'required|string|max:255',
+            'user_id' => 'required|integer|exists:users,id',
+            'expense_date' => 'required|date',
+            'reference' => 'nullable|string|max:255',
+            'description' => 'nullable|string|max:255',
 
-            'items'                       => 'required|array|min:1',
+            'items' => 'required|array|min:1',
             'items.*.expense_category_id' => 'required|integer|exists:expense_categories,id',
-            'items.*.description'         => 'nullable|string|max:255',
-            'items.*.amount'              => 'required|numeric|min:0.01',
+            'items.*.description' => 'nullable|string|max:255',
+            'items.*.amount' => 'required|numeric|min:0.01',
 
             // 'payment_type_id'             => 'nullable|integer|exists:payment_types,id',
-            'status'                      => 'required|in:draft,posted',
-            'attachment'                  => 'nullable|file|max:10240', // max 10MB
+            'status' => 'required|in:draft,posted',
+            'attachment' => 'nullable|file|max:10240', // max 10MB
         ]);
 
         // $this->assertExpenseCategoriesAreAccessible(collect($data['items'])->pluck('expense_category_id')->all());
 
-        $userId   = auth()->id();
+        $userId = auth()->id();
 
         // total from items (never trust frontend)
         $totalAmount = collect($data['items'])->sum('amount');
-
-        $attachmentPath =  uploadFile($data['attachment'], 'uploads/expense/attachments'); 
+        
+        $attachmentPath = uploadFile($data['attachment'], 'uploads/expense/attachments');
 
         DB::beginTransaction();
 
@@ -199,50 +188,50 @@ class ExpenseController extends Controller
 
             /* ================= EXPENSE ================= */
             $expense = Expense::create([
-                // 'daily_visit_id' => $data['daily_visit_id'] ,
-                'posted_at'    => now(),
-                'name'         => $data['name'],
+                'user_id' => $data['user_id'],
+                'posted_at' => now(),
+                'name' => $data['name'],
                 'expense_date' => $data['expense_date'],
-                'description'  => $data['description'],
+                'description' => $data['description'],
                 'total_amount' => $totalAmount,
-                'attachment'   => $attachmentPath,
-                'status'       => $data['status'],
-                'created_by'   => $userId,
+                'attachment' => $attachmentPath,
+                'status' => $data['status'],
+                'created_by' => $userId,
             ]);
 
             /* ================= ITEMS ================= */
             foreach ($data['items'] as $item) {
                 ExpenseItem::create([
-                    'expense_id'          => $expense->id,
+                    'expense_id' => $expense->id,
                     'expense_category_id' => $item['expense_category_id'],
-                    'description'         => $item['description'] ?? null,
-                    'amount'              => $item['amount'],
+                    'description' => $item['description'] ?? null,
+                    'amount' => $item['amount'],
                 ]);
             }
 
 
             /* ================= JOURNAL ENTRY ================= */
-             if ($data['status'] === 'posted') {
-            
+            if ($data['status'] === 'posted') {
+
                 CurrentFund::updateOrCreate(
                     [
                         'user_id' => $data['user_id'],
                     ],
                     [
-                        'balance' =>  DB::raw('balance - ' . $totalAmount),
+                        'balance' => DB::raw('balance - ' . $totalAmount),
                         'updated_at' => now(),
                     ]
                 );
-           
+
             }
 
             DB::commit();
 
             return response()->json([
-                'ok'   => true,
-                'msg'  => 'Expense saved successfully',
+                'ok' => true,
+                'msg' => 'Expense saved successfully',
                 'data' => [
-                    'id'     => $expense->id,
+                    'id' => $expense->id,
                     'status' => $expense->status,
                 ],
             ]);
@@ -252,7 +241,7 @@ class ExpenseController extends Controller
             DB::rollBack();
 
             return response()->json([
-                'ok'  => false,
+                'ok' => false,
                 'msg' => $e->getMessage(),
             ], 500);
         }
@@ -291,32 +280,31 @@ class ExpenseController extends Controller
         // 🔒 Posted expense cannot be modified
         if ($expense->status === 'posted') {
             return response()->json([
-                'ok'  => false,
+                'ok' => false,
                 'msg' => 'Posted expense cannot be modified',
             ], 422);
         }
 
         $data = $req->validate([
-            'user_id'                     => 'required|integer|exists:users,id',
-            // 'daily_visit_id'              => 'required|integer|exists:daily_visits,id',
-            'name'                        => 'required|string|max:255',
-            'expense_date'                => 'required|date',
-            'reference'                   => 'nullable|string|max:255',
-            'description'                 => 'nullable|string|max:255',
+            'user_id' => 'required|integer|exists:users,id',
+            'name' => 'required|string|max:255',
+            'expense_date' => 'required|date',
+            'reference' => 'nullable|string|max:255',
+            'description' => 'nullable|string|max:255',
 
-            'items'                       => 'required|array|min:1',
+            'items' => 'required|array|min:1',
             'items.*.expense_category_id' => 'required|integer|exists:expense_categories,id',
-            'items.*.description'         => 'nullable|string|max:255',
-            'items.*.amount'              => 'required|numeric|min:0.01',
+            'items.*.description' => 'nullable|string|max:255',
+            'items.*.amount' => 'required|numeric|min:0.01',
 
             // 'payment_type_id'             => 'nullable|integer|exists:payment_types,id',
-            'status'                      => 'required|in:draft,posted',
-            'attachment'                  => 'nullable|file|max:10240',
+            'status' => 'required|in:draft,posted',
+            'attachment' => 'nullable|file|max:10240',
         ]);
 
         // $this->assertExpenseCategoriesAreAccessible(collect($data['items'])->pluck('expense_category_id')->all());
 
-        $userId   = auth()->id();
+        $userId = auth()->id();
 
         $totalAmount = collect($data['items'])->sum('amount');
         $attachmentPath = $req->hasFile('attachment') ? uploadFile($req->file('attachment'), 'uploads/expense/attachments') : $expense->attachment;
@@ -327,16 +315,16 @@ class ExpenseController extends Controller
 
             /* ================= UPDATE EXPENSE ================= */
             $expense->update([
-                // 'daily_visit_id' => $data['daily_visit_id'],
-                'name'           => $data['name'],
-                'invoice_no'     => $data['invoice_no'] ?? null,
-                'posted_at'      => $data['posted_at'] ?? null,
-                'expense_date'   => $data['expense_date'],
-                'reference'      => $data['reference']?? null,
-                'description'    => $data['description'],
-                'attachment'     => $attachmentPath,
-                'total_amount'   => $totalAmount,
-                'status'         => $data['status'],
+                'user_id' => $data['user_id'],
+                'name' => $data['name'],
+                'invoice_no' => $data['invoice_no'] ?? null,
+                'posted_at' => $data['posted_at'] ?? null,
+                'expense_date' => $data['expense_date'],
+                'reference' => $data['reference'] ?? null,
+                'description' => $data['description'],
+                'attachment' => $attachmentPath,
+                'total_amount' => $totalAmount,
+                'status' => $data['status'],
             ]);
 
             /* ================= RESET ITEMS ================= */
@@ -345,35 +333,35 @@ class ExpenseController extends Controller
             foreach ($data['items'] as $item) {
                 $expense->items()->create([
                     'expense_category_id' => $item['expense_category_id'],
-                    'description'         => $item['description'] ?? null,
-                    'amount'              => $item['amount'],
+                    'description' => $item['description'] ?? null,
+                    'amount' => $item['amount'],
                 ]);
             }
 
-       
+
 
             /* ================= POSTING (JOURNAL) ================= */
             if ($data['status'] === 'posted') {
 
-             CurrentFund::updateOrCreate(
-                [
-                    'user_id' => $data['user_id'],
-                ],
-                [
-                    'balance' =>  DB::raw('balance - ' . $totalAmount),
-                    'updated_at' => now(),
-                ]
+                CurrentFund::updateOrCreate(
+                    [
+                        'user_id' => $data['user_id'],
+                    ],
+                    [
+                        'balance' => DB::raw('balance - ' . $totalAmount),
+                        'updated_at' => now(),
+                    ]
                 );
 
-            
+
             }
 
             DB::commit();
 
             return response()->json([
-                'ok'  => true,
+                'ok' => true,
                 'msg' => 'Expense updated successfully',
-                'id'  => $expense->id,
+                'id' => $expense->id,
             ]);
 
         } catch (\Throwable $e) {
@@ -381,7 +369,7 @@ class ExpenseController extends Controller
             DB::rollBack();
 
             return response()->json([
-                'ok'  => false,
+                'ok' => false,
                 'msg' => $e->getMessage(),
             ], 500);
         }
@@ -421,7 +409,7 @@ class ExpenseController extends Controller
     public function select2(Request $r)
     {
 
-        $q    = trim($r->input('q', ''));
+        $q = trim($r->input('q', ''));
         $type = $r->type;
         $base = Expense::query()->where('category_type_id', $type)->where('is_active', 1);
 
@@ -436,7 +424,7 @@ class ExpenseController extends Controller
 
         return response()->json([
             'results' => $items->map(fn($t) => [
-                'id'   => $t->id,
+                'id' => $t->id,
                 'text' => $t->name,
             ]),
         ]);
@@ -451,19 +439,19 @@ class ExpenseController extends Controller
             // Check if already posted
             if ($expense->status === 'posted') {
                 return response()->json([
-                    'ok'  => false,
+                    'ok' => false,
                     'msg' => 'Expense is already posted',
                 ], 422);
             }
 
-          
-            $userId   = auth()->id();
+
+            $userId = auth()->id();
 
             DB::beginTransaction();
 
             // Update status
             $expense->update([
-                'status'    => 'posted',
+                'status' => 'posted',
                 'posted_at' => now(),
             ]);
 
@@ -472,18 +460,18 @@ class ExpenseController extends Controller
                     'user_id' => $expense->dailyVisit->user_id,
                 ],
                 [
-                    'balance' =>  DB::raw('balance - ' . $expense->total_amount),
+                    'balance' => DB::raw('balance - ' . $expense->total_amount),
                     'updated_at' => now(),
                 ]
-                );
-          
+            );
+
             DB::commit();
 
             return response()->json([
-                'ok'   => true,
-                'msg'  => 'Expense posted successfully',
+                'ok' => true,
+                'msg' => 'Expense posted successfully',
                 'data' => [
-                    'id'     => $expense->id,
+                    'id' => $expense->id,
                     'status' => $expense->status,
                 ],
             ]);
@@ -492,7 +480,7 @@ class ExpenseController extends Controller
             DB::rollBack();
 
             return response()->json([
-                'ok'  => false,
+                'ok' => false,
                 'msg' => $e->getMessage(),
             ], 500);
         }
@@ -502,7 +490,7 @@ class ExpenseController extends Controller
     {
         $categoryIds = collect($categoryIds)
             ->filter()
-            ->map(fn ($id) => (int) $id)
+            ->map(fn($id) => (int) $id)
             ->unique()
             ->values();
 
