@@ -9,6 +9,7 @@ use App\Models\backend\Expense;
 use App\Models\backend\ExpenseItem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
 class ExpenseController extends Controller
 {
@@ -150,7 +151,8 @@ class ExpenseController extends Controller
             'expense_date' => ['required', 'date'],
             'description' => ['nullable', 'string'],
             'status' => ['required', 'in:draft,posted,cancelled'],
-            'attachment' => ['nullable', 'file', 'mimes:jpg,jpeg,png,gif,webp,pdf,doc,docx,xls,xlsx,csv,txt', 'max:10240'],
+            // 'attachment' => ['nullable', 'file', 'mimes:jpg,jpeg,png,gif,webp,pdf,doc,docx,xls,xlsx,csv,txt', 'max:10240'],
+            'attachment' => ['nullable', 'string'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.expense_category_id' => ['required', 'integer', 'exists:expense_categories,id'],
             'items.*.description' => ['nullable', 'string'],
@@ -161,22 +163,25 @@ class ExpenseController extends Controller
             return (float) $item['amount'];
         });
 
-        $attachmentPath = null;
+        // $attachmentPath = null;
 
-        if ($request->hasFile('attachment')) {
-            $attachmentPath = $request->file('attachment')
-                ->store('expenses', 'public');
-        }
-
+        // if ($request->hasFile('attachment')) {
+        //     $attachmentPath = $request->file('attachment')
+        //         ->store('expenses', 'public');
+        // }
+        $attachmentPath = $request->attachment;
+        
         $expense = DB::transaction(function () use (
             $request,
             $totalAmount,
             $attachmentPath
         ) {
             $expense = Expense::create([
-                'posted_at' => $request->posted_at,
+                // 'posted_at' => $request->posted_at,
+                'posted_at' => $request->filled('posted_at') ? Carbon::parse($request->posted_at)->format('Y-m-d H:i:s') : null,
                 'name' => $request->name,
-                'expense_date' => $request->expense_date,
+                // 'expense_date' => $request->expense_date,
+                'expense_date' => Carbon::parse($request->expense_date)->format('Y-m-d'),
                 'description' => $request->description,
                 'total_amount' => $totalAmount,
                 'status' => $request->status,
