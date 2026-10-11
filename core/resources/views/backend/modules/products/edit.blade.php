@@ -116,12 +116,17 @@
                                         <div class="invalid-feedback d-block category_id-error" style="display:none">
                                         </div>
                                     </div>
+
+                                    
                                     <div class="col-md-3 mb-16">
                                         <label class="form-label text-sm mb-8">Sub-Category</label>
                                         <select name="subcategory_id" id="subcategory"
                                             class="form-control js-category-select">
+                                            @if($product->subcategory)
                                             <option value="{{ $product->subcategory_id }}" selected>
                                                 {{ $product->subcategory->name }}</option>
+                                                @endif
+                                                
                                         </select>
                                         <div class="invalid-feedback d-block category_id-error" style="display:none">
                                         </div>
@@ -215,199 +220,12 @@
                                         </div>
                                     </div>
 
-                                    {{-- <div class="col-lg-3 col-sm-6 col-12">
-                                        <div class="mb-3 ">
-                                            <label class="form-label">Materials<span class="star-sign">*</span></label>
-                                            <input type="text" class="form-control" name="material"
-                                                value="{{ $product->material }}">
-                                        </div>
-                                    </div> --}}
-
-                                    <div class="col-lg-3 col-sm-6 col-12 col">
-                                        <label for="has_variant" class="form-label">Has Variant?</label>
-                                        <select class="form-select " name="has_variant" id="has_variant">
-                                            <option value="0" {{ $product->has_variants == 0 ? 'selected' : '' }}>No
-                                            </option>
-                                            <option value="1" {{ $product->has_variants == 1 ? 'selected' : '' }}>Yes
-                                            </option>
-
-                                        </select>
-
-                                    </div>
-
-                                    {{-- <div class="col-lg-3 col-sm-6 col-12 col" id="variant_type_div">
-                                        <label for="has_variant" class="form-label">Variant Type</label>
-                                        <select class="form-select " name="variant_type" id="variant_type">
-                                            <option value="cloth" {{ $product->has_variants === 'cloth' ? 'selected' : '' }}>
-                                                Cloth</option>
-                                            <option value="book" {{ $product->has_variants === 'book' ? 'selected' : '' }}>
-                                                Book</option>
-
-                                        </select>
-
-                                    </div> --}}
-
-                                    {{-- <div class="row"> --}}
-                                    @if ($products->get(0)?->color_id != null)
-                                        <div class="col-lg-3 col-sm-6 col-12 " id="color_div">
-                                            <label class="form-label text-sm mb-8">Color</label>
-
-                                            <select name="color_id[]" id="color" multiple
-                                                class="form-control js-color-type-select ">
-                                                @if ($colors->isNotEmpty())
-                                                    @foreach ($colors as $color)
-                                                        <option value="{{ $color->color_id ?? null }}" selected>
-                                                            {{ $color->color->name ?? null }}</option>
-                                                    @endforeach
-                                                @endif
-                                            </select>
-                                            <div class="invalid-feedback d-block color_type_id-error"
-                                                style="display:none">
-                                            </div>
-                                        </div>
-                                    @endif
-                                    @if ($products->get(0)?->size_id != null)
-                                        <div class="col-lg-3 col-sm-6 col-12" id="size_div">
-                                            <label class="form-label text-sm mb-8">Size</label>
-                                            @if ($sizes->isNotEmpty())
-                                                <select name="size_id[]" id="size" multiple
-                                                    class="form-control js-color-type-select">
-                                                    @foreach ($sizes as $size)
-                                                        <option value="{{ $size->size_id ?? null }}" selected>
-                                                            {{ $size->size->code ?? null }}</option>
-                                                    @endforeach
-                                                </select>
-                                            @endif
-                                            <div class="invalid-feedback d-block color_type_id-error"
-                                                style="display:none">
-                                            </div>
-                                        </div>
-                                    @endif
-                                    @if ($products->get(0)?->paper_id != null)
-                                        <div class="col-lg-3 col-sm-6 col-12" id="paper_div">
-                                            <label class="form-label text-sm mb-8">Paper Quality</label>
-                                            {{-- @if ($papers->isNotEmpty()) --}}
-                                            <select name="paper_id[]" id="paper" multiple
-                                                class="form-control js-color-type-select">
-
-                                                @foreach ($products as $product)
-                                                    <option value="{{ $product->paper_id ?? null }}" selected>
-                                                        {{ $product->paper_quality->name }} </option>
-                                                @endforeach
-                                            </select>
-                                            {{-- @endif --}}
-                                            <div class="invalid-feedback d-block color_type_id-error"
-                                                style="display:none">
-                                            </div>
-                                        </div>
-                                    @endif
-
-                                    {{-- <div class="col-12 row shadow-lg m-auto rounded mb-3 dark-mode p-3 mt-5">
-
-                                        <h6>Existing Variants</h6>
-                                        @foreach ($products as $product)
-                                            <div class="col-lg-12 row mb-2 g-2">
-                                                <div class="col-lg-2">
-                                                    <label class="form-label">Name</label>
-                                                    <input class="form-control" name="child_name[]"
-                                                        value="{{ $product->name }}" id="child_name">
-                                                    <input class="form-control" hidden name="child_id[]"
-                                                        value="{{ $product->id }}">
-                                                </div>
-
-                                                <div class="col-lg-2">
-                                                    <label class="form-label">Color</label>
-                                                    <input class="form-control" value="{{ $product->color->name ?? null }}"
-                                                        readonly>
-                                                    <input type="hidden" name="child_color_id[]"
-                                                        value="{{ $product->color_id ?? null }}">
-                                                </div>
-
-                                                <div class="col-lg-2">
-                                                    <label class="form-label">Size</label>
-                                                    <input class="form-control" value="{{ $product->size->name ?? null }}"
-                                                        readonly>
-                                                    <input type="hidden" name="child_size_id[]"
-                                                        value="{{ $product->size_id ?? null }}">
-                                                </div>
-
-
-
-                                                <div class="col-lg-2">
-                                                    <label class="form-label">SKU</label>
-                                                    <input class="form-control" name="child_sku[]"
-                                                        value="{{ $product->sku }}" id="child_sku">
-                                                </div>
-
-                                                <div class="col-lg-2">
-                                                    <label class="form-label">Price</label>
-                                                    <input type="number" min="0" class="form-control"
-                                                        name="child_price[]" value="{{ $product->price }}"
-                                                        id="child_price">
-                                                </div>
-                                            </div>
-                                        @endforeach
-                                    </div> --}}
-
-                                    <div class="col-12 row shadow-lg m-auto rounded mb-3 dark-mode p-3 mt-5"
-                                        id="child_products"></div>
+                        
 
 
                                     <div class="col-lg-12 row mt-10">
-                                        <div class="my-3 text-lg fw-bold text-gray-900">Product Specifications</div>
+                                       
 
-                                        <div class="col-lg-3 col-sm-6 col-12">
-                                            <div class="mb-3 ">
-                                                <label class="form-label">Materials</label>
-                                                <input type="text" class="form-control" name="material" value="{{ $product->specifications->material ?? '' }}">
-                                            </div>
-                                        </div>
-                                        <div class="col-lg-3 col-sm-6 col-12">
-                                            <div class="mb-3 ">
-                                                <label class="form-label">Weight(gsm)</label>
-                                                <input type="text" class="form-control" name="weight" value="{{ $product->specifications->weight_gsm ?? '' }}">
-                                            </div>
-                                        </div>
-                                        <div class="col-lg-3 col-sm-6 col-12">
-                                            <div class="mb-3 ">
-                                                <label class="form-label">Fabric Weave</label>
-                                                <input type="text" class="form-control" name="fabric_weave" value="{{ $product->specifications->fabric_weave ?? '' }}">
-                                            </div>
-                                        </div>
-                                        <div class="col-lg-3 col-sm-6 col-12">
-                                            <div class="mb-3 ">
-                                                <label class="form-label">Fabric Type</label>
-                                                <input type="text" class="form-control" name="fabric_type" value="{{ $product->specifications->fabric_type ?? '' }}">
-                                            </div>
-                                        </div>
-                                        <div class="col-lg-3 col-sm-6 col-12">
-                                            <div class="mb-3 ">
-                                                <label class="form-label">Origin Country</label>
-                                                <input type="text" class="form-control" name="origin_country" value="{{ $product->specifications->origin_country ?? '' }}">
-                                            </div>
-                                        </div>
-                                        <div class="col-lg-3 col-sm-6 col-12">
-                                            <div class="mb-3 ">
-                                                <label class="form-label">Care Instraction</label>
-                                                <input type="text" class="form-control" name="care_instructions" value="{{ $product->specifications->care_instruction ?? '' }}">
-                                            </div>
-                                        </div>
-
-                                        <div class="col-lg-3 col-sm-6 col-12 col">
-                                            <label for="durability_rating" class="form-label">Durability Rating</label>
-                                            <select class="form-select " name="durability_rating">
-                                                <option value="Standard" {{ $product->specifications->durability_rating == 'Standard' ? 'selected' : '' }}>Standard</option>
-                                                <option value="High" {{ $product->specifications->durability_rating == 'High' ? 'selected' : '' }}>High</option>
-                                                <option value="Premium" {{ $product->specifications->durability_rating == 'Premium' ? 'selected' : '' }}>Premium</option>
-                                            </select>
-                                        </div>
-
-                                        <div class="col-lg-3 col-sm-6 col-12">
-                                            <div class="mb-3 ">
-                                                <label class="form-label">Transparency Text</label>
-                                                <input type="text" class="form-control" name="transparency_text" value="{{ $product->specifications->transparency_text ?? '' }}">
-                                            </div>
-                                        </div>
                                         <div class="col-lg-6 col-sm-6 col-12 ">
                                             <div class="">
                                                 <label class="form-label ">Description</label>
@@ -430,9 +248,9 @@
 
                                 </div>
                                 <div class="row">
-                                    <div class="my-3">Image Section</div>
+                                    <div class="my-3 fw-bold mt-5">Image Section</div>
 
-                                    <div class="col-12 row  m-auto rounded mb-3 dark-mode p-3 mt-5">
+                                    <div class="col-12 row  m-auto rounded mb-3 dark-mode p-3 mt-">
 
                                         
                                         <div class="col-lg-3 col-sm-6 col-12">
@@ -451,7 +269,7 @@
                                         </div>
                                         <div class="col-lg-6 col-sm-6 col-12 ">
                                             <div class="mb-3">
-                                                <label class="form-label">Image<span class="star-sign">*</span><small
+                                                <label class="form-label">Images <small
                                                         class="text-muted">(Max: 2MB)</small></label>
                                                 <input type="hidden" name="remove_image" id="remove_image"
                                                     value="0">
@@ -464,19 +282,7 @@
                                             </div>
                                         </div>
 
-                                        {{-- size chart image --}}
-                                        <div class="col-lg-3 col-sm-6 col-12">
-                                            <div class="mb-3">
-                                                <label class="form-label">Measurement Chart<span class="star-sign">*</span><small class="text-muted">(Max: 2MB)</small></label>
-                                                <input type="hidden" name="remove_size_chart_image" id="remove_size_chart_image" value="0">
-                                                <div class="form-group">
-                                                    <div class="row" id="size_chart_image">
-
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-
+                                 
                                         <div class="row">
                                             <div class="col-12 mb-8">
                                                 <label class="form-label text-sm mb-8">Active?</label>
@@ -598,27 +404,10 @@
     <script>
         $(document).ready(function() {
 
-            function showChildDiv() {
-                if ($('#has_variant').val() == 1) {
-                    $('#child_products').removeClass('d-none');
-                } else {
-                    $('#child_products').addClass('d-none');
-
-                }
-            }
-            showChildDiv();
-            $('#has_variant').on('change', showChildDiv);
+       
 
             const products = @json($products);
 
-            function variantExists(color = null, size = null, paper = null) {
-                for (let p of products) {
-                    if (p.color_id == color && p.size_id == size && p.paper_id == paper) {
-                        return p; // returns from the outer function
-                    }
-                }
-                return null; // not found
-            }
 
 
             function generateSku() {
@@ -628,189 +417,7 @@
             }
             $('#name').on('input', generateSku);
 
-            function appendChildProduct() {
-                $('#child_products').empty();
-                $('#child_products').append(`<h6>Product Variants</h6>`);
-
-                const colorIds = $('#color').val() || [];
-                const sizeIds = $('#size').val() || [];
-                const paperIds = $('#paper').val() || [];
-
-
-                const colorNames = $('#color option:selected').map(function() {
-                    return $(this).text();
-                }).get();
-
-                const sizeNames = $('#size option:selected').map(function() {
-                    return $(this).text();
-                }).get();
-                const paperNames = $('#paper option:selected').map(function() {
-                    return $(this).text();
-                }).get();
-
-                const name = $('#name').val();
-                const price = parseFloat($('#sale_price').val());
-
-                const parentSKU = $('#sku').val() || 'SKU'; // fallback if empty
-
-                if (colorIds.length > 0 && sizeIds.length > 0) {
-                    colorIds.forEach((colorId, i) => {
-
-                        sizeIds.forEach((sizeId, j) => {
-                            const oldChild = variantExists(colorId, sizeId, null) ?? null;
-                            const childSKU =
-                                `${parentSKU}-${colorNames[i].trim().slice(0,3).toUpperCase()}-${sizeNames[j].trim()}`;
-                            $('#child_products').append(`
-                    <div class="col-lg-12 row mb-2 g-2">
-                        <div class="col-lg-2">
-                            <label class="form-label">Name</label>
-                            <input class="form-control" name="child_name[]" value="${name+'-'+colorNames[i].trim()+'-'+sizeNames[j].trim()}">
-                              <input type="hidden" name="child_id[]" value="${oldChild?.id??null}">
-                        </div>
-
-                        <div class="col-lg-2">
-                            <label class="form-label">Color</label>
-                            <input class="form-control" value="${colorNames[i].trim()}" readonly>
-                            <input type="hidden" name="child_color_id[]" value="${colorId}">
-                           
-                        </div>
-
-                        <div class="col-lg-2">
-                            <label class="form-label">Size</label>
-                            <input class="form-control" value="${sizeNames[j].trim()}" readonly>
-                            <input type="hidden" name="child_size_id[]" value="${sizeId}">
-                        </div>
-
-                       
-
-                          <div class="col-lg-2">
-                            <label class="form-label">SKU</label>
-                            <input class="form-control" name="child_sku[]" value="${childSKU}" >
-                        </div>
-
-                          <div class="col-lg-2">
-                            <label class="form-label">Price</label>
-                            <input type="text" min="0" class="form-control price" step="0.01" name="child_price[]" value="${oldChild?.price??price.toFixed(2)}">
-                        </div>
-                        
-                    </div>
-                `);
-                        });
-
-                    });
-
-                } else if (colorIds.length > 0) {
-
-                    colorIds.forEach((colorId, i) => {
-                        const oldChild = variantExists(colorId, null, null) ?? null;
-                        const childSKU = `${parentSKU}-${colorNames[i].trim().slice(0,2).toUpperCase()}`;
-                        $('#child_products').append(`
-                <div class="col-lg-12 row mb-2 g-2">
-                    <div class="col-lg-2">
-                        <label class="form-label">Name</label>
-                        <input class="form-control" name="child_name[]" value="${name+'-'+colorNames[i].trim()}">
-                          <input type="hidden" name="child_id[]" value="${oldChild?.id??null}">
-                    </div>
-
-                    <div class="col-lg-2">
-                        <label class="form-label">Color</label>
-                        <input class="form-control" value="${colorNames[i].trim()}" readonly>
-                        <input type="hidden" name="child_color_id[]" value="${colorId}">
-                    </div>
-
-
-                  
-
-                      <div class="col-lg-2">
-                        <label class="form-label">SKU</label>
-                        <input class="form-control" name="child_sku[]" value="${childSKU}" >
-                    </div>
-
-                      <div class="col-lg-2">
-                        <label class="form-label">Price</label>
-                        <input type="number" min="0" class="form-control price" step="0.01" name="child_price[]" value="${oldChild?.price?? price}">
-                    </div>
-
-                </div>
-            `);
-                    });
-
-                } else if (sizeIds.length > 0) {
-                    sizeIds.forEach((sizeId, j) => {
-                        const oldChild = variantExists(null, sizeId, null) ?? null;
-                        const childSKU = `${parentSKU}-${sizeNames[j]}`;
-                        $('#child_products').append(`
-                <div class="col-lg-12 row mb-2 g-2">
-                    <div class="col-lg-2">
-                        <label class="form-label">Name</label>
-                        <input class="form-control" name="child_name[]" value="${name+'-'+sizeNames[j].trim()}">
-                          <input type="hidden" name="child_id[]" value="${oldChild?.id??null}">
-                    </div>
-
-                    <div class="col-lg-2">
-                        <label class="form-label">Size</label>
-                        <input class="form-control" value="${sizeNames[j].trim()}" readonly>
-                        <input type="hidden" name="child_size_id[]" value="${sizeId}">
-                    </div>
-
-                    
-
-                    <div class="col-lg-2">
-                        <label class="form-label">SKU</label>
-                        <input class="form-control" name="child_sku[]" value="${childSKU}" >
-                    </div>
-
-                    <div class="col-lg-2">
-                        <label class="form-label">Price</label>
-                        <input type="number" min="0" class="form-control price" step="0.01" name="child_price[]" value="${oldChild?.price??price}">
-                    </div>
-                </div>
-            `);
-                    });
-                } else if (paperIds.length > 0) {
-                    console.log(paperIds.length);
-                    paperIds.forEach((paper, j) => {
-                        const oldChild = variantExists(null, null, paper) ?? null;
-
-                        const childSKU = `${parentSKU}-${paperNames[j].trim().slice(0,2).toUpperCase()}`;
-                        $('#child_products').append(`
-                <div class="col-lg-12 row mb-2 g-2">
-                    <div class="col-lg-2">
-                        <label class="form-label">Name</label>
-                        <input class="form-control" name="child_name[]" value="${name+'-'+paperNames[j].trim()}">
-                         <input type="hidden" name="child_id[]" value="${oldChild?.id??null}">
-                    </div>
-
-                    <div class="col-lg-2">
-                        <label class="form-label">Paper Quality</label>
-                        <input class="form-control" value="${paperNames[j].trim()}" readonly>
-                        <input type="hidden" name="child_paper_id[]" value="${paper}">
-                    </div>
-
-                    
-
-                    <div class="col-lg-2">
-                        <label class="form-label">SKU</label>
-                        <input class="form-control" name="child_sku[]" value="${childSKU}" >
-                    </div>
-
-                    <div class="col-lg-2">
-                        <label class="form-label">Price</label>
-                        <input type="number" min="0" step="0.01" class="form-control price" name="child_price[]" value="${oldChild?.price??price}">
-                    </div>
-                </div>`);
-
-                    });
-                }
-                // console.log(paperIds.length);
-            }
-
-            appendChildProduct();
-            //    , #discount_value,#discount_type, #sku, #name,#variant_type,#paper,#sale_price
-
-            // Trigger updates dynamically
-            $('#color, #size,#paper,#name').on(
-                'change input', appendChildProduct);
+     
 
             $('#mrp,#discount_type,#discount_value').on('input change', function() {
                 setTimeout(changePrice, 0); // wait one microtask
@@ -854,31 +461,7 @@
 
             $('#mrp,#discount_type,#discount_value').on('input', calculatePrice);
 
-            function handleVariant() {
-                if ($('#has_variant').val() == '0') {
-                    $('#color_div,#size_div,#paper_div,#variant_type_div').addClass('d-none');
-                    $('#size,color,paper').attr('disabled', 'disabled');
-                } else {
-                    $('#variant_type_div').removeClass('d-none');
-
-
-                    if ($('#variant_type').val() == 'cloth') {
-
-                        $('#color_div,#size_div').removeClass('d-none');
-                        $('#color,#size').removeAttr('disabled');
-                        $('#paper_div').addClass('d-none');
-                    } else {
-                        $('#paper_div').removeClass('d-none');
-                        $('#paper').removeAttr('disabled');
-                        $('#color_div,#size_div').addClass('d-none');
-                    }
-
-
-                }
-            }
-            //  handleVariant();
-
-            //  $('#has_variant,#variant_type').on('change', handleVariant);
+         
 
 
             $('#category_type').select2({

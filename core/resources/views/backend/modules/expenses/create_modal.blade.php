@@ -7,7 +7,8 @@
 {{-- ================= MODAL BODY ================= --}}
 <div class="modal-body px-24 py-16">
 
-    <form id="expenseCreateForm" action="{{ route('expenses.store') }}" method="POST" enctype="multipart/form-data" data-ajax="true" data-branch-id="{{ current_branch_id() }}">
+    <form id="expenseCreateForm" action="{{ route('expenses.store') }}" method="POST" enctype="multipart/form-data"
+        data-ajax="true" data-branch-id="{{ current_branch_id() }}">
 
         @csrf
 
@@ -16,26 +17,27 @@
             <div class="card-body">
 
                 <h6 class="mb-12 fw-semibold">Expense Information</h6>
-<div class="row g-3">
-                <div class="col-md-6 mb-20">
-        <label class="form-label text-sm mb-8">Select <span class="text-danger">*</span></label>
-       <select class="form-control form-control-sm  js-s2-ajax" name="user_id" id="user"
-                                data-url="{{ route('marketing-representative.marketing-representatives.select2') }}" data-placeholder="Select Marketing Reprenstative">
+                <div class="row g-3">
+                    <div class="col-md-6 mb-20">
+                        <label class="form-label text-sm mb-8">Select <span class="text-danger">*</span></label>
+                        <select class="form-control form-control-sm  js-s2-ajax" name="user_id" id="user"
+                            data-url="{{ route('marketing-representative.marketing-representatives.select2') }}"
+                            data-placeholder="Select Marketing Reprenstative">
 
-          </select>
-        <div class="invalid-feedback d-block user_id-error" style="display:none"></div>
-</div>
-<div class="col-md-6 mb-20">
+                        </select>
+                        <div class="invalid-feedback d-block user_id-error" style="display:none"></div>
+                    </div>
+                    <!-- <div class="col-md-6 mb-20">
 
-        <label class="form-label text-sm mb-8">Select Visit <span class="text-danger">*</span></label>
-       <select class="form-control form-control-sm  js-s2-ajax" name="daily_visit_id" id="visit"
-                                data-url="{{ route('daily-visit.select2') }}" data-placeholder="Select Daily Visit">
+                        <label class="form-label text-sm mb-8">Select Visit <span class="text-danger">*</span></label>
+                        <select class="form-control form-control-sm  js-s2-ajax" name="daily_visit_id" id="visit"
+                            data-url="{{ route('daily-visit.select2') }}" data-placeholder="Select Daily Visit">
 
-          </select>
-        <div class="invalid-feedback d-block user_id-error" style="display:none"></div>
-      </div>
+                        </select>
+                        <div class="invalid-feedback d-block user_id-error" style="display:none"></div>
+                    </div> -->
 
-      </div>
+                </div>
 
                 <div class="row g-3">
                     <div class="col-md-6">
@@ -156,7 +158,7 @@
 <script>
     window.EXPENSE_INVOICE_URL = "{{ route('expenses.invoice', ':id') }}";
     window.ExpenseIndex = {
-        onSaved: function(res) {
+        onSaved: function (res) {
 
             // 🔹 Table reload
             if ($.fn.DataTable) {
@@ -165,37 +167,26 @@
 
             const expenseId = res?.data?.id || res?.id;
 
-       
+
             // 🔹 Close modal
             $('.modal').modal('hide');
         }
     };
 
-    $('#user').on('change', function() {
-        const userId = $(this).val();
-        const $visitSelect = $('#visit');
-        console.log('Selected user_id:', userId);
 
 
-        if (userId) {
-            const newUrl = "{{ route('daily-visit.select2') }}?user_id=" + encodeURIComponent(userId);
-            window.S2.ajax($visitSelect, newUrl);
-           
-        }
-    });
-
-    (function() {
+    (function () {
 
         const $table = $('#expenseItemsTable tbody');
         let rowIndex = 1;
 
         /* ================= ADD ROW ================= */
-        $('#btnAddExpenseItem').on('click', function() {
+        $('#btnAddExpenseItem').on('click', function () {
 
             const $firstRow = $table.find('tr:first');
 
             // 1️⃣ destroy select2 before cloning
-            $firstRow.find('.select2-hidden-accessible').each(function() {
+            $firstRow.find('.select2-hidden-accessible').each(function () {
                 $(this).select2('destroy');
             });
 
@@ -203,7 +194,7 @@
             const $row = $firstRow.clone();
 
             // 3️⃣ fix name & clear values
-            $row.find('input, select').each(function() {
+            $row.find('input, select').each(function () {
                 const name = $(this).attr('name');
                 if (!name) return;
 
@@ -222,7 +213,7 @@
         });
 
         /* ================= REMOVE ROW ================= */
-        $table.on('click', '.btnRemoveRow', function() {
+        $table.on('click', '.btnRemoveRow', function () {
             if ($table.find('tr').length === 1) return;
             $(this).closest('tr').remove();
             calculateTotal();
@@ -233,7 +224,7 @@
 
         function calculateTotal() {
             let total = 0;
-            $('.expense-amount').each(function() {
+            $('.expense-amount').each(function () {
                 total += parseFloat($(this).val() || 0);
             });
 
@@ -242,15 +233,15 @@
         }
 
         // Form submit handlers
-        $('#btnSaveDraft').on('click', function() {
-           
+        $('#btnSaveDraft').on('click', function () {
+
             $('#expenseStatus').val('draft');
             $('#expenseCreateForm').submit();
         });
 
-        $('#btnPostExpense').on('click', function() {
+        $('#btnPostExpense').on('click', function () {
             // Check if branch is selected
-            
+
             $('#expenseStatus').val('posted');
             $('#expenseCreateForm').submit();
         });
