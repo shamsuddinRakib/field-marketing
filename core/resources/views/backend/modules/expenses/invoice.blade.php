@@ -89,10 +89,10 @@
         </table>
 
         {{-- ================= PAYMENT ================= --}}
-        <div class="mt-3">
+        {{-- <div class="mt-3">
             <strong>Payment Method:</strong>
             {{ $expense->payment?->paymentType?->name ?? 'Not Selected' }}
-        </div>
+        </div> --}}
 
         {{-- ================= FOOTER ================= --}}
         <div class="mt-5 d-flex justify-content-between text-muted small">

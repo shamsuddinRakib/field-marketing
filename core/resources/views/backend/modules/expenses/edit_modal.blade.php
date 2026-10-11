@@ -30,7 +30,7 @@
                         <div class="invalid-feedback d-block user_id-error" style="display:none"></div>
                     </div>
 
-                    <div class="col-md-6 mb-20">
+                    {{-- <div class="col-md-6 mb-20">
                         <label class="form-label text-sm mb-8">Select Visit <span class="text-danger">*</span></label>
                         <select class="form-control form-control-sm js-s2-ajax" name="daily_visit_id" id="visit"
                             data-url="{{ route('daily-visit.select2') }}" data-placeholder="Select Daily Visit">
@@ -41,15 +41,20 @@
                             @endif
                         </select>
                         <div class="invalid-feedback d-block user_id-error" style="display:none"></div>
-                    </div>
-                </div>
-
-                <div class="row g-3">
+                    </div> --}}
                     <div class="col-md-6">
                         <label class="form-label text-sm">Expense Name <span class="text-danger">*</span></label>
                         <input type="text" name="name" class="form-control form-control-sm radius-8"
                             value="{{ $expense->name }}" required>
                     </div>
+                </div>
+
+                <div class="row g-3">
+                    {{-- <div class="col-md-6">
+                        <label class="form-label text-sm">Expense Name <span class="text-danger">*</span></label>
+                        <input type="text" name="name" class="form-control form-control-sm radius-8"
+                            value="{{ $expense->name }}" required>
+                    </div> --}}
 
                     <div class="col-md-6">
                         <label class="form-label text-sm">Expense Date <span class="text-danger">*</span></label>
@@ -68,7 +73,7 @@
                         @endif
                     </div>
 
-                    <div class="col-md-6">
+                    <div class="col-md-12 mb-20">
                         <label class="form-label text-sm">Description</label>
                         <input type="text" name="description" class="form-control form-control-sm radius-8"
                             value="{{ $expense->description }}" placeholder="Optional note">
@@ -211,15 +216,15 @@
         }
     };
 
-    $('#user').on('change', function() {
-        const userId = $(this).val();
-        const $visitSelect = $('#visit');
+    // $('#user').on('change', function() {
+    //     const userId = $(this).val();
+    //     const $visitSelect = $('#visit');
 
-        if (userId) {
-            const newUrl = "{{ route('daily-visit.select2') }}?user_id=" + encodeURIComponent(userId);
-            window.S2.ajax($visitSelect, newUrl);
-        }
-    });
+    //     if (userId) {
+    //         const newUrl = "{{ route('daily-visit.select2') }}?user_id=" + encodeURIComponent(userId);
+    //         window.S2.ajax($visitSelect, newUrl);
+    //     }
+    // });
 
     (function() {
 
