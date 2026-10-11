@@ -17,10 +17,10 @@ class ExpenseResource extends JsonResource
         // return parent::toArray($request);
         return [
             'id' => $this->id,
-            'daily_visit_id' => $this->daily_visit_id,
-            'branch_id' => $this->branch_id,
-            'invoice_no' => $this->invoice_no,
-            'expense_no' => $this->expense_no,
+            // 'daily_visit_id' => $this->daily_visit_id,
+            // 'branch_id' => $this->branch_id,
+            // 'invoice_no' => $this->invoice_no,
+            // 'expense_no' => $this->expense_no,
             'name' => $this->name,
             'expense_date' => $this->expense_date,
             'posted_at' => $this->posted_at,
