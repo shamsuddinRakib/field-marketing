@@ -1154,7 +1154,7 @@ class ProductController extends Controller
             });
         }
 
-        $items = $base->orderBy('id')->orderBy('name')
+        $items = $base->orderBy('id', 'desc')->orderBy('name')
             ->limit(20)->get(['id', 'name']);
 
         return response()->json([

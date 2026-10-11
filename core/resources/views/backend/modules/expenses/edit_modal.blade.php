@@ -20,26 +20,23 @@
 
                 <div class="row g-3">
                     <div class="col-md-6 mb-20">
-                        <label class="form-label text-sm mb-8">Select <span class="text-danger">*</span></label>
+                        <label class="form-label text-sm mb-8">Select Representative <span class="text-danger">*</span></label>
                         <select class="form-control form-control-sm js-s2-ajax" name="user_id" id="user"
                             data-url="{{ route('marketing-representative.marketing-representatives.select2') }}" data-placeholder="Select Marketing Representative">
-                            @if ($expense->dailyVisit && $expense->dailyVisit->user)
-                                <option value="{{ $expense->dailyVisit->user->id }}" selected>{{ $expense->dailyVisit->user->name }}</option>
+                            @if ($expense->user && $expense->user)
+                                <option value="{{ $expense->user->id }}" selected>{{ $expense->user->name }}</option>
                             @endif
                         </select>
                         <div class="invalid-feedback d-block user_id-error" style="display:none"></div>
                     </div>
-
-                   
-                </div>
-
-                <div class="row g-3">
-                    {{-- <div class="col-md-6">
+                    <div class="col-md-6">
                         <label class="form-label text-sm">Expense Name <span class="text-danger">*</span></label>
                         <input type="text" name="name" class="form-control form-control-sm radius-8"
                             value="{{ $expense->name }}" required>
-                    </div> --}}
+                    </div>
+                </div>
 
+                <div class="row g-3">
                     <div class="col-md-6">
                         <label class="form-label text-sm">Expense Date <span class="text-danger">*</span></label>
                         <input type="date" name="expense_date" class="form-control form-control-sm radius-8"

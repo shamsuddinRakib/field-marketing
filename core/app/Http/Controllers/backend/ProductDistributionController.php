@@ -148,7 +148,7 @@ class ProductDistributionController extends Controller
             'product_id'      => ['required', 'string', 'max:50'],
             'quantity'     => ['required', 'integer'],
             'note'     => ['nullable', 'string', 'max:150'],
-            'status'     => ['required', 'string', 'in:pending,delivered'],
+          
 
         ]);
 

@@ -155,6 +155,7 @@ class ExpenseController extends Controller
 
     public function store(Request $req)
     {
+        // dd($req->all());
         
         $data = $req->validate([
             'name' => 'required|string|max:255',
@@ -172,6 +173,8 @@ class ExpenseController extends Controller
             'status' => 'required|in:draft,posted',
             'attachment' => 'nullable|file|max:10240', // max 10MB
         ]);
+
+        
 
         // $this->assertExpenseCategoriesAreAccessible(collect($data['items'])->pluck('expense_category_id')->all());
 
