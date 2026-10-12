@@ -16,7 +16,7 @@ class InstituitionResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'name' => $this->name,
+            'institution_name' => $this->institution_name,
             'address' => $this->address,
             'phone' => $this->phone,
             'email' => $this->email,

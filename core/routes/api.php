@@ -38,8 +38,8 @@ Route::put('/profile', [ProfileController::class, 'update'])->middleware('auth:s
 
 Route::get('categories', [CategoryController::class, 'index']);
 
-Route::get('products', [ProductController::class, 'index']);
-Route::get('products/{slug}', [ProductController::class, 'show']);
+// Route::get('products', [ProductController::class, 'index']);
+// Route::get('products/{slug}', [ProductController::class, 'show']);
 
 Route::get('/swagger-test', function () {
     return response()->json([
@@ -60,6 +60,12 @@ Route::get('/website-settings', [WebsiteSettingController::class, 'index']);
 Route::get('/offers', [OfferController::class, 'index']);
 Route::get('/offers/check-offer/{slug}', [ProductController::class, 'checkOffer']);
 Route::get('/offers/{slug}/products', [OfferController::class, 'products']);
+
+//products
+Route::get('/products', [ProductController::class, 'index'])->name('products.index');
+Route::get('/products/search', [ProductController::class, 'search'])->name('products.search');
+Route::get('/products/category/{category}', [ProductController::class, 'byCategory'])->name('products.category');
+Route::get('/products/{product}', [ProductController::class, 'show'])->name('products.show');
 
 
 // Marketing-Representative

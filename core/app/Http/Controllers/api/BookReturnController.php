@@ -23,7 +23,7 @@ class BookReturnController extends Controller
         }
 
         $bookReturns = BookReturn::with([
-            'institution:id,name,email,phone,address,status',
+            'institution:id,institution_name,email,phone,address,status',
             'product:id,name,slug,brand_id',
         ])
             ->where('marketing_representative_id', $mr->id)
@@ -75,7 +75,7 @@ class BookReturnController extends Controller
         ]);
 
         $bookReturn->load([
-            'institution:id,name,email,phone,address,status',
+            'institution:id,institution_name,email,phone,address,status',
             'product:id,name,slug,brand_id',
         ]);
 
@@ -100,7 +100,7 @@ class BookReturnController extends Controller
         }
 
         $bookReturn = BookReturn::with([
-            'institution:id,name,email,phone,address,status',
+            'institution:id,institution_name,email,phone,address,status',
             'product:id,name,slug,brand_id',
         ])
             ->where('id', $id)
@@ -170,7 +170,7 @@ class BookReturnController extends Controller
         ]);
 
         $bookReturn->fresh()->load([
-            'institution:id,name,email,phone,address,status',
+            'institution:id,institution_name,email,phone,address,status',
             'product:id,name,slug,brand_id',
         ]);
 
