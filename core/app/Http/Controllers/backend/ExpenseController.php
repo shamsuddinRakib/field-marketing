@@ -460,7 +460,7 @@ class ExpenseController extends Controller
 
             CurrentFund::updateOrCreate(
                 [
-                    'user_id' => $expense->dailyVisit->user_id,
+                    'user_id' => $expense->user_id,
                 ],
                 [
                     'balance' => DB::raw('balance - ' . $expense->total_amount),

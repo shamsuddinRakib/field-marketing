@@ -268,6 +268,15 @@
                                         </a>
                                     </li>
                                 @endperm
+                                @perm('cost-per-result.index')
+                                    <li>
+                                        <a class="{{ Route::is('cost-per-result.index') ? 'active' : '' }}"
+                                            href="{{ route('cost-per-result.index') }}">
+                                            <iconify-icon icon="mdi:cash-usd" class="menu-icon"></iconify-icon>
+                                            <span>Cost Per Result</span>
+                                        </a>
+                                    </li>
+                                @endperm
                             </ul>
                         </li>
                     @endperm

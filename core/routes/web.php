@@ -19,6 +19,7 @@ use App\Http\Controllers\backend\CountryController;
 use App\Http\Controllers\backend\CouponController;
 use App\Http\Controllers\backend\CustomerController;
 use App\Http\Controllers\backend\CustomerLedgerController;
+use App\Http\Controllers\backend\CostPerResultController;
 use App\Http\Controllers\backend\DailyPaymentSummaryController;
 use App\Http\Controllers\backend\DailyVisitController;
 use App\Http\Controllers\backend\DepartmentController;
@@ -559,4 +560,7 @@ Route::middleware(['web', 'auth', 'perm', 'branchscope'])->group(function () {
         Route::delete('spot-sale/{spotSale}', [SpotSaleController::class, 'destroy'])->whereNumber('spotSale')->name('destroy');
         Route::get('product-price/{product}', [SpotSaleController::class, 'productPrice'])->whereNumber('product')->name('productPrice');
     });
+
+    Route::get('/cost-per-result', [CostPerResultController::class, 'index'])->name('cost-per-result.index');
+    Route::post('/cost-per-result', [CostPerResultController::class, 'costPerResult'])->name('cost-per-result.submit');
 });
