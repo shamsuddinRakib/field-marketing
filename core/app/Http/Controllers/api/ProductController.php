@@ -1,0 +1,221 @@
+<?php
+
+namespace App\Http\Controllers\api;
+
+use App\Http\Controllers\Controller;
+<<<<<<< HEAD
+use App\Models\backend\Category;
+use App\Models\backend\OfferDiscount;
+use App\Models\backend\OfferGift;
+=======
+use App\Http\Resources\ProductResource;
+>>>>>>> c56afc1301bcb7e9882fdcf8204f29a0dc9be5fe
+use App\Models\backend\Product;
+use Illuminate\Http\Request;
+
+class ProductController extends Controller
+{
+<<<<<<< HEAD
+    public function index(Request $request)
+    {
+        $products = Product::with('category')->where('is_active', 1);
+
+        if ($request->category) {
+            $products->where('category_id', Category::where('slug', $request->category)->first()->id);
+        }
+
+        if ($request->search) {
+            $products->where('name', 'like', '%' . $request->search . '%');
+        }
+
+        if ($request->sort_by == 'price_asc') {
+            $products->orderBy('price', 'asc');
+        } elseif ($request->sort_by == 'price_desc') {
+            $products->orderBy('price', 'desc');
+        } else if ($request->sort_by == 'latest') {
+            $products->orderBy('created_at', 'desc');
+        } else if ($request->sort_by == 'oldest') {
+            $products->orderBy('created_at', 'asc');
+        } else {
+            $products->orderBy('created_at', 'desc');
+        }
+
+
+        $products = $products->where('parent_id', null)->paginate(8);
+
+        $products = $products->through(function ($product) {
+            $hasOffer = isProductUnderAnyOffer($product->id);
+
+            if ($hasOffer && $hasOffer->offer_type == 'gift') {
+                $freeProducts = null;
+                $giftProduct = OfferGift::where('offer_id', $hasOffer->id)->where('buy_product_id', $product->id)->get();
+
+                // foreach($giftProduct as $gift){
+                $freeProducts = Product::whereIn('id', $giftProduct->pluck('free_product_id'))->get();
+                // }
+
+                $product->freeProducts = $freeProducts;
+            } else if ($hasOffer && $hasOffer->offer_type == 'discount') {
+
+                $discountRule = OfferDiscount::where('offer_id', $hasOffer->id)->first();
+                $offerPrice = $product->mrp - applyDiscount($discountRule, $product);
+                if ($offerPrice < $product->price) {
+                    $product->offer_price = $offerPrice;
+                }
+            }
+
+            // $product->hasOffer = $hasOffer;
+            return $product;
+        });
+
+
+        return response()->json(['success' => true, 'data' => $products]);
+    }
+
+    /**
+     * Lightweight active product list for dropdowns (delivery / distribution forms).
+     */
+    public function dropdown(Request $request)
+    {
+        $query = Product::query()
+            ->select(['id', 'name', 'slug', 'sku', 'price', 'mrp', 'thumbnail_image', 'brand_id', 'category_id'])
+            ->where('is_active', 1)
+            ->where('parent_id', null);
+
+        if ($request->filled('is_sellable')) {
+            $query->where('is_sellable', $request->boolean('is_sellable'));
+        }
+
+        if ($request->filled('search')) {
+            $search = $request->input('search');
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('sku', 'like', "%{$search}%");
+            });
+        }
+
+        $products = $query->orderBy('name')->get();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Products fetched successfully.',
+            'data' => $products,
+        ]);
+    }
+
+    public function show(Request $request, $slug)
+    {
+        $product = Product::with(['category', 'children.size', 'children.color', 'specifications'])->where('slug', $slug)->where('is_active', 1)->first();
+
+        // return priceAfterDiscount($product);
+        if (!$product) {
+            return response()->json(['success' => false, 'message' => 'Product not found'], 404);
+        }
+        $hasOffer = isProductUnderAnyOffer($product->id);
+
+
+        if ($hasOffer && ($hasOffer->offer_type == 'gift' || $hasOffer->offer_type == 'bundle')) {
+            $freeProducts = null;
+            $giftProduct = OfferGift::where('offer_id', $hasOffer->id)->where('buy_product_id', $product->id)->get();
+
+            // foreach($giftProduct as $gift){
+            $freeProducts = Product::whereIn('id', $giftProduct->pluck('free_product_id'))->get();
+            // }
+            $i = 0;
+            foreach ($freeProducts as $freeProduct) {
+                $freeProduct->quantity = $giftProduct[$i]->free_quantity;
+                $i++;
+            }
+
+            if ($product->children) {
+                foreach ($product->children as $child) {
+                    $child->freeProducts = $freeProducts;
+                }
+            } else {
+                $product->freeProducts = $freeProducts;
+            }
+        } else if ($hasOffer && $hasOffer->offer_type == 'discount') {
+            $discountRule = OfferDiscount::where('offer_id', $hasOffer->id)->first();
+            if ($product->children) {
+                foreach ($product->children as $child) {
+                    $offerPrice = $child->mrp - applyDiscount($discountRule, $child);
+                    if ($offerPrice < $child->price) {
+                        $child->offer_price = $offerPrice;
+                    }
+                }
+
+                $product->offer_price = $product->mrp - applyDiscount($discountRule, $product);
+            } else {
+                $offerPrice = $product->mrp - applyDiscount($discountRule, $product);
+                if ($offerPrice < $product->price) {
+                    $product->offer_price = $offerPrice;
+                }
+            }
+        }
+
+        return response()->json(['success' => true, 'data' => $product]);
+=======
+    public function index()
+    {
+        $products = Product::query()
+            ->whereNull('parent_id')
+            ->with('category')
+            ->latest('id')
+            ->paginate(20);
+
+        return ProductResource::collection($products);
+    }
+
+    /**
+     * Search products by name.
+     * Example: /api/products/search?q=book
+     */
+    public function search(Request $request)
+    {
+        $validated = $request->validate([
+            'q' => ['required', 'string', 'min:1', 'max:100'],
+        ]);
+
+        $keyword = trim($validated['q']);
+
+        $products = Product::query()
+            ->whereNull('parent_id')
+            ->where(function ($query) use ($keyword) {
+                $query->where('name', 'LIKE', "%{$keyword}%")
+                    ->orWhere('slug', 'LIKE', "%{$keyword}%");
+            })
+            ->with('category')
+            ->orderBy('id', 'desc')
+            ->paginate(20)
+            ->appends(['q' => $keyword]);
+
+        return ProductResource::collection($products);
+    }
+
+    /**
+     * Display products by category.
+     * Example: /api/products/category/1
+     */
+    public function byCategory($category)
+    {
+        $products = Product::query()
+            ->whereNull('parent_id')
+            ->where('category_id', $category)
+            ->with('category')
+            ->latest('id')
+            ->paginate(20);
+
+        return ProductResource::collection($products);
+    }
+
+    /**
+     * Display a single product. id=65
+     */
+    public function show(Product $product)
+    {
+        $product->load('category');
+
+        return new ProductResource($product);
+>>>>>>> c56afc1301bcb7e9882fdcf8204f29a0dc9be5fe
+    }
+}
