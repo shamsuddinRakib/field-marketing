@@ -49,7 +49,7 @@ class ProductDistributionController extends Controller
 
         $data = [];
         foreach ($rows as $b) {
-            $nameCol = '<strong>' . e($b->user->name) . '</strong>';
+            $nameCol = '<strong>' . e($b->user->name ?? '') . '</strong>';
 
             // $active = $b->is_active
             //     ? '<span class="badge text-sm fw-semibold bg-dark-success-gradient px-20 py-9 radius-4 text-white">Active</span>'
