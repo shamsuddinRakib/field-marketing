@@ -55,10 +55,11 @@
                                 <label class="form-check-label">S.L</label>
                             </div>
                         </th>
-                        <th>Name</th>
-                        <th>Mobile</th>
-                        <th>Email</th>
+                        <th>Mr. Details</th>
+                        {{-- <th>Mobile</th> --}}
+                        {{-- <th>Email</th> --}}
                         <th>Organization</th>
+                        <th>Current Status</th>
                         <th>Branch</th>
                         <th>Upazila</th>
                         <th>Status</th>

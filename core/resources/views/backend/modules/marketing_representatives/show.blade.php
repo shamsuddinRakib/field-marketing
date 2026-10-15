@@ -18,25 +18,28 @@
             </li>
             <li>-</li>
             <li class="fw-medium">
-                <a href="{{ route('marketing-representative.marketing-representatives.index') }}" class="hover-text-primary">Marketing Representatives</a>
+                <a href="{{ route('marketing-representative.marketing-representatives.index') }}"
+                    class="hover-text-primary">Marketing Representatives</a>
             </li>
             <li>-</li>
             <li class="fw-medium">Profile</li>
         </ul>
     </div>
 
-    <div class="row">
+    <div class="row gy-4">
         <div class="col-lg-8">
-            <div class="card">
-                <div class="card-header d-flex align-items-center justify-content-between">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent py-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
                     <h5 class="card-title mb-0">Representative Information</h5>
-                    <div class="d-flex gap-2">
-                        <a href="{{ route('marketing-representative.marketing-representatives.index') }}" class="btn btn-sm btn-outline-primary">
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <a href="{{ route('marketing-representative.marketing-representatives.index') }}"
+                            class="btn btn-sm btn-outline-primary d-inline-flex align-items-center">
                             <iconify-icon icon="lucide:arrow-left" class="me-1"></iconify-icon> Back to List
                         </a>
-                        <a href="#" class="btn btn-sm btn-primary AjaxModal"
+                        <a href="#" class="btn btn-sm btn-primary AjaxModal d-inline-flex align-items-center"
                             data-ajax-modal="{{ route('marketing-representative.marketing-representatives.editModal', $representative->id) }}"
-                            data-size="lg" data-onload="MarketingRepresentativesIndex.onLoad" data-onsuccess="MarketingRepresentativesIndex.onSaved">
+                            data-size="lg" data-onload="MarketingRepresentativesIndex.onLoad"
+                            data-onsuccess="MarketingRepresentativesIndex.onSaved">
                             <iconify-icon icon="lucide:edit" class="me-1"></iconify-icon> Edit
                         </a>
                     </div>
@@ -45,7 +48,7 @@
                     <div class="row">
                         <div class="col-md-6 mb-16">
                             <label class="form-label text-sm mb-6">Name</label>
-                            <input class="form-control" type="text" disabled value="{{ $representative->name }}">
+                            <input class="form-control" type="text" disabled value="{{ $representative->user->name }}">
                         </div>
                         <div class="col-md-6 mb-16">
                             <label class="form-label text-sm mb-6">Employee ID</label>
@@ -53,31 +56,28 @@
                         </div>
                         <div class="col-md-6 mb-16">
                             <label class="form-label text-sm mb-6">Mobile</label>
-                            <input class="form-control" type="text" disabled value="{{ $representative->mobile ?? 'N/A' }}">
+                            <input class="form-control" type="text" disabled
+                                value="{{ $representative->user->phone ?? 'N/A' }}">
                         </div>
                         <div class="col-md-6 mb-16">
                             <label class="form-label text-sm mb-6">Email</label>
-                            <input class="form-control" type="text" disabled value="{{ $representative->email ?? 'N/A' }}">
+                            <input class="form-control" type="text" disabled
+                                value="{{ $representative->user->email ?? 'N/A' }}">
                         </div>
                         <div class="col-md-6 mb-16">
                             <label class="form-label text-sm mb-6">Organization</label>
-                            <input class="form-control" type="text" disabled value="{{ $representative->organization ?? 'N/A' }}">
-                        </div>
-                        <div class="col-md-6 mb-16">
-                            <label class="form-label text-sm mb-6">Territory</label>
-                            <input class="form-control" type="text" disabled value="{{ $representative->territory ?? 'N/A' }}">
-                        </div>
-                        <div class="col-md-6 mb-16">
-                            <label class="form-label text-sm mb-6">Assigned Institutions</label>
-                            <input class="form-control" type="text" disabled value="{{ $representative->assigned_institutions ?? 'N/A' }}">
+                            <input class="form-control" type="text" disabled
+                                value="{{ $representative->organization ?? 'N/A' }}">
                         </div>
                         <div class="col-md-6 mb-16">
                             <label class="form-label text-sm mb-6">Status</label>
                             <div>
-                                @if($representative->status)
-                                    <span class="bg-success-focus text-success-600 border border-success-main px-12 py-4 radius-4 fw-medium text-sm">Active</span>
+                                @if ($representative->status)
+                                    <span
+                                        class="bg-success-focus text-success-600 border border-success-main px-12 py-4 radius-4 fw-medium text-sm">Active</span>
                                 @else
-                                    <span class="bg-danger-focus text-danger-600 border border-danger-main px-12 py-4 radius-4 fw-medium text-sm">Inactive</span>
+                                    <span
+                                        class="bg-danger-focus text-danger-600 border border-danger-main px-12 py-4 radius-4 fw-medium text-sm">Inactive</span>
                                 @endif
                             </div>
                         </div>
@@ -85,27 +85,31 @@
                 </div>
             </div>
 
-            <div class="card mt-24">
-                <div class="card-header">
+            <div class="card border-0 shadow-sm mt-24">
+                <div class="card-header bg-transparent py-3">
                     <h5 class="card-title mb-0">Address & Location</h5>
                 </div>
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-4 mb-16">
                             <label class="form-label text-sm mb-6">Division</label>
-                            <input class="form-control" type="text" disabled value="{{ $representative->division->name ?? 'N/A' }}">
+                            <input class="form-control" type="text" disabled
+                                value="{{ $representative->division->name ?? 'N/A' }}">
                         </div>
                         <div class="col-md-4 mb-16">
                             <label class="form-label text-sm mb-6">District</label>
-                            <input class="form-control" type="text" disabled value="{{ $representative->district->district_name ?? 'N/A' }}">
+                            <input class="form-control" type="text" disabled
+                                value="{{ $representative->district->district_name ?? 'N/A' }}">
                         </div>
                         <div class="col-md-4 mb-16">
                             <label class="form-label text-sm mb-6">Upazila</label>
-                            <input class="form-control" type="text" disabled value="{{ $representative->upazila->upazila_name ?? 'N/A' }}">
+                            <input class="form-control" type="text" disabled
+                                value="{{ $representative->upazila->upazila_name ?? 'N/A' }}">
                         </div>
                         <div class="col-md-6 mb-16">
                             <label class="form-label text-sm mb-6">Branch</label>
-                            <input class="form-control" type="text" disabled value="{{ $representative->branch->name ?? 'N/A' }}">
+                            <input class="form-control" type="text" disabled
+                                value="{{ $representative->branch->name ?? 'N/A' }}">
                         </div>
                         <div class="col-md-6 mb-16">
                             <label class="form-label text-sm mb-6">Address</label>
@@ -117,43 +121,74 @@
         </div>
 
         <div class="col-lg-4">
-            <div class="card">
-                <div class="card-header">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent py-3 border-0">
                     <h5 class="card-title mb-0">Profile Summary</h5>
                 </div>
-                <div class="card-body text-center">
-                    <div class="mb-16">
-                        <div class="w-80-px h-80-px rounded-circle bg-primary-focus text-primary-main d-inline-flex align-items-center justify-content-center fw-bold text-xl">
-                            {{ strtoupper(substr($representative->name, 0, 2)) }}
+
+                <div class="card-body px-3 pt-0">
+                    <div class="row g-3">
+
+                        {{-- Current Fund --}}
+                        <div class="col-6">
+                            <div class="p-3 rounded-3 bg-light text-center h-100 border border-primary-subtle d-flex flex-column justify-content-between transition-hover">
+                                <div class="w-40-px h-40-px rounded-circle bg-primary-focus text-primary-main d-inline-flex align-items-center justify-content-center text-lg mx-auto mb-2 shadow-sm">
+                                    <iconify-icon icon="solar:wallet-money-outline"></iconify-icon>
+                                </div>
+                                <div>
+                                    <div class="text-muted text-xs fw-semibold mb-1 text-uppercase tracking-wider">Current Fund</div>
+                                    <h6 class="fw-bold mb-0 text-dark text-sm">
+                                        {{ number_format((float) ($currentFund ?? 0), 2) }}
+                                    </h6>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                    <h6 class="fw-semibold">{{ $representative->name }}</h6>
-                    <p class="text-muted text-sm mb-16">{{ $representative->employee_id }}</p>
-                    <div class="d-flex justify-content-center gap-2">
-                        @if($representative->mobile)
-                            <a href="tel:{{ $representative->mobile }}" class="btn btn-sm btn-outline-primary" title="Call">
-                                <iconify-icon icon="lucide:phone"></iconify-icon>
-                            </a>
-                        @endif
-                        @if($representative->email)
-                            <a href="mailto:{{ $representative->email }}" class="btn btn-sm btn-outline-primary" title="Email">
-                                <iconify-icon icon="lucide:mail"></iconify-icon>
-                            </a>
-                        @endif
-                    </div>
-                </div>
-                <div class="card-footer">
-                    <div class="d-flex justify-content-between text-sm mb-8">
-                        <span class="text-muted">Created</span>
-                        <span>{{ $representative->created_at?->format('d M, Y') ?? 'N/A' }}</span>
-                    </div>
-                    <div class="d-flex justify-content-between text-sm mb-8">
-                        <span class="text-muted">Last Updated</span>
-                        <span>{{ $representative->updated_at?->format('d M, Y') ?? 'N/A' }}</span>
-                    </div>
-                    <div class="d-flex justify-content-between text-sm">
-                        <span class="text-muted">Deleted</span>
-                        <span>{{ $representative->deleted_at?->format('d M, Y') ?? 'No' }}</span>
+
+                        {{-- Total Product --}}
+                        <div class="col-6">
+                            <div class="p-3 rounded-3 bg-light text-center h-100 border border-success-subtle d-flex flex-column justify-content-between transition-hover">
+                                <div class="w-40-px h-40-px rounded-circle bg-success-focus text-success-main d-inline-flex align-items-center justify-content-center text-lg mx-auto mb-2 shadow-sm">
+                                    <iconify-icon icon="solar:box-outline"></iconify-icon>
+                                </div>
+                                <div>
+                                    <div class="text-muted text-xs fw-semibold mb-1 text-uppercase tracking-wider">Total Product</div>
+                                    <h6 class="fw-bold mb-0 text-dark text-sm">
+                                        {{ number_format((int) ($totalProduct ?? 0)) }}
+                                    </h6>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- Spot Sales Count --}}
+                        <div class="col-6">
+                            <div class="p-3 rounded-3 bg-light text-center h-100 border border-info-subtle d-flex flex-column justify-content-between transition-hover">
+                                <div class="w-40-px h-40-px rounded-circle bg-info-focus text-info-main d-inline-flex align-items-center justify-content-center text-lg mx-auto mb-2 shadow-sm">
+                                    <iconify-icon icon="solar:cart-large-2-outline"></iconify-icon>
+                                </div>
+                                <div>
+                                    <div class="text-muted text-xs fw-semibold mb-1 text-uppercase tracking-wider">Spot Sales</div>
+                                    <h6 class="fw-bold mb-0 text-dark text-sm">
+                                        {{ number_format((int) ($totalSpotSalesCount ?? 0)) }}
+                                    </h6>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- Spot Sale Amount --}}
+                        <div class="col-6">
+                            <div class="p-3 rounded-3 bg-light text-center h-100 border border-warning-subtle d-flex flex-column justify-content-between transition-hover">
+                                <div class="w-40-px h-40-px rounded-circle bg-warning-focus text-warning-main d-inline-flex align-items-center justify-content-center text-lg mx-auto mb-2 shadow-sm">
+                                    <iconify-icon icon="solar:wallet-outline"></iconify-icon>
+                                </div>
+                                <div>
+                                    <div class="text-muted text-xs fw-semibold mb-1 text-uppercase tracking-wider">Spot Amount</div>
+                                    <h6 class="fw-bold mb-0 text-dark text-sm">
+                                        {{ number_format((float) ($totalSpotSalesAmount ?? 0), 2) }}
+                                    </h6>
+                                </div>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
             </div>
@@ -177,7 +212,9 @@
                         url: "{{ route('org.branches.select2') }}",
                         dataType: 'json',
                         delay: 200,
-                        data: params => ({ q: params.term || '' }),
+                        data: params => ({
+                            q: params.term || ''
+                        }),
                         processResults: data => data
                     }
                 });
@@ -194,7 +231,9 @@
                         url: "{{ route('marketing-representative.marketing-representatives.upazilas.select2') }}",
                         dataType: 'json',
                         delay: 200,
-                        data: params => ({ q: params.term || '' }),
+                        data: params => ({
+                            q: params.term || ''
+                        }),
                         processResults: data => data
                     }
                 }).off('select2:select').on('select2:select', function(e) {
@@ -206,16 +245,14 @@
                     $form.find('[name="division_name"]').val(item.division_name || '');
                 }).off('select2:clear').on('select2:clear', function() {
                     const $form = $select.closest('form');
-                    $form.find('[name="district_id"], [name="division_id"], [name="district_name"], [name="division_name"]').val('');
+                    $form.find(
+                        '[name="district_id"], [name="division_id"], [name="district_name"], [name="division_name"]'
+                        ).val('');
                 });
             });
         };
         window.MarketingRepresentativesIndex.onSaved = function(res) {
-            if (res?.id) {
-                window.location.reload();
-            } else {
-                window.location.reload();
-            }
+            $window.location.reload();
         };
     </script>
 @endsection

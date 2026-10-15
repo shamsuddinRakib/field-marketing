@@ -4,6 +4,8 @@ namespace App\Models\backend;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
 
 class BookRequest extends Model
 {
@@ -15,15 +17,15 @@ class BookRequest extends Model
 
     protected $fillable = [
         'marketing_representative_id',
-        'product_id',
-        'quantity',
+        // 'product_id',
+        // 'quantity',
         'note',
         'request_date',
         'status',
     ];
 
     protected $casts = [
-        'quantity' => 'integer',
+        // 'quantity' => 'integer',
         'request_date' => 'date',
     ];
 
@@ -40,5 +42,10 @@ class BookRequest extends Model
     public function statusLabel(): string
     {
         return self::STATUSES[$this->status] ?? ucfirst((string) $this->status);
+    }
+
+    public function items(): HasMany
+    {
+        return $this->hasMany(BookRequestItem::class, 'book_request_id');
     }
 }
