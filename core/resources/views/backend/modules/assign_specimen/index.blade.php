@@ -8,8 +8,8 @@
 @section('content')
   <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-24">
     <div>
-      <h6 class="fw-semibold mb-0">Speciment Assignment List</h6>
-      <p class="m-0">Manage Speciment Assignment</p>
+      <h6 class="fw-semibold mb-0">Specimen Assignment List</h6>
+      <p class="m-0">Manage Specimen Assignment</p>
     </div>
     <ul class="d-flex align-items-center gap-2">
       <li class="fw-medium">
@@ -18,7 +18,7 @@
         </a>
       </li>
       <li>-</li>
-      <li class="fw-medium">Speciment Assign</li>
+      <li class="fw-medium">Specimen Assign</li>
     </ul>
   </div>
 
@@ -35,12 +35,13 @@
         </ul>
 
         @perm('assign-specimen.store')
-            <button 
+            <button
                 class="d-flex btn btn-primary btn-sm px-12 py-8 radius-8 AjaxModal"
-                data-ajax-modal="{{ route('assign-specimen.create') }}"  
+                data-ajax-modal="{{ route('assign-specimen.create') }}"
                 data-size="lg"
+                data-onload="AssignSpecimenIndex.onLoad"
                 data-onsuccess="BranchesIndex.onSaved">
-                <iconify-icon icon="ic:baseline-plus" class="text-xl"></iconify-icon>Assign Product
+                <iconify-icon icon="ic:baseline-plus" class="text-xl"></iconify-icon>Assign Specimen
         </button>
         @endperm
       </div>
@@ -58,13 +59,12 @@
             </th>
             <th>MR Name</th>
             <th>Type</th>
-            <th>Visited</th>
-            <th>Product</th>
-            <th>Quantity</th>
+            <th>Recipient</th>
+            <th>When</th>
+            <th>Total Qty</th>
             <th>Note</th>
-             <th>Status</th>
-         
-            <th style="width:120px">Action</th>
+            <th>Status</th>
+            <th style="width:130px">Action</th>
           </tr>
         </thead>
         <tbody></tbody>
@@ -81,12 +81,12 @@
 
     window.BranchesIndex = {
     onSaved: function (res) {
-      // DataTable current page reload
       $('.AjaxDataTable').DataTable().ajax.reload(null, false);
-      // Optional: extra toast (আপনার গ্লোবালে আগেই toast দেওয়া আছে, এটা না দিলেও হবে)
-      if (window.Swal) Swal.fire({icon:'success', title:'Created', text: res?.msg || 'Saved', timer:1000, showConfirmButton:false});
+      if (window.Swal) Swal.fire({icon:'success', title:'Saved', text: res?.msg || 'Saved', timer:1000, showConfirmButton:false});
     }
   };
+
+  window.AssignSpecimenIndex = { onLoad: function () {} };
 
 
   $(document).on('click', '.btn-branch-delete', function(e){
@@ -100,18 +100,15 @@
         dataType: 'json',
         data: { _method: 'DELETE', _token: '{{ csrf_token() }}' },
         success: function(res){
-          // DataTable রিলোড (পজিশন ধরে)
           $('.AjaxDataTable').DataTable().ajax.reload(null, false);
           if (window.Swal) {
             Swal.fire({ icon:'success', title: res?.msg || 'Deleted', timer: 1000, showConfirmButton:false });
           }
         },
         error: function(xhr){
-          if (xhr.status === 422){
-            const msg = xhr.responseJSON?.msg || 'Cannot delete this color.';
+          const msg = xhr.responseJSON?.msg || 'Cannot delete this record.';
+          if (xhr.status === 422 || xhr.status === 403){
             Swal && Swal.fire({ icon:'warning', title:'Blocked', text: msg });
-          } else if (xhr.status === 403){
-            Swal && Swal.fire({ icon:'warning', title:'Forbidden', text: xhr.responseJSON?.message || 'Permission denied' });
           } else {
             Swal && Swal.fire({ icon:'error', title:'Failed', text:'Delete failed' });
           }
@@ -122,14 +119,14 @@
     if (window.Swal){
       Swal.fire({
         icon: 'warning',
-        title: 'Delete this record?',
-        text: 'This action cannot be undone.',
+        title: 'Delete this assignment?',
+        text: 'Items under this assignment will also be deleted.',
         showCancelButton: true,
         confirmButtonText: 'Yes, delete',
         confirmButtonColor: '#d33'
       }).then(r => { if (r.isConfirmed) doDelete(); });
     } else {
-      if (confirm('Delete this color?')) doDelete();
+      if (confirm('Delete this assignment?')) doDelete();
     }
   });
 

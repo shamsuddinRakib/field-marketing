@@ -452,7 +452,7 @@ class ProductController extends Controller
             'price'             => $final_price,
             'has_variants'      => $data['has_variant'] ?? 0,
             'is_sellable'       => ($data['has_variant'] == 0 ? 1 : 0),
-            'material'          => $data['material'],
+            'material'          => $data['material'] ?? null,
             'description'       => $data['description'],
             'short_description' => $data['short_description'],
             'is_active'         => $data['is_active'],
@@ -466,16 +466,16 @@ class ProductController extends Controller
 
         ]);
 
-        ProductSpecification::create([
-            'product_id' => $product->id,
-            'material'   => $data['material'],
-            'weight'     => $data['weight'],
-            'fabric_weave' => $data['fabric_weave'],
-            'fabric_type' => $data['fabric_type'],
-            'care_instructions' => $data['care_instructions'],
-            'durability_rating' => $data['durability_rating'],
-            'transparency_text' => $data['transparency_text'],
-        ]);
+        // ProductSpecification::create([
+        //     'product_id' => $product->id,
+        //     'material'   => $data['material'] ?? null,
+        //     'weight'     => $data['weight'] ?? null,
+        //     'fabric_weave' => $data['fabric_weave'] ?? null,
+        //     'fabric_type' => $data['fabric_type'] ?? null,
+        //     'care_instructions' => $data['care_instructions'] ?? null,
+        //     'durability_rating' => $data['durability_rating'] ?? null,
+        //     'transparency_text' => $data['transparency_text'] ?? null,
+        // ]);
 
         if ($data['has_variant'] == 1) {
             $colors = $child_data['child_color_id'] ?? [];
@@ -810,7 +810,6 @@ class ProductController extends Controller
         $product->discount_type     = $data['discount_type'];
         $product->discount_value    = $data['discount_value'];
         $product->price             = $final_price;
-        $product->material          = $data['material'];
         $product->description       = $data['description'];
         $product->short_description = $data['short_description'];
         $product->is_active         = $data['is_active'];
@@ -821,19 +820,19 @@ class ProductController extends Controller
         $product->save();
 
         // Update or create product specifications
-        ProductSpecification::updateOrCreate(
-            ['product_id' => $product->id],
-            [
-                'material'          => $data['material'],
-                'weight_gsm'            => $data['weight'],
-                'fabric_weave'      => $data['fabric_weave'],
-                'fabric_type'       => $data['fabric_type'],
-                'origin_country'    => $data['origin_country'],
-                'care_instructions'  => $data['care_instructions'],
-                'durability_rating' => $data['durability_rating'],
-                'transparency_text' => $data['transparency_text'],
-            ]
-        );
+        // ProductSpecification::updateOrCreate(
+        //     ['product_id' => $product->id],
+        //     [
+        //         'material'          => $data['material'],
+        //         'weight_gsm'            => $data['weight'],
+        //         'fabric_weave'      => $data['fabric_weave'],
+        //         'fabric_type'       => $data['fabric_type'],
+        //         'origin_country'    => $data['origin_country'],
+        //         'care_instructions'  => $data['care_instructions'],
+        //         'durability_rating' => $data['durability_rating'],
+        //         'transparency_text' => $data['transparency_text'],
+        //     ]
+        // );
 
         if ($product->has_variants === 1) {
             //   dd($req->child_id);
@@ -1155,7 +1154,7 @@ class ProductController extends Controller
             });
         }
 
-        $items = $base->orderBy('id')->orderBy('name')
+        $items = $base->orderBy('id', 'desc')->orderBy('name')
             ->limit(20)->get(['id', 'name']);
 
         return response()->json([

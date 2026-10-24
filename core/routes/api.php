@@ -48,18 +48,6 @@ Route::get('/swagger-test', function () {
     ]);
 });
 
-Route::post('orders', [OrderController::class, 'create']);
-// Route::get('orders', [OrderController::class, 'index'])->middleware('auth:sanctum');
-Route::get('user/orders', [OrderController::class, 'userOrders'])->middleware('auth:sanctum');
-Route::get('user/orders/{invoice_no}', [OrderController::class, 'show'])->middleware('auth:sanctum');
-Route::get('orders/track-order/{invoice_no}', [OrderController::class, 'trackOrder']);
-
-Route::post('/get-coupon', [CouponController::class, 'getCouponByCode']);
-Route::get('/website-settings', [WebsiteSettingController::class, 'index']);
-
-Route::get('/offers', [OfferController::class, 'index']);
-Route::get('/offers/check-offer/{slug}', [ProductController::class, 'checkOffer']);
-Route::get('/offers/{slug}/products', [OfferController::class, 'products']);
 
 //products
 Route::get('/products', [ProductController::class, 'index'])->name('products.index');

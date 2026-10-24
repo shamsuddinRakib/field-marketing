@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class Expense extends Model
 {
     protected $fillable = [
-        'daily_visit_id',
+        'user_id',
         'branch_id',
         'invoice_no',
         'posted_at',
@@ -45,6 +45,10 @@ class Expense extends Model
     public function dailyVisit()
     {
         return $this->belongsTo(DailyVisit::class, 'daily_visit_id');
+    }
+    public function user()
+    {
+        return $this->belongsTo(User::class);
     }
 
     // public function journalEntry()

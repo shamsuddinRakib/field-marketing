@@ -44,7 +44,7 @@
                     <div class="col-md-6 mb-12" id="teacherWrap" style="display:{{ $customerType === 'teacher' ? 'block' : 'none' }}">
                         <label class="form-label text-sm mb-8">Select Teacher <span class="text-danger">*</span></label>
                         <select class="form-control form-control-sm js-s2-ajax" name="teacher_id" id="teacherSelect"
-                            data-url="{{ route('teacher.teachers.institutions.select2') }}"
+                            data-url="{{ route('teacher.teachers.select2') }}"
                             data-placeholder="Select Teacher">
                             @if ($spotSale->teacher)
                                 <option value="{{ $spotSale->teacher->id }}" selected>{{ $spotSale->teacher->teacher_name }}</option>
@@ -74,7 +74,7 @@
         </div>
 
         {{-- ================= SALE ITEMS ================= --}}
-        <table class="table table-sm align-middle" id="spotSaleItemsTable">
+        <div class="table-responsive"><table class="table table-sm align-middle items-table-fixed" id="spotSaleItemsTable">
             <thead class="table-light">
                 <tr>
                     <th style="width:38%">Product</th>
@@ -115,7 +115,7 @@
                     </tr>
                 @endforeach
             </tbody>
-        </table>
+        </table></div>
 
         <div class="d-flex justify-content-end mb-8">
             <button type="button" id="btnAddSpotSaleItem" class="btn btn-sm btn-outline-primary">

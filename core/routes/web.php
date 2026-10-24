@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ai\ChatAssistantController;
 use App\Http\Controllers\backend\AccountController;
 use App\Http\Controllers\backend\AccountLedgerController;
 use App\Http\Controllers\backend\AccountTransferController;
@@ -19,6 +20,7 @@ use App\Http\Controllers\backend\CountryController;
 use App\Http\Controllers\backend\CouponController;
 use App\Http\Controllers\backend\CustomerController;
 use App\Http\Controllers\backend\CustomerLedgerController;
+use App\Http\Controllers\backend\CostPerResultController;
 use App\Http\Controllers\backend\DailyPaymentSummaryController;
 use App\Http\Controllers\backend\DailyVisitController;
 use App\Http\Controllers\backend\DepartmentController;
@@ -68,6 +70,20 @@ use App\Http\Controllers\backend\SubjectController;
 use App\Http\Controllers\backend\TeacherController;
 
 use Illuminate\Support\Facades\Route;
+
+/* ==========================================================================
+   AI ASSISTANT — chat interface (UI implemented)
+   `/ai-chat` is a live page route so the sidebar menu works today.
+   NOTE: intentionally outside the 'perm' group — no permission row exists in
+   the DB yet, so protected users would get 403. Move it inside the group below
+   once the `ai.chat` permission is seeded, to inherit branchscope too.
+   The AI API endpoints (send/history/conversations/clear) are wired later —
+   see the commented skeleton at the bottom of this file, and fill the
+   $aiChatRoutes array at the top of the chat view.
+   ========================================================================== */
+Route::middleware(['web', 'auth', 'firewall'])->group(function () {
+    Route::get('ai-chat', fn () => view('backend.modules.ai_chat.index'))->name('ai.chat');
+});
 
 Route::middleware(['web', 'auth', 'perm', 'branchscope'])->group(function () {
     Route::prefix('country')->name('country.')->group(function () {
@@ -291,6 +307,7 @@ Route::middleware(['web', 'auth', 'perm', 'branchscope'])->group(function () {
         Route::post('/store', [ProductDistributionController::class, 'store'])->name('store');
         Route::get('/edit/{productDistribution}', [ProductDistributionController::class, 'editModal'])->whereNumber('productDistribution')->name('edit');
         Route::put('/update/{productDistribution}', [ProductDistributionController::class, 'update'])->name('update');
+        Route::get('/{productDistribution}', [ProductDistributionController::class, 'show'])->whereNumber('productDistribution')->name('show');
         Route::delete('/{productDistribution}', [ProductDistributionController::class, 'destroy'])->name('destroy');
         Route::get('/status-modal/{productDistribution}', [ProductDistributionController::class, 'statusModal'])->name('statusModal');
         Route::post('/status-modal/{productDistribution}', [ProductDistributionController::class, 'updateStatus'])->name('updateStatus');
@@ -314,6 +331,9 @@ Route::middleware(['web', 'auth', 'perm', 'branchscope'])->group(function () {
         Route::post('/list-ajax', [DailyVisitController::class, 'listAjax'])->name('listAjax');
         Route::get('/create', [DailyVisitController::class, 'createModal'])->name('create');
         Route::post('/store', [DailyVisitController::class, 'store'])->name('store');
+        Route::get('/edit/{dailyVisit}', [DailyVisitController::class, 'editModal'])->whereNumber('dailyVisit')->name('edit');
+        Route::put('/update/{dailyVisit}', [DailyVisitController::class, 'update'])->name('update');
+        Route::delete('/{dailyVisit}', [DailyVisitController::class, 'destroy'])->name('destroy');
         Route::get('/status-modal/{dailyVisit}', [DailyVisitController::class, 'statusModal'])->name('statusModal');
         Route::get('/select2', [DailyVisitController::class, 'select2'])->name('select2');
         Route::post('/status-modal/{dailyVisit}', [DailyVisitController::class, 'updateStatus'])->name('updateStatus');
@@ -328,6 +348,7 @@ Route::middleware(['web', 'auth', 'perm', 'branchscope'])->group(function () {
         Route::get('/status-modal/{assignSpecimen}', [AssignSpecimenController::class, 'statusModal'])->name('statusModal');
         Route::get('/edit/{assignSpecimen}', [AssignSpecimenController::class, 'editModal'])->whereNumber('assignSpecimen')->name('edit');
         Route::put('/update/{assignSpecimen}', [AssignSpecimenController::class, 'update'])->name('update');
+        Route::get('/{assignSpecimen}', [AssignSpecimenController::class, 'show'])->whereNumber('assignSpecimen')->name('show');
         Route::post('/status-modal/{assignSpecimen}', [AssignSpecimenController::class, 'updateStatus'])->name('updateStatus');
         Route::delete('/{assignSpecimen}', [AssignSpecimenController::class, 'destroy'])->name('destroy');
     });
@@ -559,4 +580,31 @@ Route::middleware(['web', 'auth', 'perm', 'branchscope'])->group(function () {
         Route::delete('spot-sale/{spotSale}', [SpotSaleController::class, 'destroy'])->whereNumber('spotSale')->name('destroy');
         Route::get('product-price/{product}', [SpotSaleController::class, 'productPrice'])->whereNumber('product')->name('productPrice');
     });
+
+    Route::get('/cost-per-result', [CostPerResultController::class, 'index'])->name('cost-per-result.index');
+    Route::post('/cost-per-result', [CostPerResultController::class, 'costPerResult'])->name('cost-per-result.submit');
 });
+
+/* ==========================================================================
+   AI ASSISTANT — remaining integration steps when the controller is ready
+   --------------------------------------------------------------------------
+   DONE already:
+     - Chat UI view: resources/views/backend/modules/ai_chat/index.blade.php
+     - Page route:   GET /ai-chat   (name: ai.chat) — see the group at top
+     - Sidebar menu: resources/views/backend/include/sidebar.blade.php
+                     ("AI Assistant" item — wrap it in @perm('ai.chat') when the
+                      permission is seeded so non-admins get RBAC)
+
+   TODO here (register inside the 'auth'+'perm' group above, then move the
+   page route 'ai.chat' into that same group as well):
+      ========================================================================== */
+
+
+   Route::prefix('ai')->name('ai.')->group(function () {
+       Route::post('chat/send',          [ChatAssistantController::class, 'ask'])->name('chat.send');            // POST { message, conversation_id? }
+    //    Route::get('chat/history',        [AiChatController::class, 'history'])->name('chat.history');      // GET  ?conversation_id=...
+    //    Route::get('chat/conversations',  [AiChatController::class, 'conversations'])->name('chat.conversations'); // GET
+    //    Route::post('chat/clear',         [AiChatController::class, 'clear'])->name('chat.clear');          // POST { conversation_id? }
+   });
+
+

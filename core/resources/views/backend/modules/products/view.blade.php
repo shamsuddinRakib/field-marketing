@@ -40,7 +40,7 @@
             <div class="  ">
                 <div class="accordion-card-one accordion mb-6 shadow-sm rounded" id="accordionExample">
                     {{-- <div class="accordion-item"> --}}
-                    {{-- <div class="accordion-header" id="headingOne">
+                        {{-- <div class="accordion-header" id="headingOne">
                             <div class="accordion-button" data-bs-toggle="collapse" data-bs-target="#collapseOne"
                                 aria-controls="collapseOne">
                                 <div class="addproduct-icon">
@@ -50,11 +50,11 @@
                                 </div>
                             </div>
                         </div> --}}
-                    <div id="collapseOne" class="accordion-collapse collapse show" aria-labelledby="headingOne"
-                        data-bs-parent="#accordionExample">
-                        <div class="accordion-body">
+                        <div id="collapseOne" class="accordion-collapse collapse show" aria-labelledby="headingOne"
+                            data-bs-parent="#accordionExample">
+                            <div class="accordion-body">
 
-                            {{-- <div class="row">
+                                {{-- <div class="row">
 
 
                                     <div class="col-lg-5 col-sm-6 col-12">
@@ -77,8 +77,8 @@
 
                                     <div class="col-lg-3 col-sm-6 col-12">
                                         <label for="sku" class="form-label">Product SKU</label>
-                                        <input type="text" name="sku" class="form-control" placeholder="e.g. TS001"
-                                            id="sku" value="{{ $product->sku }}" readonly>
+                                        <input type="text" name="sku" class="form-control" placeholder="e.g. TS001" id="sku"
+                                            value="{{ $product->sku }}" readonly>
 
                                     </div>
 
@@ -114,7 +114,7 @@
 
 
 
-                                  
+
                                     <div class="col-lg-3 col-sm-6 col-12">
                                         <label class="form-label text-sm mb-8">Product Type</label>
                                         <select name="product_type_id" id="product_type"
@@ -128,8 +128,7 @@
 
                                     <div class="col-lg-3 col-sm-6 col-12">
                                         <label class="form-label text-sm mb-8">Unit</label>
-                                        <select name="unit_id" id="unit"
-                                            class="form-control js-product-type-select">
+                                        <select name="unit_id" id="unit" class="form-control js-product-type-select">
                                             <option value="{{ $product->unit_id }}" selected>{{ $product->unit->name }}
                                             </option>
                                         </select>
@@ -140,146 +139,149 @@
 
 
                                     {{-- <div class="row"> --}}
-                            {{-- <div class="col-lg-3 col-sm-6 col-12">
-                                        <label class="form-label text-sm mb-8">Brand</label>
-                                        <select name="brand_id" id="brand"
-                                            class="form-control js-product-type-select">
-                                            <option value="{{ $product->brand_id }}" selected>{{ $product->brand->name }}
-                                            </option>
-                                        </select>
-                                        <div class="invalid-feedback d-block brand_type_id-error" style="display:none">
-                                        </div>
-                                    </div>
-
-
-
-
-
-
-
-                                    <div class="col-lg-3 col-sm-6 col-12">
-                                        <div class="mb-3 ">
-                                            <label class="form-label">Purchase Price<span
-                                                    class="star-sign">*</span></label>
-                                            <input type="number" class="form-control" name="cost_price"
-                                                value="{{ $product->cost_price }}" readonly>
-                                        </div>
-                                    </div>
-
-                                    <div class="col-lg-3 col-sm-6 col-12">
-                                        <div class="mb-3 add-product">
-                                            <label class="form-label">MRP Price<span class="star-sign">*</span></label>
-                                            <input type="number"  class="form-control" min="0"
-                                                value="{{ $product->mrp }}" readonly>
-                                        </div>
-                                    </div>
-
-                                    <div class="col-lg-3 mb-3">
-                                        <label class="form-label">Discount</label>
-                                        <div class="input-group">
-                                            <select name="discount_type" class="form-select" id="discount_type">
-                                                <option >
-                                                   {{ $product->discount_type == 0 ? 'Flat' : 'Percentage(%)' }}  </option>
-                                               
+                                        {{-- <div class="col-lg-3 col-sm-6 col-12">
+                                            <label class="form-label text-sm mb-8">Brand</label>
+                                            <select name="brand_id" id="brand" class="form-control js-product-type-select">
+                                                <option value="{{ $product->brand_id }}" selected>{{ $product->brand->name
+                                                    }}
+                                                </option>
                                             </select>
-                                            <input type="number" class="form-control" 
-                                                value="{{ $product->discount_value }}" required readonly>
-                                        </div>
-                                    </div>
-
-
-
-                                    <div class="col-lg-3 col-sm-6 col-12">
-                                        <div class="mb-3">
-                                            <label class="form-label">Sale Price<span class="star-sign">*</span></label>
-                                            <input type="text" class="form-control" name="price" id="sale_price"
-                                                value="{{ $product->price }}" readonly>
-                                        </div>
-                                    </div>
-
-                                    <div class="col-lg-3 col-sm-6 col-12">
-                                        <div class="mb-3 ">
-                                            <label class="form-label">Materials<span class="star-sign">*</span></label>
-                                            <input type="text" class="form-control" name="material"
-                                                value="{{ $product->material }}" readonly>
-                                        </div>
-                                    </div>
-
-                                    <div class="col-lg-3 col-sm-6 col-12 col">
-                                        <label for="has_variant" class="form-label">Has Variant?</label>
-                                        <select class="form-select " name="has_variant" id="has_variant" >
-                                            <option >{{ $product->has_variants == 0 ? 'NO' : 'YES' }}
-                                            </option>
-                                           
-
-                                        </select>
-
-                                    </div>  --}}
-
-
-                            <div class="col-12 row shadow-lg m-auto rounded mb-3 dark-mode p-3 ">
-
-                                <h6>All Variants</h6>
-                                @foreach ($child_products as $product)
-                                    <div class="col-lg-12 row mb-2 g-2">
-                                        <div class="col-lg-2">
-                                            <label class="form-label">Name</label>
-                                            <input class="form-control" value="{{ $product->name }}" readonly>
-
-                                        </div>
-                                        @if ($product->color_id)
-                                            <div class="col-lg-2">
-                                                <label class="form-label">Color</label>
-                                                <input class="form-control" value="{{ $product->color->name ?? null }}"
-                                                    readonly>
-
+                                            <div class="invalid-feedback d-block brand_type_id-error" style="display:none">
                                             </div>
-                                        @endif
-                                        @if ($product->size_id)
-                                            <div class="col-lg-2">
-                                                <label class="form-label">Size</label>
-                                                <input class="form-control" value="{{ $product->size->name ?? null }}"
-                                                    readonly>
-
-                                            </div>
-                                        @endif
-                                        @if ($product->paper_id)
-                                            <div class="col-lg-2">
-                                                <label class="form-label">Size</label>
-                                                <input class="form-control"
-                                                    value="{{ $product->paper_quality->name ?? null }}" readonly>
-
-                                            </div>
-                                        @endif
-
-
-
-                                        <div class="col-lg-2">
-                                            <label class="form-label">SKU</label>
-                                            <input class="form-control" value="{{ $product->sku }}" readonly>
                                         </div>
 
-                                        <div class="col-lg-2">
-                                            <label class="form-label">Price</label>
-                                            <input type="number" min="0" class="form-control" name="child_price[]"
-                                                value="{{ $product->price }}" readonly>
+
+
+
+
+
+
+                                        <div class="col-lg-3 col-sm-6 col-12">
+                                            <div class="mb-3 ">
+                                                <label class="form-label">Purchase Price<span
+                                                        class="star-sign">*</span></label>
+                                                <input type="number" class="form-control" name="cost_price"
+                                                    value="{{ $product->cost_price }}" readonly>
+                                            </div>
                                         </div>
+
+                                        <div class="col-lg-3 col-sm-6 col-12">
+                                            <div class="mb-3 add-product">
+                                                <label class="form-label">MRP Price<span class="star-sign">*</span></label>
+                                                <input type="number" class="form-control" min="0"
+                                                    value="{{ $product->mrp }}" readonly>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-lg-3 mb-3">
+                                            <label class="form-label">Discount</label>
+                                            <div class="input-group">
+                                                <select name="discount_type" class="form-select" id="discount_type">
+                                                    <option>
+                                                        {{ $product->discount_type == 0 ? 'Flat' : 'Percentage(%)' }}
+                                                    </option>
+
+                                                </select>
+                                                <input type="number" class="form-control"
+                                                    value="{{ $product->discount_value }}" required readonly>
+                                            </div>
+                                        </div>
+
+
+
+                                        <div class="col-lg-3 col-sm-6 col-12">
+                                            <div class="mb-3">
+                                                <label class="form-label">Sale Price<span class="star-sign">*</span></label>
+                                                <input type="text" class="form-control" name="price" id="sale_price"
+                                                    value="{{ $product->price }}" readonly>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-lg-3 col-sm-6 col-12">
+                                            <div class="mb-3 ">
+                                                <label class="form-label">Materials<span class="star-sign">*</span></label>
+                                                <input type="text" class="form-control" name="material"
+                                                    value="{{ $product->material }}" readonly>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-lg-3 col-sm-6 col-12 col">
+                                            <label for="has_variant" class="form-label">Has Variant?</label>
+                                            <select class="form-select " name="has_variant" id="has_variant">
+                                                <option>{{ $product->has_variants == 0 ? 'NO' : 'YES' }}
+                                                </option>
+
+
+                                            </select>
+
+                                        </div> --}}
+
+
+                                        <div class="col-12 row shadow-lg m-auto rounded mb-3 dark-mode p-3 ">
+
+                                            <h6>All Variants</h6>
+                                            @foreach ($child_products as $product)
+                                                <div class="col-lg-12 row mb-2 g-2">
+                                                    <div class="col-lg-2">
+                                                        <label class="form-label">Name</label>
+                                                        <input class="form-control" value="{{ $product->name }}" readonly>
+
+                                                    </div>
+                                                    @if ($product->color_id)
+                                                        <div class="col-lg-2">
+                                                            <label class="form-label">Color</label>
+                                                            <input class="form-control" value="{{ $product->color->name ?? null }}"
+                                                                readonly>
+
+                                                        </div>
+                                                    @endif
+                                                    @if ($product->size_id)
+                                                        <div class="col-lg-2">
+                                                            <label class="form-label">Size</label>
+                                                            <input class="form-control" value="{{ $product->size->name ?? null }}"
+                                                                readonly>
+
+                                                        </div>
+                                                    @endif
+                                                    @if ($product->paper_id)
+                                                        <div class="col-lg-2">
+                                                            <label class="form-label">Size</label>
+                                                            <input class="form-control"
+                                                                value="{{ $product->paper_quality->name ?? null }}" readonly>
+
+                                                        </div>
+                                                    @endif
+
+
+
+                                                    <div class="col-lg-2">
+                                                        <label class="form-label">SKU</label>
+                                                        <input class="form-control" value="{{ $product->sku }}" readonly>
+                                                    </div>
+
+                                                    <div class="col-lg-2">
+                                                        <label class="form-label">Price</label>
+                                                        <input type="number" min="0" class="form-control" name="child_price[]"
+                                                            value="{{ $product->price }}" readonly>
+                                                    </div>
+                                                </div>
+                                            @endforeach
+                                        </div>
+
+
+
+
                                     </div>
-                                @endforeach
+
+                                </div>
                             </div>
-
-
-
-
                         </div>
+                        {{--
+                    </div> --}}
 
-                    </div>
                 </div>
+                {{--
             </div>
-            {{-- </div> --}}
-
-        </div>
-        {{-- </div>
         </div> --}}
 
     </form>

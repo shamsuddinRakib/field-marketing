@@ -13,6 +13,11 @@ class AssignSpecimen extends Model
         'updated_at'
     ];
 
+    public function items()
+    {
+        return $this->hasMany(AssignSpecimenItem::class, 'assign_specimen_id');
+    }
+
     public function user()
     {
         return $this->belongsTo(User::class);
