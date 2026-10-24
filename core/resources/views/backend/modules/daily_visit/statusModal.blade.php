@@ -9,8 +9,7 @@
             <label for="status" class="form-label">Select Status</label>
             <select name="status" id="status" class="form-select">
                 <option value="pending" {{ $dailyVisit->status == 'pending' ? 'selected' : '' }}>Pending</option>
-                <option value="delivered" {{ $dailyVisit->status == 'approved' ? 'selected' : '' }}>Approved</option>
-                
+                <option value="approved" {{ $dailyVisit->status == 'approved' ? 'selected' : '' }}>Approved</option>
             </select>
         </div>
     </div>

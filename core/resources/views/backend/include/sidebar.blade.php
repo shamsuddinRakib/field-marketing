@@ -34,6 +34,15 @@
 
                 </ul>
             </li>
+            {{-- AI Assistant menu start — wraps in @perm('ai.chat') once permission is seeded --}}
+            <li class="{{ Route::is('ai.*') ? 'active' : '' }}">
+                <a href="{{ route('ai.chat') }}">
+                    <iconify-icon icon="solar:magic-wand-3-bold" class="menu-icon"></iconify-icon>
+                    <span>AI Assistant</span>
+                </a>
+            </li>
+            {{-- AI Assistant menu end --}}
+
             {{-- user management module start --}}
 
             @permgroup(['usermanage', 'rbac', 'security'])
@@ -284,7 +293,7 @@
             @endpermgroup
 
             @permgroup(['fund-request.index', 'fund-distribution.index'])
-                <li class="sidebar-menu-group-title">Fund Management</li>
+                <li class="sidebar-menu-group-title ">Fund Management</li>
                 <li class="dropdown {{ Route::is('fund-request.*') || Route::is('fund-distribution.*') ? 'active' : '' }}">
                     <a href="javascript:void(0)">
                         <iconify-icon icon="mdi:cash-multiple" class="menu-icon"></iconify-icon>

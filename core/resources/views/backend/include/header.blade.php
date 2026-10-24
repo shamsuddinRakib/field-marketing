@@ -50,5 +50,15 @@
     <link rel="stylesheet" href="{{asset('theme/admin/assets/js/lib/select2/css/select2.min.css')}}" ></link>
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css"/>
- 
+
+    {{-- Fix: long select2 names overflowing ajax modals (product distribution / assign specimen / spot sale item tables) --}}
+    <style>
+        #AjaxModal .select2-container { max-width: 100% !important; min-width: 0; }
+        #AjaxModal .select2-selection__rendered { white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; }
+        #AjaxModal table.items-table-fixed { table-layout: fixed; width: 100%; }
+        #AjaxModal table.items-table-fixed th,
+        #AjaxModal table.items-table-fixed td { min-width: 0; overflow: hidden; }
+        #AjaxModal table.items-table-fixed .select2-container { width: 100% !important; }
+    </style>
+
 </head>
