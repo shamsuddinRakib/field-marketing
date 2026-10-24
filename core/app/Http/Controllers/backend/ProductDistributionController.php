@@ -3,12 +3,16 @@
 namespace App\Http\Controllers\backend;
 
 use App\Http\Controllers\Controller;
+use App\Models\backend\BookRequest;
 use App\Models\backend\CurrentStock;
+use App\Models\backend\MarketingRepresentative;
 use App\Models\backend\ProductDistribution;
 use App\Models\backend\ProductDistributionItem;
+use App\Services\BookRequestAvailabilityService;
 use App\Models\backend\StockLedger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class ProductDistributionController extends Controller
 {

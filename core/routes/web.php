@@ -305,6 +305,8 @@ Route::middleware(['web', 'auth', 'perm', 'branchscope'])->group(function () {
         Route::post('/list-ajax', [ProductDistributionController::class, 'listAjax'])->name('listAjax');
         Route::get('/create', [ProductDistributionController::class, 'createModal'])->name('create');
         Route::post('/store', [ProductDistributionController::class, 'store'])->name('store');
+        Route::get('/products-select2', [ProductDistributionController::class, 'productsSelect2'])->name('products.select2');
+        Route::get('/distributions-select2', [ProductDistributionController::class, 'distributionsSelect2'])->name('distributions.select2');
         Route::get('/edit/{productDistribution}', [ProductDistributionController::class, 'editModal'])->whereNumber('productDistribution')->name('edit');
         Route::put('/update/{productDistribution}', [ProductDistributionController::class, 'update'])->name('update');
         Route::get('/{productDistribution}', [ProductDistributionController::class, 'show'])->whereNumber('productDistribution')->name('show');
@@ -312,6 +314,7 @@ Route::middleware(['web', 'auth', 'perm', 'branchscope'])->group(function () {
         Route::get('/status-modal/{productDistribution}', [ProductDistributionController::class, 'statusModal'])->name('statusModal');
         Route::post('/status-modal/{productDistribution}', [ProductDistributionController::class, 'updateStatus'])->name('updateStatus');
     });
+
 
     //fund distribution
     Route::prefix('fund-distributions')->name('fund-distribution.')->group(function () {

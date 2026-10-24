@@ -18,8 +18,13 @@ class ProductDistribution extends Model
         return $this->hasMany(ProductDistributionItem::class, 'product_distribution_id');
     }
 
-    public function user()
-    {
-        return $this->belongsTo(User::class);
-    }
+   public function user()
+   {
+    return $this->belongsTo(User::class);
+   }
+
+   public function bookRequests()
+   {
+    return $this->hasMany(BookRequest::class);
+   }
 }

@@ -1,5 +1,5 @@
-<div class="modal-header">
-    <p class="modal-title fw-bold text-xl">Change Distribution Status (#{{ $productDistribution->id }})</p>
+<div class="modal-header" >
+    <p class="modal-title fw-bold text-xl">Change Distribution Status</p>
     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 </div>
 <form action="{{ route('product-distribution.updateStatus', $productDistribution->id) }}" method="POST" data-ajax="true">
