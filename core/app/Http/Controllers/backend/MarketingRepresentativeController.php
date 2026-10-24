@@ -34,7 +34,7 @@ class MarketingRepresentativeController extends Controller
     public function listAjax(Request $request)
     {
         // index must match the DataTable column order in index.blade.php
-        $columns = ['id', 'name', 'mobile', 'email', 'organization', 'branch_name', 'upazila_name', 'status', 'actions'];
+        $columns = ['id', 'name', 'current_fund', 'total_product', 'organization', 'branch_name', 'upazila_name', 'status', 'actions'];
         $draw = (int) $request->input('draw');
         $start = (int) $request->input('start', 0);
         $length = (int) $request->input('length', 10);
@@ -46,13 +46,50 @@ class MarketingRepresentativeController extends Controller
             ->leftJoin('users as us', 'us.id', '=', 'marketing_representatives.user_id')
             ->leftJoin('branches as b', 'b.id', '=', 'marketing_representatives.branch_id')
             ->leftJoin('upazilas as u', 'u.id', '=', 'marketing_representatives.upazila_id')
+            ->leftJoinSub(
+                \App\Models\backend\CurrentFund::query()
+                    ->select('user_id')
+                    ->selectRaw('SUM(balance) as current_fund')
+                    ->groupBy('user_id'),
+                'cf',
+                'cf.user_id',
+                '=',
+                'marketing_representatives.user_id'
+            )
+            ->leftJoinSub(
+                \App\Models\backend\ProductDistribution::query()
+                    ->select('user_id')
+                    ->selectRaw('SUM(quantity) as total_product')
+                    ->where('status', 'delivered')
+                    ->groupBy('user_id'),
+                'pd',
+                'pd.user_id',
+                '=',
+                'marketing_representatives.user_id'
+            )
+            ->leftJoinSub(
+                \App\Models\backend\SpotSale::query()
+                    ->select('user_id')
+                    ->selectRaw('COUNT(id) as total_spot_sales_count')
+                    ->selectRaw('SUM(total) as total_spot_sales_amount')
+                    ->where('status', 'approved')
+                    ->groupBy('user_id'),
+                'ss',
+                'ss.user_id',
+                '=',
+                'marketing_representatives.user_id'
+            )
             ->select(
                 'marketing_representatives.*',
                 'us.name as user_name',
                 'us.phone as user_phone',
                 'us.email as user_email',
                 'b.name as branch_name',
-                'u.upazila_name'
+                'u.upazila_name',
+                \Illuminate\Support\Facades\DB::raw('COALESCE(cf.current_fund, 0) as current_fund'),
+                DB::raw('COALESCE(pd.total_product, 0) as total_product'),
+                DB::raw('COALESCE(ss.total_spot_sales_count, 0) as total_spot_sales_count'),
+                DB::raw('COALESCE(ss.total_spot_sales_amount, 0) as total_spot_sales_amount')
             );
 
         $total = (clone $query)->count('marketing_representatives.id');
@@ -74,11 +111,13 @@ class MarketingRepresentativeController extends Controller
         // name / mobile / email live in the `users` table, not in marketing_representatives
         $orderBy = match ($orderColumn) {
             'name' => 'us.name',
+            'current_fund' => 'current_fund',
             'mobile' => 'us.phone',
             'email' => 'us.email',
             'branch_name' => 'b.name',
             'upazila_name' => 'u.upazila_name',
             'actions' => 'marketing_representatives.id',
+            'total_product' => 'total_product',
             default => 'marketing_representatives.' . $orderColumn,
         };
         $query->orderBy($orderBy, $orderDirection);
@@ -106,10 +145,31 @@ class MarketingRepresentativeController extends Controller
 
             return [
                 (int) $representative->id,
-                e($representative->user_name),
-                e($representative->user_phone ?: '-'),
-                e($representative->user_email ?: '-'),
+                // e($representative->user_name),   
+                // e($representative->user_phone ?: '-'),
+                // e($representative->user_email ?: '-'),
+                '<div>
+                    <div class="fw-semibold">' . '<strong>Name:</strong> '  . e($representative->user_name ?: '-') . '</div>
+                    <div class="text-sm text-secondary">' . '<strong>Phone:</strong> ' . e($representative->user_phone ?: '-') . '</div>
+                    <div class="text-sm text-secondary">' . '<strong>Email:</strong> ' . e($representative->user_email ?: '-') . '</div>
+                </div>',
                 e($representative->organization ?: '-'),
+
+                '<div>
+                    <div class="fw-semibold">
+                        Current Fund: ' . number_format((float) $representative->current_fund, 2) . '
+                    </div>
+                    <div class="text-sm text-secondary">
+                        Total Product: ' . number_format((int) $representative->total_product) . '
+                    </div>
+                     <div class="text-sm text-secondary">
+                        Spot Sales: ' . number_format((int) $representative->total_spot_sales_count) . '
+                    </div>
+                    <div class="text-sm text-secondary">
+                        Spot Sale Amount: ' . number_format((float) $representative->total_spot_sales_amount, 2) . '
+                    </div>
+                </div>',
+
                 e($representative->branch_name ?: '-'),
                 e($representative->upazila_name ?: '-'),
                 $status,
@@ -125,19 +185,6 @@ class MarketingRepresentativeController extends Controller
         ]);
     }
 
-    // public function store(Request $request)
-    // {
-    //     $representative = MarketingRepresentative::create($this->validated($request));
-
-    //     return response()->json(['ok' => true, 'id' => $representative->id, 'msg' => 'Marketing representative created.']);
-    // }
-
-    // public function update(Request $request, MarketingRepresentative $representative)
-    // {
-    //     $representative->update($this->validated($request, $representative));
-
-    //     return response()->json(['ok' => true, 'msg' => 'Marketing representative updated.']);
-    // }
 
     public function store(Request $request)
     {
@@ -236,16 +283,31 @@ class MarketingRepresentativeController extends Controller
     {
         $representative->load(['user', 'branch', 'upazila', 'district', 'division']);
 
-        return view('backend.modules.marketing_representatives.show', compact('representative'));
+        $userId = $representative->user_id;
+
+        // Current Fund
+        $currentFund = \App\Models\backend\CurrentFund::where('user_id', $userId)
+            ->sum('balance');
+
+        // Total Delivered Product Quantity
+        $totalProduct = \App\Models\backend\ProductDistribution::where('user_id', $userId)
+            ->where('status', 'delivered')
+            ->sum('quantity');
+
+        // Approved Spot Sales Count
+        $totalSpotSalesCount = \App\Models\backend\SpotSale::where('user_id', $userId)
+            ->where('status', 'approved')
+            ->count();
+
+        // Approved Spot Sales Amount
+        $totalSpotSalesAmount = \App\Models\backend\SpotSale::where('user_id', $userId)
+            ->where('status', 'approved')
+            ->sum('total');
+
+
+        return view('backend.modules.marketing_representatives.show', compact('representative','currentFund', 'totalProduct','totalSpotSalesCount','totalSpotSalesAmount'));
     }
 
-    // public function destroy(MarketingRepresentative $representative)
-    // {
-    //     $representative->delete();
-
-    //     return response()->json(['ok' => true, 'msg' => 'Marketing representative deleted.']);
-    // }
-    
     public function destroy(MarketingRepresentative $representative)
     {
         DB::transaction(function () use ($representative) {

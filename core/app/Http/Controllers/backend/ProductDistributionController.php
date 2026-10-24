@@ -47,9 +47,28 @@ class ProductDistributionController extends Controller
 
         $data = [];
         foreach ($rows as $b) {
-            $nameCol = '<strong>' . e(optional($b->user)->name ?? ('#' . $b->user_id)) . '</strong>';
-            $whenCol = $b->created_at ? $b->created_at->format('d M Y, h:i A') : '—';
-            $qty     = $b->items_qty ?? $b->items->sum('quantity');
+            $nameCol = '<strong>' . e($b->user->name ?? '') . '</strong>';
+
+            // $active = $b->is_active
+            //     ? '<span class="badge text-sm fw-semibold bg-dark-success-gradient px-20 py-9 radius-4 text-white">Active</span>'
+            //     : '<span class="badge text-sm fw-semibold bg-dark-warning-gradient px-20 py-9 radius-4 text-white">Inactive</span>';
+
+            $actions = '<div class="d-inline-flex justify-content-end gap-1 w-100">
+                <a href="#" class="w-32-px h-32-px rounded-circle d-inline-flex align-items-center justify-content-center
+                    bg-success-focus text-success-main AjaxModal"
+                    data-ajax-modal="' . route('product-distribution.edit', $b->id) . '"
+                    data-size="lg"
+                    data-onsuccess="BranchesIndex.onSaved"
+                    title="Edit">
+                    <iconify-icon icon="lucide:edit"></iconify-icon>
+                </a>
+                <a href="#" class="w-32-px h-32-px rounded-circle d-inline-flex align-items-center justify-content-center bg-danger-focus text-danger-main btn-branch-delete"
+                    data-id="' . $b->id . '"
+                    data-url="' . route('product-distribution.destroy', $b->id) . '"
+                    title="Delete">
+                    <iconify-icon icon="mdi:delete"></iconify-icon>
+                </a>
+            </div>';
 
             $statusLabel = match ($b->status) {
                 'pending'   => '<span class="badge text-sm fw-semibold bg-info-600 px-20 py-9 radius-4 text-white">Pending</span>',

@@ -76,16 +76,41 @@ class AssignSpecimenController extends Controller
 
     public function store(Request $request)
     {
-        $data = $this->validateSpecimenRequest($request);
+        // $data = $this->validateSpecimenRequest($request);
 
-        $mr = MarketingRepresentative::where('user_id', auth()->id())->first();
+        // $mr = MarketingRepresentative::where('user_id', auth()->id())->first();
 
-        if (!$mr) {
+        // if (!$mr) {
+        //     return response()->json([
+        //         'success' => false,
+        //         'message' => 'Marketing representative profile not found.',
+        //     ], 404);
+        // }
+        $data = $request->validate([
+            'product_id' => ['required', 'integer', 'exists:products,id'],
+            'teacher_id' => ['nullable', 'integer', Rule::exists('teachers', 'id')->whereNull('deleted_at')],
+            'library_id' => ['nullable', 'integer', Rule::exists('libraries', 'id')->whereNull('deleted_at')],
+            'institution_id' => ['nullable', 'integer', Rule::exists('institutions', 'id')->whereNull('deleted_at')],
+            'quantity' => ['required', 'integer', 'min:1'],
+            'note' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        if (
+            empty($data['teacher_id'])
+            && empty($data['library_id'])
+            && empty($data['institution_id'])
+        ) {
             return response()->json([
                 'success' => false,
-                'message' => 'Marketing representative profile not found.',
-            ], 404);
+                'message' => 'Either teacher_id, institution_id or library_id is required.',
+                'errors' => [
+                    'recipient' => [
+                        'Either teacher_id, institution_id or library_id is required.',
+                    ],
+                ],
+            ], 422);
         }
+
 
         $specimen = AssignSpecimen::create([
             'user_id' => auth()->id(),
@@ -132,16 +157,41 @@ class AssignSpecimenController extends Controller
 
     public function update(Request $request, $id)
     {
-        $data = $this->validateSpecimenRequest($request);
+        // $data = $this->validateSpecimenRequest($request);
 
-        $mr = MarketingRepresentative::where('user_id', auth()->id())->first();
+        // $mr = MarketingRepresentative::where('user_id', auth()->id())->first();
 
-        if (!$mr) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Marketing representative profile not found.',
-            ], 404);
-        }
+        // if (!$mr) {
+        //     return response()->json([
+        //         'success' => false,
+        //         'message' => 'Marketing representative profile not found.',
+        //     ], 404);
+        // }
+
+        $data = $request->validate([
+        'product_id' => ['required', 'integer', 'exists:products,id'],
+        'teacher_id' => ['nullable', 'integer', Rule::exists('teachers', 'id')->whereNull('deleted_at')],
+        'library_id' => ['nullable', 'integer', Rule::exists('libraries', 'id')->whereNull('deleted_at')],
+        'institution_id' => ['nullable', 'integer', Rule::exists('institutions', 'id')->whereNull('deleted_at')],
+        'quantity' => ['required', 'integer', 'min:1'],
+        'note' => ['nullable', 'string', 'max:255'],
+    ]);
+
+    if (
+        empty($data['teacher_id'])
+        && empty($data['library_id'])
+        && empty($data['institution_id'])
+    ) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Either teacher_id, institution_id or library_id is required.',
+            'errors' => [
+                'recipient' => [
+                    'Either teacher_id, institution_id or library_id is required.',
+                ],
+            ],
+        ], 422);
+    }
 
         $specimen = AssignSpecimen::where('id', $id)
             ->where('user_id', auth()->id())
