@@ -48,9 +48,9 @@
                             class="form-control form-control-sm radius-8" required>
                     </div>
                     <div class="col-12 d-flex align-items-center gap-3 flex-wrap">
-                        <button type="submit" class="btn btn-primary btn-sm px-16 py-10 radius-8"
+                        <button type="submit" class="btn btn-primary d-flex btn-sm px-16 py-10 radius-8"
                             id="costPerResultSubmit">
-                            <iconify-icon icon="solar:magnifer-outline" class="text-lg"></iconify-icon>
+                            <iconify-icon icon="solar:magnifer-outline" class="text-lg px-2"></iconify-icon>
                             Generate Report
                         </button>
                         <div id="costPerResultError" class="text-danger text-sm" role="alert" aria-live="polite"></div>
