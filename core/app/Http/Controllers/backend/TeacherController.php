@@ -63,7 +63,7 @@ class TeacherController extends Controller
                     ->orWhere('teachers.subject', 'like', "%{$search}%")
                     ->orWhere('teachers.class_name', 'like', "%{$search}%")
                     ->orWhere('i.institution_name', 'like', "%{$search}%")
-              
+
                     ->orWhere('i.code', 'like', "%{$search}%");
             });
         }
@@ -97,7 +97,7 @@ class TeacherController extends Controller
                 . '</div>';
 
             $teacherName = $teacher->teacher_name;
-            $institutionName = $teacher->institution_name ?: $teacher->inst_name ?: $teacher->inst_name2;
+            $institutionName = \Illuminate\Support\Str::limit($teacher->institution_name ?: $teacher->inst_name ?: $teacher->inst_name2, 20, '...');
 
             return [
                 (int) $teacher->id,
@@ -128,7 +128,13 @@ class TeacherController extends Controller
         }
         $teacher = Teacher::create($this->validated($request));
 
-        return response()->json(['ok' => true, 'id' => $teacher->id, 'msg' => 'Teacher created.']);
+        //return response()->json(['ok' => true, 'id' => $teacher->id, 'msg' => 'Teacher created.']);
+        return response()->json([
+            'ok' => true,
+            'id' => $teacher->id,
+            'teacher_name' => $teacher->teacher_name,
+            'msg' => 'Teacher created successfully.'
+        ]);
     }
 
     public function update(Request $request, Teacher $teacher)
@@ -152,7 +158,7 @@ class TeacherController extends Controller
             ->when($term !== '', function ($q) use ($term) {
                 $q->where(function ($b) use ($term) {
                     $b->where('institution_name', 'like', "%{$term}%")
-                      ->orWhere('code', 'like', "%{$term}%");
+                        ->orWhere('code', 'like', "%{$term}%");
                 });
             })
             ->orderBy('institution_name')
@@ -174,7 +180,7 @@ class TeacherController extends Controller
         $query = Teacher::query()
             ->when($term !== '', function ($q) use ($term) {
                 $q->where('teacher_name', 'like', "%{$term}%")
-                  ->orWhere('phone', 'like', "%{$term}%");
+                    ->orWhere('phone', 'like', "%{$term}%");
             })
             ->orderBy('teacher_name')
             ->limit(30);

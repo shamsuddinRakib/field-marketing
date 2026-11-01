@@ -17,6 +17,8 @@ class Expense extends Model
         'expense_date',
         'description',
         'total_amount',
+        'from_location',
+        'to_location',
         'status',          // draft | posted
         'created_by',
     ];

@@ -8,6 +8,7 @@ use App\Models\backend\AssignSpecimen;
 use App\Models\backend\MarketingRepresentative;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\DB;
 
 class AssignSpecimenController extends Controller
 {
@@ -44,11 +45,23 @@ class AssignSpecimenController extends Controller
             $query->where('institution_id', $request->institution_id);
         }
 
+        // if ($request->filled('search')) {
+        //     $search = $request->input('search');
+        //     $query->where(function ($q) use ($search) {
+        //         $q->where('note', 'like', "%{$search}%")
+        //             ->orWhereHas('product', function ($pq) use ($search) {
+        //                 $pq->where('name', 'like', "%{$search}%")
+        //                     ->orWhere('sku', 'like', "%{$search}%");
+        //             });
+        //     });
+        // }
+
         if ($request->filled('search')) {
             $search = $request->input('search');
+
             $query->where(function ($q) use ($search) {
                 $q->where('note', 'like', "%{$search}%")
-                    ->orWhereHas('product', function ($pq) use ($search) {
+                    ->orWhereHas('items.product', function ($pq) use ($search) {
                         $pq->where('name', 'like', "%{$search}%")
                             ->orWhere('sku', 'like', "%{$search}%");
                     });
@@ -74,67 +87,309 @@ class AssignSpecimenController extends Controller
         ]);
     }
 
+    // public function store(Request $request)
+    // {
+    //     // $data = $this->validateSpecimenRequest($request);
+
+    //     // $mr = MarketingRepresentative::where('user_id', auth()->id())->first();
+
+    //     // if (!$mr) {
+    //     //     return response()->json([
+    //     //         'success' => false,
+    //     //         'message' => 'Marketing representative profile not found.',
+    //     //     ], 404);
+    //     // }
+    //     $data = $request->validate([
+    //         'product_id' => ['required', 'integer', 'exists:products,id'],
+    //         'teacher_id' => ['nullable', 'integer', Rule::exists('teachers', 'id')->whereNull('deleted_at')],
+    //         'library_id' => ['nullable', 'integer', Rule::exists('libraries', 'id')->whereNull('deleted_at')],
+    //         'institution_id' => ['nullable', 'integer', Rule::exists('institutions', 'id')->whereNull('deleted_at')],
+    //         'quantity' => ['required', 'integer', 'min:1'],
+    //         'note' => ['nullable', 'string', 'max:255'],
+    //     ]);
+
+    //     if (
+    //         empty($data['teacher_id'])
+    //         && empty($data['library_id'])
+    //         && empty($data['institution_id'])
+    //     ) {
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'Either teacher_id, institution_id or library_id is required.',
+    //             'errors' => [
+    //                 'recipient' => [
+    //                     'Either teacher_id, institution_id or library_id is required.',
+    //                 ],
+    //             ],
+    //         ], 422);
+    //     }
+
+
+    //     $specimen = AssignSpecimen::create([
+    //         'user_id' => auth()->id(),
+    //         'product_id' => $data['product_id'],
+    //         'teacher_id' => $data['teacher_id'] ?? null,
+    //         'library_id' => $data['library_id'] ?? null,
+    //         'institution_id' => $data['institution_id'] ?? null,
+    //         'quantity' => $data['quantity'],
+    //         'note' => $data['note'] ?? null,
+    //         'status' => 'pending',
+    //     ]);
+
+    //     $specimen->load($this->relations());
+
+    //     return response()->json([
+    //         'success' => true,
+    //         'message' => 'Product delivery created successfully.',
+    //         'data' => new AssignSpecimenResource($specimen),
+    //     ], 201);
+    // }
+
+    // public function show($id)
+    // {
+    //     $mr = MarketingRepresentative::where('user_id', auth()->id())->firstOrFail();
+
+    //     $specimen = AssignSpecimen::with($this->relations())
+    //         ->where('id', $id)
+    //         ->where('user_id', auth()->id())
+    //         ->first();
+
+    //     if (!$specimen) {
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'Product delivery not found.',
+    //         ], 404);
+    //     }
+
+    //     return response()->json([
+    //         'success' => true,
+    //         'message' => 'Product delivery fetched successfully.',
+    //         'data' => new AssignSpecimenResource($specimen),
+    //     ]);
+    // }
+
+    // public function update(Request $request, $id)
+    // {
+    //     // $data = $this->validateSpecimenRequest($request);
+
+    //     // $mr = MarketingRepresentative::where('user_id', auth()->id())->first();
+
+    //     // if (!$mr) {
+    //     //     return response()->json([
+    //     //         'success' => false,
+    //     //         'message' => 'Marketing representative profile not found.',
+    //     //     ], 404);
+    //     // }
+
+    //     $data = $request->validate([
+    //         'product_id' => ['required', 'integer', 'exists:products,id'],
+    //         'teacher_id' => ['nullable', 'integer', Rule::exists('teachers', 'id')->whereNull('deleted_at')],
+    //         'library_id' => ['nullable', 'integer', Rule::exists('libraries', 'id')->whereNull('deleted_at')],
+    //         'institution_id' => ['nullable', 'integer', Rule::exists('institutions', 'id')->whereNull('deleted_at')],
+    //         'quantity' => ['required', 'integer', 'min:1'],
+    //         'note' => ['nullable', 'string', 'max:255'],
+    //     ]);
+
+    //     if (
+    //         empty($data['teacher_id'])
+    //         && empty($data['library_id'])
+    //         && empty($data['institution_id'])
+    //     ) {
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'Either teacher_id, institution_id or library_id is required.',
+    //             'errors' => [
+    //                 'recipient' => [
+    //                     'Either teacher_id, institution_id or library_id is required.',
+    //                 ],
+    //             ],
+    //         ], 422);
+    //     }
+
+    //     $specimen = AssignSpecimen::where('id', $id)
+    //         ->where('user_id', auth()->id())
+    //         ->first();
+
+    //     if (!$specimen) {
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'Product delivery not found.',
+    //         ], 404);
+    //     }
+
+    //     if ($specimen->status !== 'pending') {
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'Only pending product deliveries can be edited.',
+    //         ], 403);
+    //     }
+
+    //     $specimen->update([
+    //         'product_id' => $data['product_id'],
+    //         'teacher_id' => $data['teacher_id'] ?? null,
+    //         'library_id' => $data['library_id'] ?? null,
+    //         'institution_id' => $data['institution_id'] ?? null,
+    //         'quantity' => $data['quantity'],
+    //         'note' => $data['note'] ?? null,
+    //     ]);
+
+    //     $specimen->load($this->relations());
+
+    //     return response()->json([
+    //         'success' => true,
+    //         'message' => 'Product delivery updated successfully.',
+    //         'data' => new AssignSpecimenResource($specimen),
+    //     ]);
+    // }
+
+    // public function destroy($id)
+    // {
+    //     $mr = MarketingRepresentative::where('user_id', auth()->id())->first();
+
+    //     if (!$mr) {
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'Marketing representative profile not found.',
+    //         ], 404);
+    //     }
+
+    //     $specimen = AssignSpecimen::where('id', $id)
+    //         ->where('user_id', auth()->id())
+    //         ->first();
+
+    //     if (!$specimen) {
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'Product delivery not found.',
+    //         ], 404);
+    //     }
+
+    //     if ($specimen->status !== 'pending') {
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'Only pending product deliveries can be deleted.',
+    //         ], 403);
+    //     }
+
+    //     $specimen->delete();
+
+    //     return response()->json([
+    //         'success' => true,
+    //         'message' => 'Product delivery deleted successfully.',
+    //     ]);
+    // }
+
+    // private function validateSpecimenRequest(Request $request): array
+    // {
+    //     $data = $request->validate([
+    //         'product_id' => ['required', 'integer', 'exists:products,id'],
+    //         'teacher_id' => ['nullable', 'integer', Rule::exists('teachers', 'id')->whereNull('deleted_at')],
+    //         'library_id' => ['nullable', 'integer', Rule::exists('libraries', 'id')->whereNull('deleted_at')],
+    //         'institution_id' => ['nullable', 'integer', Rule::exists('institutions', 'id')->whereNull('deleted_at')],
+    //         'quantity' => ['required', 'integer', 'min:1'],
+    //         'note' => ['nullable', 'string', 'max:255'],
+    //     ]);
+
+    //     if (
+    //         empty($data['teacher_id'])
+    //         && empty($data['institution_id'])
+    //         && empty($data['library_id'])
+    //     ) {
+    //         abort(response()->json([
+    //             'success' => false,
+    //             'message' => 'Either teacher_id, institution_id or library_id is required.',
+    //             'errors' => [
+    //                 'recipient' => ['Either teacher_id, institution_id or library_id is required.'],
+    //             ],
+    //         ], 422));
+    //     }
+
+    //     return $data;
+    // }
+
+    // private function relations(): array
+    // {
+    //     return [
+    //         'product:id,name,slug,sku,price,thumbnail_image,brand_id',
+    //         'teacher:id,teacher_name,designation,department,institution_id',
+    //         'library:id,library_name,code,phone,address',
+    //         'institution:id,institution_name,code,phone,address',
+    //     ];
+    // }
+
     public function store(Request $request)
     {
-        // $data = $this->validateSpecimenRequest($request);
+        $mr = MarketingRepresentative::where('user_id', auth()->id())
+            ->first();
 
-        // $mr = MarketingRepresentative::where('user_id', auth()->id())->first();
+        if (!$mr) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Marketing representative profile not found.',
+            ], 404);
+        }
 
-        // if (!$mr) {
-        //     return response()->json([
-        //         'success' => false,
-        //         'message' => 'Marketing representative profile not found.',
-        //     ], 404);
-        // }
         $data = $request->validate([
-            'product_id' => ['required', 'integer', 'exists:products,id'],
             'teacher_id' => ['nullable', 'integer', Rule::exists('teachers', 'id')->whereNull('deleted_at')],
             'library_id' => ['nullable', 'integer', Rule::exists('libraries', 'id')->whereNull('deleted_at')],
             'institution_id' => ['nullable', 'integer', Rule::exists('institutions', 'id')->whereNull('deleted_at')],
-            'quantity' => ['required', 'integer', 'min:1'],
             'note' => ['nullable', 'string', 'max:255'],
+            'items' => ['required', 'array', 'min:1'],
+            'items.*.product_id' => ['required', 'integer', 'exists:products,id'],
+            'items.*.quantity' => ['required', 'integer', 'min:1'],
         ]);
 
-        if (
-            empty($data['teacher_id'])
-            && empty($data['library_id'])
-            && empty($data['institution_id'])
-        ) {
+        $recipientCount = count(array_filter([
+            $data['teacher_id'] ?? null,
+            $data['library_id'] ?? null,
+            $data['institution_id'] ?? null,
+        ]));
+
+        if ($recipientCount !== 1) {
             return response()->json([
                 'success' => false,
-                'message' => 'Either teacher_id, institution_id or library_id is required.',
+                'message' => 'Exactly one recipient is required: teacher_id, library_id or institution_id.',
                 'errors' => [
                     'recipient' => [
-                        'Either teacher_id, institution_id or library_id is required.',
+                        'Provide exactly one recipient ID.',
                     ],
                 ],
             ], 422);
         }
 
+        $specimen = DB::transaction(function () use ($data) {
+            $specimen = AssignSpecimen::create([
+                'user_id' => auth()->id(),
+                'teacher_id' => $data['teacher_id'] ?? null,
+                'library_id' => $data['library_id'] ?? null,
+                'institution_id' => $data['institution_id'] ?? null,
+                'note' => $data['note'] ?? null,
+                'status' => 'pending',
+            ]);
 
-        $specimen = AssignSpecimen::create([
-            'user_id' => auth()->id(),
-            'product_id' => $data['product_id'],
-            'teacher_id' => $data['teacher_id'] ?? null,
-            'library_id' => $data['library_id'] ?? null,
-            'institution_id' => $data['institution_id'] ?? null,
-            'quantity' => $data['quantity'],
-            'note' => $data['note'] ?? null,
-            'status' => 'pending',
-        ]);
+            foreach ($data['items'] as $item) {
+                $specimen->items()->create([
+                    'product_id' => $item['product_id'],
+                    'quantity' => $item['quantity'],
+                ]);
+            }
+
+            return $specimen;
+        });
 
         $specimen->load($this->relations());
 
         return response()->json([
             'success' => true,
-            'message' => 'Product delivery created successfully.',
+            'message' => 'Assign specimen created successfully.',
             'data' => new AssignSpecimenResource($specimen),
         ], 201);
     }
 
     public function show($id)
     {
-        $mr = MarketingRepresentative::where('user_id', auth()->id())->firstOrFail();
+        $mr = MarketingRepresentative::where('user_id', auth()->id())
+            ->firstOrFail();
 
         $specimen = AssignSpecimen::with($this->relations())
             ->where('id', $id)
@@ -144,54 +399,56 @@ class AssignSpecimenController extends Controller
         if (!$specimen) {
             return response()->json([
                 'success' => false,
-                'message' => 'Product delivery not found.',
+                'message' => 'Assign specimen not found.',
             ], 404);
         }
 
         return response()->json([
             'success' => true,
-            'message' => 'Product delivery fetched successfully.',
+            'message' => 'Assign specimen fetched successfully.',
             'data' => new AssignSpecimenResource($specimen),
         ]);
     }
 
     public function update(Request $request, $id)
     {
-        // $data = $this->validateSpecimenRequest($request);
+        $mr = MarketingRepresentative::where('user_id', auth()->id())
+            ->first();
 
-        // $mr = MarketingRepresentative::where('user_id', auth()->id())->first();
-
-        // if (!$mr) {
-        //     return response()->json([
-        //         'success' => false,
-        //         'message' => 'Marketing representative profile not found.',
-        //     ], 404);
-        // }
+        if (!$mr) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Marketing representative profile not found.',
+            ], 404);
+        }
 
         $data = $request->validate([
-        'product_id' => ['required', 'integer', 'exists:products,id'],
-        'teacher_id' => ['nullable', 'integer', Rule::exists('teachers', 'id')->whereNull('deleted_at')],
-        'library_id' => ['nullable', 'integer', Rule::exists('libraries', 'id')->whereNull('deleted_at')],
-        'institution_id' => ['nullable', 'integer', Rule::exists('institutions', 'id')->whereNull('deleted_at')],
-        'quantity' => ['required', 'integer', 'min:1'],
-        'note' => ['nullable', 'string', 'max:255'],
-    ]);
+            'teacher_id' => ['nullable', 'integer', Rule::exists('teachers', 'id')->whereNull('deleted_at')],
+            'library_id' => ['nullable', 'integer', Rule::exists('libraries', 'id')->whereNull('deleted_at')],
+            'institution_id' => ['nullable', 'integer', Rule::exists('institutions', 'id')->whereNull('deleted_at')],
+            'note' => ['nullable', 'string', 'max:255'],
+            'items' => ['required', 'array', 'min:1'],
+            'items.*.product_id' => ['required', 'integer', 'exists:products,id'],
+            'items.*.quantity' => ['required', 'integer', 'min:1'],
+        ]);
 
-    if (
-        empty($data['teacher_id'])
-        && empty($data['library_id'])
-        && empty($data['institution_id'])
-    ) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Either teacher_id, institution_id or library_id is required.',
-            'errors' => [
-                'recipient' => [
-                    'Either teacher_id, institution_id or library_id is required.',
+        $recipientCount = count(array_filter([
+            $data['teacher_id'] ?? null,
+            $data['library_id'] ?? null,
+            $data['institution_id'] ?? null,
+        ]));
+
+        if ($recipientCount !== 1) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Exactly one recipient is required: teacher_id, library_id or institution_id.',
+                'errors' => [
+                    'recipient' => [
+                        'Provide exactly one recipient ID.',
+                    ],
                 ],
-            ],
-        ], 422);
-    }
+            ], 422);
+        }
 
         $specimen = AssignSpecimen::where('id', $id)
             ->where('user_id', auth()->id())
@@ -200,38 +457,48 @@ class AssignSpecimenController extends Controller
         if (!$specimen) {
             return response()->json([
                 'success' => false,
-                'message' => 'Product delivery not found.',
+                'message' => 'Assign specimen not found.',
             ], 404);
         }
 
         if ($specimen->status !== 'pending') {
             return response()->json([
                 'success' => false,
-                'message' => 'Only pending product deliveries can be edited.',
+                'message' => 'Only pending assign specimens can be edited.',
             ], 403);
         }
 
-        $specimen->update([
-            'product_id' => $data['product_id'],
-            'teacher_id' => $data['teacher_id'] ?? null,
-            'library_id' => $data['library_id'] ?? null,
-            'institution_id' => $data['institution_id'] ?? null,
-            'quantity' => $data['quantity'],
-            'note' => $data['note'] ?? null,
-        ]);
+        DB::transaction(function () use ($specimen, $data) {
+            $specimen->update([
+                'teacher_id' => $data['teacher_id'] ?? null,
+                'library_id' => $data['library_id'] ?? null,
+                'institution_id' => $data['institution_id'] ?? null,
+                'note' => $data['note'] ?? null,
+            ]);
+
+            $specimen->items()->delete();
+
+            foreach ($data['items'] as $item) {
+                $specimen->items()->create([
+                    'product_id' => $item['product_id'],
+                    'quantity' => $item['quantity'],
+                ]);
+            }
+        });
 
         $specimen->load($this->relations());
 
         return response()->json([
             'success' => true,
-            'message' => 'Product delivery updated successfully.',
+            'message' => 'Assign specimen updated successfully.',
             'data' => new AssignSpecimenResource($specimen),
         ]);
     }
 
     public function destroy($id)
     {
-        $mr = MarketingRepresentative::where('user_id', auth()->id())->first();
+        $mr = MarketingRepresentative::where('user_id', auth()->id())
+            ->first();
 
         if (!$mr) {
             return response()->json([
@@ -247,58 +514,33 @@ class AssignSpecimenController extends Controller
         if (!$specimen) {
             return response()->json([
                 'success' => false,
-                'message' => 'Product delivery not found.',
+                'message' => 'Assign specimen not found.',
             ], 404);
         }
 
         if ($specimen->status !== 'pending') {
             return response()->json([
                 'success' => false,
-                'message' => 'Only pending product deliveries can be deleted.',
+                'message' => 'Only pending assign specimens can be deleted.',
             ], 403);
         }
 
-        $specimen->delete();
+        DB::transaction(function () use ($specimen) {
+            $specimen->items()->delete();
+            $specimen->delete();
+        });
 
         return response()->json([
             'success' => true,
-            'message' => 'Product delivery deleted successfully.',
+            'message' => 'Assign specimen deleted successfully.',
         ]);
-    }
-
-    private function validateSpecimenRequest(Request $request): array
-    {
-        $data = $request->validate([
-            'product_id' => ['required', 'integer', 'exists:products,id'],
-            'teacher_id' => ['nullable', 'integer', Rule::exists('teachers', 'id')->whereNull('deleted_at')],
-            'library_id' => ['nullable', 'integer', Rule::exists('libraries', 'id')->whereNull('deleted_at')],
-            'institution_id' => ['nullable', 'integer', Rule::exists('institutions', 'id')->whereNull('deleted_at')],
-            'quantity' => ['required', 'integer', 'min:1'],
-            'note' => ['nullable', 'string', 'max:255'],
-        ]);
-
-        if (
-            empty($data['teacher_id'])
-            && empty($data['institution_id'])
-            && empty($data['library_id'])
-        ) {
-            abort(response()->json([
-                'success' => false,
-                'message' => 'Either teacher_id, institution_id or library_id is required.',
-                'errors' => [
-                    'recipient' => ['Either teacher_id, institution_id or library_id is required.'],
-                ],
-            ], 422));
-        }
-
-        return $data;
     }
 
     private function relations(): array
     {
         return [
-            'product:id,name,slug,sku,price,thumbnail_image,brand_id',
-            'teacher:id,teacher_name,designation,department,institution_id',
+            'items.product:id,name,slug,sku,price,thumbnail_image,brand_id',
+            'teacher:id,teacher_name,phone,designation,department,institution_id',
             'library:id,library_name,code,phone,address',
             'institution:id,institution_name,code,phone,address',
         ];

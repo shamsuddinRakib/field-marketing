@@ -12,32 +12,113 @@ class AssignSpecimenResource extends JsonResource
      *
      * @return array<string, mixed>
      */
+    // public function toArray(Request $request): array
+    // {
+    //     return [
+    //         'id' => $this->id,
+    //         'quantity' => $this->quantity,
+    //         'note' => $this->note,
+    //         'status' => $this->status,
+    //         'created_at' => $this->created_at,
+    //         'updated_at' => $this->updated_at,
+
+    //         'product' => $this->whenLoaded('product', function () {
+    //             return [
+    //                 'id' => $this->product->id,
+    //                 'name' => $this->product->name,
+    //                 'slug' => $this->product->slug,
+    //                 'sku' => $this->product->sku,
+    //                 'price' => $this->product->price,
+    //                 'thumbnail_image' => $this->product->thumbnail_image,
+    //                 'brand_id' => $this->product->brand_id,
+    //             ];
+    //         }),
+
+    //         'teacher' => $this->whenLoaded('teacher', function () {
+    //             return [
+    //                 'id' => $this->teacher->id,
+    //                 'name' => $this->teacher->teacher_name,
+    //                 'phone' => $this->teacher->phone,
+    //                 'designation' => $this->teacher->designation,
+    //                 'department' => $this->teacher->department,
+    //                 'institution_id' => $this->teacher->institution_id,
+    //             ];
+    //         }),
+
+    //         'library' => $this->whenLoaded('library', function () {
+    //             return [
+    //                 'id' => $this->library->id,
+    //                 'name' => $this->library->library_name,
+    //                 'code' => $this->library->code,
+    //                 'phone' => $this->library->phone,
+    //                 'address' => $this->library->address,
+    //             ];
+    //         }),
+
+    //         'institution' => $this->whenLoaded('institution', function () {
+    //             return [
+    //                 'id' => $this->institution->id,
+    //                 'name' => $this->institution->institution_name,
+    //                 'phone' => $this->institution->phone,
+    //                 'code' => $this->institution->code,
+    //                 'address' => $this->institution->address,
+    //             ];
+    //         }),
+
+    //         'recipient_type' => $this->recipientType(),
+    //     ];
+    // }
+
+    // private function recipientType(): ?string
+    // {
+    //     if ($this->teacher_id) {
+    //         return 'teacher';
+    //     }
+
+    //     if ($this->institution_id) {
+    //         return 'institution';
+    //     }
+
+    //     if ($this->library_id) {
+    //         return 'library';
+    //     }
+
+    //     return null;
+    // }
+
     public function toArray(Request $request): array
     {
         return [
             'id' => $this->id,
-            'quantity' => $this->quantity,
             'note' => $this->note,
             'status' => $this->status,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
 
-            'product' => $this->whenLoaded('product', function () {
-                return [
-                    'id' => $this->product->id,
-                    'name' => $this->product->name,
-                    'slug' => $this->product->slug,
-                    'sku' => $this->product->sku,
-                    'price' => $this->product->price,
-                    'thumbnail_image' => $this->product->thumbnail_image,
-                    'brand_id' => $this->product->brand_id,
-                ];
+            'items' => $this->whenLoaded('items', function () {
+                return $this->items->map(function ($item) {
+                    return [
+                        'id' => $item->id,
+                        'product_id' => $item->product_id,
+                        'quantity' => $item->quantity,
+                        'product' => $item->product ? [
+                            'id' => $item->product->id,
+                            'name' => $item->product->name,
+                            'slug' => $item->product->slug,
+                            'sku' => $item->product->sku,
+                            'price' => $item->product->price,
+                            'thumbnail_image' => $item->product->thumbnail_image,
+                            'brand_id' => $item->product->brand_id,
+                        ] : null,
+                    ];
+                });
             }),
 
             'teacher' => $this->whenLoaded('teacher', function () {
                 return [
                     'id' => $this->teacher->id,
                     'name' => $this->teacher->teacher_name,
+                    'phone' => $this->teacher->phone,
                     'designation' => $this->teacher->designation,
                     'department' => $this->teacher->department,
                     'institution_id' => $this->teacher->institution_id,
@@ -58,8 +139,8 @@ class AssignSpecimenResource extends JsonResource
                 return [
                     'id' => $this->institution->id,
                     'name' => $this->institution->institution_name,
-                    'code' => $this->institution->code,
                     'phone' => $this->institution->phone,
+                    'code' => $this->institution->code,
                     'address' => $this->institution->address,
                 ];
             }),

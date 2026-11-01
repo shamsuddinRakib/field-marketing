@@ -10,9 +10,9 @@
     @php
         $customerType = $assignSpecimen->teacher_id ? 'teacher' : ($assignSpecimen->library_id ? 'library' : '—');
         $recipientName = $assignSpecimen->teacher_id
-            ? (optional($assignSpecimen->teacher)->teacher_name ?? ('#' . $assignSpecimen->teacher_id))
+            ? optional($assignSpecimen->teacher)->teacher_name ?? '#' . $assignSpecimen->teacher_id
             : ($assignSpecimen->library_id
-                ? (optional($assignSpecimen->library)->library_name ?? ('#' . $assignSpecimen->library_id))
+                ? optional($assignSpecimen->library)->library_name ?? '#' . $assignSpecimen->library_id
                 : '—');
     @endphp
 
@@ -22,14 +22,24 @@
             <div class="row g-3">
                 <div class="col-md-6">
                     <small class="text-muted d-block">Marketing Representative</small>
-                    <strong>{{ optional($assignSpecimen->user)->name ?? ('#' . $assignSpecimen->user_id) }}</strong>
+                    {{-- <strong>{{ optional($assignSpecimen->user)->name ?? ('#' . $assignSpecimen->user_id) }}</strong> --}}
+                    <div>
+                        <strong>Name:</strong>
+                        {{ optional($assignSpecimen->user)->name ?? '#' . $assignSpecimen->user_id }}
+                    </div>
+                    <div class="text-muted small">
+                        <strong>Phone:</strong>
+                        {{ optional($assignSpecimen->user)->phone ?? '—' }}
+                    </div>
                 </div>
                 <div class="col-md-6">
                     <small class="text-muted d-block">Status</small>
                     @if ($assignSpecimen->status === 'approved')
-                        <span class="badge text-sm fw-semibold bg-dark-success-gradient px-20 py-9 radius-4 text-white">Approved</span>
+                        <span
+                            class="badge text-sm fw-semibold bg-dark-success-gradient px-20 py-9 radius-4 text-white">Approved</span>
                     @else
-                        <span class="badge text-sm fw-semibold bg-dark-warning-gradient px-20 py-9 radius-4 text-white">Pending</span>
+                        <span
+                            class="badge text-sm fw-semibold bg-dark-warning-gradient px-20 py-9 radius-4 text-white">Pending</span>
                     @endif
                 </div>
                 <div class="col-md-6">
@@ -38,7 +48,22 @@
                 </div>
                 <div class="col-md-6">
                     <small class="text-muted d-block">Recipient</small>
-                    <strong>{{ $recipientName }}</strong>
+                    {{-- <strong>{{ $recipientName }}</strong> --}}
+                    <div>
+                        <strong>Name:</strong>
+                        {{ $recipientName }}
+                    </div>
+
+                    <div class="text-muted small">
+                        <strong>Phone:</strong>
+                        @if ($assignSpecimen->teacher_id)
+                            {{ optional($assignSpecimen->teacher)->phone ?? '—' }}
+                        @elseif ($assignSpecimen->library_id)
+                            {{ optional($assignSpecimen->library)->phone ?? '—' }}
+                        @else
+                            —
+                        @endif
+                    </div>
                 </div>
                 <div class="col-md-6">
                     <small class="text-muted d-block">Note</small>
@@ -66,7 +91,7 @@
             @forelse ($assignSpecimen->items as $idx => $item)
                 <tr>
                     <td>{{ $idx + 1 }}</td>
-                    <td>{{ optional($item->product)->name ?? ('#' . $item->product_id) }}</td>
+                    <td>{{ optional($item->product)->name ?? '#' . $item->product_id }}</td>
                     <td class="text-end">{{ number_format((int) $item->quantity) }}</td>
                 </tr>
             @empty

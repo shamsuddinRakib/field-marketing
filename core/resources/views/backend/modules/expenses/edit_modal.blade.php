@@ -7,7 +7,8 @@
 {{-- ================= MODAL BODY ================= --}}
 <div class="modal-body px-24 py-16">
 
-    <form id="expenseEditForm" action="{{ route('expenses.update', $expense->id) }}" method="POST" enctype="multipart/form-data" data-ajax="true" data-branch-id="{{ current_branch_id() }}">
+    <form id="expenseEditForm" action="{{ route('expenses.update', $expense->id) }}" method="POST"
+        enctype="multipart/form-data" data-ajax="true" data-branch-id="{{ current_branch_id() }}">
 
         @csrf
         @method('PUT')
@@ -20,9 +21,11 @@
 
                 <div class="row g-3">
                     <div class="col-md-6 mb-20">
-                        <label class="form-label text-sm mb-8">Select Representative <span class="text-danger">*</span></label>
+                        <label class="form-label text-sm mb-8">Select Representative <span
+                                class="text-danger">*</span></label>
                         <select class="form-control form-control-sm js-s2-ajax" name="user_id" id="user"
-                            data-url="{{ route('marketing-representative.marketing-representatives.select2') }}" data-placeholder="Select Marketing Representative">
+                            data-url="{{ route('marketing-representative.marketing-representatives.select2') }}"
+                            data-placeholder="Select Marketing Representative">
                             @if ($expense->user && $expense->user)
                                 <option value="{{ $expense->user->id }}" selected>{{ $expense->user->name }}</option>
                             @endif
@@ -37,10 +40,24 @@
                 </div>
 
                 <div class="row g-3">
+
+                    <div class="col-md-6">
+                        <label class="form-label text-sm">From Location</label>
+                        <input type="text" name="from_location" class="form-control form-control-sm radius-8"
+                            value="{{ old('from_location', $expense->from_location) }}" placeholder="e.g. Dhanmondi"
+                            maxlength="255">
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label text-sm">To Location</label>
+                        <input type="text" name="to_location" class="form-control form-control-sm radius-8"
+                            value="{{ old('to_location', $expense->to_location) }}" placeholder="e.g. Paltan"
+                            maxlength="255">
+                    </div>
                     <div class="col-md-6">
                         <label class="form-label text-sm">Expense Date <span class="text-danger">*</span></label>
                         <input type="date" name="expense_date" class="form-control form-control-sm radius-8"
-                            value="{{ ($expense->expense_date) }}" required>
+                            value="{{ $expense->expense_date }}" required>
                     </div>
 
                     <div class="col-md-6">
@@ -49,7 +66,8 @@
                             accept=".jpg,.jpeg,.png,.pdf,.doc,.docx">
                         @if ($expense->attachment)
                             <small class="d-block mt-8 text-muted">
-                                Current file: <a href="{{ asset($expense->attachment) }}" target="_blank" class="text-primary">Open</a>
+                                Current file: <a href="{{ asset($expense->attachment) }}" target="_blank"
+                                    class="text-primary">Open</a>
                             </small>
                         @endif
                     </div>
@@ -128,7 +146,8 @@
                         {{ number_format($expense->total_amount, 2) }}
                     </span>
                 </h5>
-                <input type="hidden" name="total_amount" id="expenseTotalInput" value="{{ $expense->total_amount }}">
+                <input type="hidden" name="total_amount" id="expenseTotalInput"
+                    value="{{ $expense->total_amount }}">
             </div>
         </div>
 
@@ -191,13 +210,13 @@
 
             const expenseId = res?.data?.id || res?.id;
 
-           
+
             // 🔹 Close modal
             $('.modal').modal('hide');
         }
     };
 
-  
+
 
     (function() {
 
@@ -245,7 +264,7 @@
 
         /* STATUS BUTTONS */
         $('#btnSaveDraft').on('click', function() {
-           
+
             $('#expenseStatus').val('draft');
             $('#expenseEditForm').submit();
         });

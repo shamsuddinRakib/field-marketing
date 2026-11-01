@@ -1,8 +1,10 @@
 <?php
+
 namespace App\Http\Controllers\backend;
 
 use App\Http\Controllers\Controller;
 use App\Models\backend\BranchAccount;
+use App\Models\backend\CompanySetting;
 use App\Models\backend\CurrentFund;
 use App\Models\backend\Expense;
 use App\Models\backend\ExpenseCategory;
@@ -34,7 +36,7 @@ class ExpenseController extends Controller
 
         $base = Expense::query()
             ->with(['items.category:id,name', 'user:id,name'])
-            ->select(['id','user_id', 'name', 'reference', 'description', 'total_amount', 'status', 'attachment']);
+            ->select(['id', 'user_id', 'name', 'reference', 'description', 'total_amount', 'status', 'from_location', 'to_location', 'attachment']);
 
         if (!$branchAll && $branchId) {
             $base->where('branch_id', $branchId);
@@ -68,6 +70,15 @@ class ExpenseController extends Controller
                 ->filter()
                 ->unique()
                 ->implode(', ');
+
+            // Expense Type with From and To Location
+            $expenseType = '
+                <strong>' . e($b->name) . '</strong>
+                <div class="text-muted text-sm mt-1">
+                    <div>From: ' . e($b->from_location ?: '—') . '</div>
+                    <div>To: ' . e($b->to_location ?: '—') . '</div>
+                </div>
+            ';
 
             $statusBadge = $b->status === 'posted'
                 ? '<span class="badge text-sm fw-semibold bg-dark-success-gradient px-20 py-9 radius-4 text-white">Posted</span>'
@@ -127,7 +138,12 @@ class ExpenseController extends Controller
                 $b->id,
                 e($b->user->name ?? '—'),
                 '<strong>' . e($b->name) . '</strong>',
-                e($categories ?: '—'),
+                // e($categories ?: '—'),
+                '<strong>' . e($categories ?: '—') . '</strong>' . '
+                <div class="text-muted text-sm mt-1">
+                    <div>From: ' . e($b->from_location ?: '—') . '</div>
+                    <div>To: ' . e($b->to_location ?: '—') . '</div>
+                </div>',
                 e($b->description ?? '—'),
                 $attachmentCell,
                 number_format($b->total_amount, 2),
@@ -156,11 +172,15 @@ class ExpenseController extends Controller
     public function store(Request $req)
     {
         // dd($req->all());
-        
+
         $data = $req->validate([
             'name' => 'required|string|max:255',
             'user_id' => 'required|integer|exists:users,id',
             'expense_date' => 'required|date',
+
+            'from_location' => 'nullable|string|max:255',
+            'to_location' => 'nullable|string|max:255',
+
             'reference' => 'nullable|string|max:255',
             'description' => 'nullable|string|max:255',
 
@@ -174,7 +194,7 @@ class ExpenseController extends Controller
             'attachment' => 'nullable|file|max:10240', // max 10MB
         ]);
 
-        
+
 
         // $this->assertExpenseCategoriesAreAccessible(collect($data['items'])->pluck('expense_category_id')->all());
 
@@ -182,7 +202,7 @@ class ExpenseController extends Controller
 
         // total from items (never trust frontend)
         $totalAmount = collect($data['items'])->sum('amount');
-        
+
         $attachmentPath = uploadFile($data['attachment'], 'uploads/expense/attachments');
 
         DB::beginTransaction();
@@ -195,6 +215,8 @@ class ExpenseController extends Controller
                 'posted_at' => now(),
                 'name' => $data['name'],
                 'expense_date' => $data['expense_date'],
+                'from_location' => $data['from_location'] ?? null,
+                'to_location' => $data['to_location'] ?? null,
                 'description' => $data['description'],
                 'total_amount' => $totalAmount,
                 'attachment' => $attachmentPath,
@@ -225,7 +247,6 @@ class ExpenseController extends Controller
                         'updated_at' => now(),
                     ]
                 );
-
             }
 
             DB::commit();
@@ -238,7 +259,6 @@ class ExpenseController extends Controller
                     'status' => $expense->status,
                 ],
             ]);
-
         } catch (\Throwable $e) {
 
             DB::rollBack();
@@ -292,6 +312,8 @@ class ExpenseController extends Controller
             'user_id' => 'required|integer|exists:users,id',
             'name' => 'required|string|max:255',
             'expense_date' => 'required|date',
+            'from_location' => 'nullable|string|max:255',
+            'to_location' => 'nullable|string|max:255',
             'reference' => 'nullable|string|max:255',
             'description' => 'nullable|string|max:255',
 
@@ -300,7 +322,7 @@ class ExpenseController extends Controller
             'items.*.description' => 'nullable|string|max:255',
             'items.*.amount' => 'required|numeric|min:0.01',
 
-            // 'payment_type_id'             => 'nullable|integer|exists:payment_types,id',
+            // 'payment_type_id' => 'nullable|integer|exists:payment_types,id',
             'status' => 'required|in:draft,posted',
             'attachment' => 'nullable|file|max:10240',
         ]);
@@ -323,6 +345,8 @@ class ExpenseController extends Controller
                 'invoice_no' => $data['invoice_no'] ?? null,
                 'posted_at' => $data['posted_at'] ?? null,
                 'expense_date' => $data['expense_date'],
+                'from_location' => $data['from_location'] ?? null,
+                'to_location' => $data['to_location'] ?? null,
                 'reference' => $data['reference'] ?? null,
                 'description' => $data['description'],
                 'attachment' => $attachmentPath,
@@ -355,8 +379,6 @@ class ExpenseController extends Controller
                         'updated_at' => now(),
                     ]
                 );
-
-
             }
 
             DB::commit();
@@ -366,7 +388,6 @@ class ExpenseController extends Controller
                 'msg' => 'Expense updated successfully',
                 'id' => $expense->id,
             ]);
-
         } catch (\Throwable $e) {
 
             DB::rollBack();
@@ -382,15 +403,17 @@ class ExpenseController extends Controller
     {
         $expense->load([
             'items.category',
-            'payment.paymentType',
+            // 'payment.paymentType',
             'branch',
             'creator',
 
         ]);
 
+        $companySetting = CompanySetting::first();
+
         return view(
             'backend.modules.expenses.invoice',
-            compact('expense')
+            compact('expense', 'companySetting')
         );
     }
 
@@ -398,7 +421,6 @@ class ExpenseController extends Controller
     {
         if ($expense->status === 'posted') {
             return response()->json(['ok' => false, 'msg' => 'Approved transaction cant be deleted'], 422);
-
         }
         //delete attachment file if exists
         if ($expense->attachment && file_exists(public_path($expense->attachment))) {
@@ -478,7 +500,6 @@ class ExpenseController extends Controller
                     'status' => $expense->status,
                 ],
             ]);
-
         } catch (\Throwable $e) {
             DB::rollBack();
 

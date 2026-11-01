@@ -17,6 +17,7 @@ use App\Http\Controllers\api\WebsiteSettingController;
 use App\Http\Controllers\api\OrderController;
 use App\Http\Controllers\api\ProductController;
 use App\Http\Controllers\api\AssignSpecimenController;
+use App\Http\Controllers\api\CourseClassController;
 use App\Http\Controllers\api\ProfileController;
 use App\Http\Controllers\api\TeacherController;
 use App\Http\Controllers\api\LibraryController;
@@ -138,5 +139,9 @@ Route::prefix('mr')->name('api.mr.')->group(function () {
         Route::get('/locations', [MrLocationController::class, 'index'])->name('mr.locations.index');
         Route::post('/locations', [MrLocationController::class, 'store'])->name('mr.locations.store');
         Route::get('/locations/{id}', [MrLocationController::class, 'show'])->name('mr.locations.show');
+
+        //student courseClass
+        Route::get('/course-classes', [CourseClassController::class, 'index'])->name('course-classes.index');
+        Route::get('/course-classes/{id}', [CourseClassController::class, 'show'])->name('course-classes.show');
     });
 });

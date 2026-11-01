@@ -3,10 +3,13 @@
 namespace App\Http\Controllers\backend;
 
 use App\Http\Controllers\Controller;
+use App\Models\backend\CourseClass;
+use App\Models\backend\Institution;
 use App\Models\backend\Library;
 use App\Models\backend\Product;
 use App\Models\backend\SpotSale;
 use App\Models\backend\SpotSaleItem;
+use App\Models\backend\Student;
 use App\Models\backend\Teacher;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -27,11 +30,12 @@ class SpotSaleController extends Controller
         $searchVal = trim($request->input('search.value', ''));
 
         $base = SpotSale::query()
-            ->select(['id', 'user_id', 'total', 'teacher_id', 'library_id', 'status', 'note', 'created_at'])
+            ->select(['id', 'user_id', 'total', 'teacher_id', 'library_id', 'student_id', 'status', 'note', 'created_at'])
             ->with([
                 'user:id,name',
                 'teacher:id,teacher_name',
                 'library:id,library_name',
+                'student:id,student_name',
                 'items.product:id,name',
             ])
             // NOTE: withSum() must come AFTER select() — select() replaces
@@ -44,7 +48,7 @@ class SpotSaleController extends Controller
             $base->where(function ($q) use ($searchVal) {
                 $q->where('note', 'like', "%{$searchVal}%")
                     ->orWhere('id', $searchVal)
-                    ->orWhereHas('user', fn ($u) => $u->where('name', 'like', "%{$searchVal}%"));
+                    ->orWhereHas('user', fn($u) => $u->where('name', 'like', "%{$searchVal}%"));
             });
         }
 
@@ -58,18 +62,20 @@ class SpotSaleController extends Controller
 
         $data = [];
         foreach ($rows as $b) {
-            $type = $b->teacher_id ? 'teacher' : ($b->library_id ? 'library' : '—');
+            $type = $b->teacher_id ? 'teacher' : ($b->library_id ? 'library' : ($b->student_id ? 'student' : '—'));
             $typeBadge = $type === 'teacher'
                 ? '<span class="badge text-sm fw-semibold bg-primary px-12 py-6 radius-4">Teacher</span>'
                 : ($type === 'library'
                     ? '<span class="badge text-sm fw-semibold bg-info px-12 py-6 radius-4">Library</span>'
-                    : '—');
+                    : ($type === 'student'
+                        ? '<span class="badge text-sm fw-semibold bg-success px-12 py-6 radius-4">Student</span>' : '—'));
 
             $customer = $b->teacher_id
-                ? e(optional($b->teacher)->teacher_name ?? ('#'.$b->teacher_id))
+                ? e(optional($b->teacher)->teacher_name ?? ('#' . $b->teacher_id))
                 : ($b->library_id
-                    ? e(optional($b->library)->library_name ?? ('#'.$b->library_id))
-                    : '—');
+                    ? e(optional($b->library)->library_name ?? ('#' . $b->library_id))
+                    : ($b->student_id
+                        ? e(optional($b->student)->student_name ?? ('#' . $b->student_id)) : '—'));
 
             $statusBadge = $b->status === 'approved'
                 ? '<span class="badge text-sm fw-semibold bg-dark-success-gradient px-20 py-9 radius-4 text-white">Approved</span>'
@@ -121,7 +127,7 @@ class SpotSaleController extends Controller
 
             $data[] = [
                 $b->id,
-                '<strong>' . e(optional($b->user)->name ?? ('#'.$b->user_id)) . '</strong>',
+                '<strong>' . e(optional($b->user)->name ?? ('#' . $b->user_id)) . '</strong>',
                 $typeBadge,
                 $customer,
                 e($b->note ?? '—'),
@@ -142,16 +148,29 @@ class SpotSaleController extends Controller
 
     public function createModal()
     {
-        return view('backend.modules.spot_sale.create'); // modal partial
+
+        $classes = CourseClass::where('is_active', 1)
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        $institutions = Institution::orderBy('institution_name')
+            ->get(['id', 'institution_name']);
+
+        return view('backend.modules.spot_sale.create', compact('classes', 'institutions')); // modal partial
     }
 
     public function store(Request $req)
     {
         $data = $req->validate([
             'user_id'               => 'required|integer|exists:users,id',
-            'customer_type'         => 'required|in:teacher,library',
+            'customer_type'         => 'required|in:teacher,library,student',
             'teacher_id'            => 'nullable|integer|exists:teachers,id|required_if:customer_type,teacher',
             'library_id'            => 'nullable|integer|exists:libraries,id|required_if:customer_type,library',
+
+            'student_name' => 'required_if:customer_type,student|nullable|string|max:255',
+            'course_class_id' => 'required_if:customer_type,student|nullable|integer|exists:course_class,id',
+            'institution_id' => 'required_if:customer_type,student|nullable|integer|exists:institutions,id',
+
             'note'                  => 'nullable|string|max:255',
             'status'                => 'required|in:pending,approved',
 
@@ -184,11 +203,24 @@ class SpotSaleController extends Controller
         DB::beginTransaction();
 
         try {
+            $studentId = null;
+
+            if ($data['customer_type'] === 'student') {
+                $student = Student::create([
+                    'user_id'         => $data['user_id'],
+                    'student_name'    => $data['student_name'],
+                    'course_class_id' => $data['course_class_id'],
+                    'institution_id'  => $data['institution_id'],
+                ]);
+
+                $studentId = $student->id;
+            }
             $spotSale = SpotSale::create([
                 'user_id'    => $data['user_id'],
                 'total'      => (int) round($total),
                 'teacher_id' => $data['customer_type'] === 'teacher' ? $data['teacher_id'] : null,
                 'library_id' => $data['customer_type'] === 'library' ? $data['library_id'] : null,
+                'student_id' => $studentId,
                 'status'     => $data['status'],
                 'note'       => $data['note'] ?? null,
             ]);
@@ -222,9 +254,20 @@ class SpotSaleController extends Controller
             'user:id,name',
             'teacher:id,teacher_name',
             'library:id,name,library_name',
+
+            'student:id,user_id,student_name,course_class_id,institution_id',
+            'student.courseClass:id,name',
+            'student.institution:id,institution_name',
         ]);
 
-        return view('backend.modules.spot_sale.edit', compact('spotSale'));
+        $classes = CourseClass::where('is_active', 1)
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        $institutions = Institution::orderBy('institution_name')
+            ->get(['id', 'institution_name']);
+
+        return view('backend.modules.spot_sale.edit', compact('spotSale', 'classes', 'institutions'));
     }
 
     public function show(SpotSale $spotSale)
@@ -234,6 +277,10 @@ class SpotSaleController extends Controller
             'user:id,name',
             'teacher:id,teacher_name',
             'library:id,name,library_name',
+
+            'student:id,user_id,student_name,course_class_id,institution_id',
+            'student.courseClass:id,name',
+            'student.institution:id,institution_name',
         ]);
 
         return view('backend.modules.spot_sale.show', compact('spotSale'));
@@ -247,9 +294,14 @@ class SpotSaleController extends Controller
 
         $data = $req->validate([
             'user_id'               => 'required|integer|exists:users,id',
-            'customer_type'         => 'required|in:teacher,library',
+            'customer_type'         => 'required|in:teacher,library,student',
             'teacher_id'            => 'nullable|integer|exists:teachers,id|required_if:customer_type,teacher',
             'library_id'            => 'nullable|integer|exists:libraries,id|required_if:customer_type,library',
+
+            'student_name'          => 'required_if:customer_type,student|nullable|string|max:255',
+            'course_class_id'       => 'required_if:customer_type,student|nullable|integer|exists:course_class,id',
+            'institution_id'        => 'required_if:customer_type,student|nullable|integer|exists:institutions,id',
+
             'note'                  => 'nullable|string|max:255',
             'status'                => 'required|in:pending,approved',
 
@@ -282,11 +334,38 @@ class SpotSaleController extends Controller
         DB::beginTransaction();
 
         try {
+
+            $studentId = null;
+
+            if ($data['customer_type'] === 'student') {
+                if ($spotSale->student_id) {
+                    $student = Student::findOrFail($spotSale->student_id);
+
+                    $student->update([
+                        'user_id'         => $data['user_id'],
+                        'student_name'    => $data['student_name'],
+                        'course_class_id' => $data['course_class_id'],
+                        'institution_id'  => $data['institution_id'],
+                    ]);
+                } else {
+                    $student = Student::create([
+                        'user_id'         => $data['user_id'],
+                        'student_name'    => $data['student_name'],
+                        'course_class_id' => $data['course_class_id'],
+                        'institution_id'  => $data['institution_id'],
+                    ]);
+                }
+
+                $studentId = $student->id;
+            }
+
             $spotSale->update([
                 'user_id'    => $data['user_id'],
                 'total'      => (int) round($total),
                 'teacher_id' => $data['customer_type'] === 'teacher' ? $data['teacher_id'] : null,
                 'library_id' => $data['customer_type'] === 'library' ? $data['library_id'] : null,
+                'student_id' => $studentId,
+
                 'status'     => $data['status'],
                 'note'       => $data['note'] ?? null,
             ]);

@@ -18,8 +18,8 @@
         }
     </style>
 
-  
-<div class="invoice-wrapper">
+
+    <div class="invoice-wrapper">
 
         {{-- ================= HEADER ================= --}}
         <div class="expense-invoice-header mb-4">
@@ -40,7 +40,15 @@
         <table class="table table-sm table-borderless mb-4">
             <tr>
                 <td width="20%"><strong>Expense Name</strong></td>
-                <td>{{ $expense->name }}</td>
+                <td>{{ $expense->name ?? '' }}</td>
+            </tr>
+            <tr>
+                <td><strong>From Location</strong></td>
+                <td>{{ $expense->from_location ?? '—' }}</td>
+            </tr>
+            <tr>
+                <td><strong>To Location</strong></td>
+                <td>{{ $expense->to_location ?? '—' }}</td>
             </tr>
             <tr>
                 <td><strong>Reference</strong></td>
@@ -101,5 +109,4 @@
         </div>
 
     </div>
-
 @endsection

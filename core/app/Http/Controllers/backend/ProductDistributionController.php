@@ -40,7 +40,7 @@ class ProductDistributionController extends Controller
             $base->where(function ($q) use ($searchVal) {
                 $q->where('note', 'like', "%{$searchVal}%")
                     ->orWhere('id', $searchVal)
-                    ->orWhereHas('user', fn ($u) => $u->where('name', 'like', "%{$searchVal}%"));
+                    ->orWhereHas('user', fn($u) => $u->where('name', 'like', "%{$searchVal}%"));
             });
         }
 
@@ -52,6 +52,13 @@ class ProductDistributionController extends Controller
         $data = [];
         foreach ($rows as $b) {
             $nameCol = '<strong>' . e($b->user->name ?? '') . '</strong>';
+
+            $whenCol = $b->created_at
+                ? $b->created_at->format('d M Y')
+                : '—';
+
+            $qty = (float) ($b->items_qty ?? 0);
+
 
             // $active = $b->is_active
             //     ? '<span class="badge text-sm fw-semibold bg-dark-success-gradient px-20 py-9 radius-4 text-white">Active</span>'
@@ -140,6 +147,8 @@ class ProductDistributionController extends Controller
         try {
             $distribution = ProductDistribution::create([
                 'user_id' => $data['user_id'],
+                'product_id' => $data['items'][0]['product_id'],
+                'quantity'   => collect($data['items'])->sum('quantity'),
                 'note'    => $data['note'] ?? null,
                 'status'  => 'pending',
             ]);

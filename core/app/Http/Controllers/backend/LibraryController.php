@@ -108,7 +108,7 @@ class LibraryController extends Controller
                 e($library->division_name ?: '-'),
                 e($library->district_name ?: '-'),
                 e($library->upazila_name ?: '-'),
-                e($library->address ? \Illuminate\Support\Str::limit($library->address, 50) : '-'),
+                e($library->address ? \Illuminate\Support\Str::limit($library->address, 25) : '-'),
                 $status,
                 $actions,
             ];
@@ -129,7 +129,13 @@ class LibraryController extends Controller
         }
         $library = Library::create($this->validated($request));
 
-        return response()->json(['ok' => true, 'id' => $library->id, 'msg' => 'Library created.']);
+        //return response()->json(['ok' => true, 'id' => $library->id, 'msg' => 'Library created.']);
+        return response()->json([
+            'ok' => true,
+            'id' => $library->id,
+            'library_name' => $library->library_name,
+            'msg' => 'Library created successfully.'
+        ]);
     }
 
     public function update(Request $request, Library $library)
@@ -152,10 +158,10 @@ class LibraryController extends Controller
         $districtId = $request->input('district_id');
         $divisionId = $request->input('division_id');
         $upazilas = Upazila::with('upazila_district.district_division')
-            ->when($term !== '', fn ($query) => $query->where('upazila_name', 'like', "%{$term}%"))
-            ->when($districtId, fn ($query) => $query->where('upazila_district_id', $districtId))
+            ->when($term !== '', fn($query) => $query->where('upazila_name', 'like', "%{$term}%"))
+            ->when($districtId, fn($query) => $query->where('upazila_district_id', $districtId))
             ->when($divisionId && !$districtId, function ($query) use ($divisionId) {
-                $query->whereHas('upazila_district', fn ($q) => $q->where('district_division_id', $divisionId));
+                $query->whereHas('upazila_district', fn($q) => $q->where('district_division_id', $divisionId));
             })
             ->orderBy('upazila_name')
             ->limit(30)
@@ -183,7 +189,7 @@ class LibraryController extends Controller
             ->when($term !== '', function ($q) use ($term) {
                 $q->where(function ($b) use ($term) {
                     $b->where('library_name', 'like', "%{$term}%")
-                      ->orWhere('code', 'like', "%{$term}%");
+                        ->orWhere('code', 'like', "%{$term}%");
                 });
             })
             ->orderBy('library_name')

@@ -28,9 +28,9 @@ class AssignSpecimenController extends Controller
         $base = AssignSpecimen::query()
             ->select(['id', 'user_id', 'teacher_id', 'library_id', 'note', 'status', 'created_at'])
             ->with([
-                'user:id,name',
-                'teacher:id,teacher_name',
-                'library:id,library_name',
+                'user:id,name,phone',
+                'teacher:id,teacher_name,phone',
+                'library:id,library_name,phone',
                 'items.product:id,name',
             ])
             ->withSum('items as items_qty', 'quantity');
@@ -41,9 +41,9 @@ class AssignSpecimenController extends Controller
             $base->where(function ($q) use ($searchVal) {
                 $q->where('note', 'like', "%{$searchVal}%")
                     ->orWhere('id', $searchVal)
-                    ->orWhereHas('user', fn ($u) => $u->where('name', 'like', "%{$searchVal}%"))
-                    ->orWhereHas('teacher', fn ($t) => $t->where('teacher_name', 'like', "%{$searchVal}%"))
-                    ->orWhereHas('library', fn ($l) => $l->where('library_name', 'like', "%{$searchVal}%"));
+                    ->orWhereHas('user', fn($u) => $u->where('name', 'like', "%{$searchVal}%"))
+                    ->orWhereHas('teacher', fn($t) => $t->where('teacher_name', 'like', "%{$searchVal}%"))
+                    ->orWhereHas('library', fn($l) => $l->where('library_name', 'like', "%{$searchVal}%"));
             });
         }
 
@@ -54,7 +54,48 @@ class AssignSpecimenController extends Controller
 
         $data = [];
         foreach ($rows as $b) {
-            $nameCol = '<strong>' . e(optional($b->user)->name ?? ('#' . $b->user_id)) . '</strong>';
+            //$nameCol = '<strong>' . e(optional($b->user)->name ?? ('#' . $b->user_id)) . '</strong>';
+            $nameCol = '<div>
+                <div><strong>Name:</strong> ' .
+                e(optional($b->user)->name ?? ('#' . $b->user_id)) .
+                '</div>
+                <div class="text-secondary" style="font-size:12px;">
+                    <strong>Phone:</strong> ' .
+                e(optional($b->user)->phone ?? '—') .
+                '</div>
+            </div>';
+
+            if ($b->teacher_id) {
+                $recipientName = $b->teacher->teacher_name ?? '—';
+                $recipientPhone = $b->teacher->phone ?? '—';
+            } elseif ($b->library_id) {
+                $recipientName = $b->library->library_name ?? '—';
+                $recipientPhone = $b->library->phone ?? '—';
+            } else {
+                $recipientName = '—';
+                $recipientPhone = '—';
+            }
+
+            // $visited = $b->teacher_id
+            //     ? e($b->teacher->teacher_name ?? '—')
+            //     : e($b->library->library_name ?? '—');
+
+            $visited = '<div>
+            <div><strong>Name:</strong> ' .
+                        e($recipientName) .
+                        '</div>
+            <div class="text-secondary" style="font-size:12px;">
+                <strong>Phone:</strong> ' .
+                        e($recipientPhone) .
+                        '</div>
+            </div>';
+
+
+            $whenCol = $b->created_at
+                ? $b->created_at->format('d M Y')
+                : '—';
+
+            $qty = (float) ($b->items_qty ?? 0);
 
             $type = $b->teacher_id ? 'teacher' : ($b->library_id ? 'library' : '—');
             $typeBadge = $type === 'teacher'
@@ -63,7 +104,7 @@ class AssignSpecimenController extends Controller
                     ? '<span class="badge text-sm fw-semibold bg-info px-12 py-6 radius-4">Library</span>'
                     : '—');
 
-            $nameCol = '<strong>' . e($b->user->name ?? '') . '</strong>';
+            //$nameCol = '<strong>' . e($b->user->name ?? '') . '</strong>';
 
             // $active = $b->is_active
             //     ? '<span class="badge text-sm fw-semibold bg-dark-success-gradient px-20 py-9 radius-4 text-white">Active</span>'
@@ -181,7 +222,7 @@ class AssignSpecimenController extends Controller
 
     public function show(AssignSpecimen $assignSpecimen)
     {
-        $assignSpecimen->load(['items.product:id,name', 'user:id,name', 'teacher:id,teacher_name', 'library:id,library_name']);
+        $assignSpecimen->load(['items.product:id,name', 'user:id,name,phone', 'teacher:id,teacher_name,phone', 'library:id,library_name,phone']);
 
         return view('backend.modules.assign_specimen.show', compact('assignSpecimen'));
     }

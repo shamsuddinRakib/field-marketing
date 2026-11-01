@@ -81,8 +81,9 @@ use Illuminate\Support\Facades\Route;
    see the commented skeleton at the bottom of this file, and fill the
    $aiChatRoutes array at the top of the chat view.
    ========================================================================== */
+
 Route::middleware(['web', 'auth', 'firewall'])->group(function () {
-    Route::get('ai-chat', fn () => view('backend.modules.ai_chat.index'))->name('ai.chat');
+    Route::get('ai-chat', fn() => view('backend.modules.ai_chat.index'))->name('ai.chat');
 });
 
 Route::middleware(['web', 'auth', 'perm', 'branchscope'])->group(function () {
@@ -603,11 +604,9 @@ Route::middleware(['web', 'auth', 'perm', 'branchscope'])->group(function () {
       ========================================================================== */
 
 
-   Route::prefix('ai')->name('ai.')->group(function () {
-       Route::post('chat/send',          [ChatAssistantController::class, 'ask'])->name('chat.send');            // POST { message, conversation_id? }
+Route::prefix('ai')->name('ai.')->group(function () {
+    Route::post('chat/send',          [ChatAssistantController::class, 'ask'])->name('chat.send');            // POST { message, conversation_id? }
     //    Route::get('chat/history',        [AiChatController::class, 'history'])->name('chat.history');      // GET  ?conversation_id=...
     //    Route::get('chat/conversations',  [AiChatController::class, 'conversations'])->name('chat.conversations'); // GET
     //    Route::post('chat/clear',         [AiChatController::class, 'clear'])->name('chat.clear');          // POST { conversation_id? }
-   });
-
-
+});

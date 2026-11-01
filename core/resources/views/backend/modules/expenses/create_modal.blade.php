@@ -52,6 +52,16 @@
                     </div> --}}
 
                     <div class="col-md-6">
+                        <label class="form-label text-sm">From Location</label>
+                        <input type="text" name="from_location" class="form-control form-control-sm radius-8" placeholder="e.g. Dhanmondi" maxlength="255">
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label text-sm">To Location</label>
+                        <input type="text" name="to_location" class="form-control form-control-sm radius-8"placeholder="e.g. Paltan" maxlength="255">
+                    </div>
+
+                    <div class="col-md-6">
                         <label class="form-label text-sm">Expense Date <span class="text-danger">*</span></label>
                         <input type="date" name="expense_date" class="form-control form-control-sm radius-8"
                             value="{{ now()->toDateString() }}" required>
@@ -159,11 +169,11 @@
     </form>
 </div>
 
-{{-- ================= JS HOOKS (NO LOGIC YET) ================= --}}
+{{-- JS --}}
 <script>
     window.EXPENSE_INVOICE_URL = "{{ route('expenses.invoice', ':id') }}";
     window.ExpenseIndex = {
-        onSaved: function (res) {
+        onSaved: function(res) {
 
             // 🔹 Table reload
             if ($.fn.DataTable) {
@@ -180,18 +190,18 @@
 
 
 
-    (function () {
+    (function() {
 
         const $table = $('#expenseItemsTable tbody');
         let rowIndex = 1;
 
         /* ================= ADD ROW ================= */
-        $('#btnAddExpenseItem').on('click', function () {
+        $('#btnAddExpenseItem').on('click', function() {
 
             const $firstRow = $table.find('tr:first');
 
             // 1️⃣ destroy select2 before cloning
-            $firstRow.find('.select2-hidden-accessible').each(function () {
+            $firstRow.find('.select2-hidden-accessible').each(function() {
                 $(this).select2('destroy');
             });
 
@@ -199,7 +209,7 @@
             const $row = $firstRow.clone();
 
             // 3️⃣ fix name & clear values
-            $row.find('input, select').each(function () {
+            $row.find('input, select').each(function() {
                 const name = $(this).attr('name');
                 if (!name) return;
 
@@ -218,7 +228,7 @@
         });
 
         /* ================= REMOVE ROW ================= */
-        $table.on('click', '.btnRemoveRow', function () {
+        $table.on('click', '.btnRemoveRow', function() {
             if ($table.find('tr').length === 1) return;
             $(this).closest('tr').remove();
             calculateTotal();
@@ -229,7 +239,7 @@
 
         function calculateTotal() {
             let total = 0;
-            $('.expense-amount').each(function () {
+            $('.expense-amount').each(function() {
                 total += parseFloat($(this).val() || 0);
             });
 
@@ -238,13 +248,13 @@
         }
 
         // Form submit handlers
-        $('#btnSaveDraft').on('click', function () {
+        $('#btnSaveDraft').on('click', function() {
 
             $('#expenseStatus').val('draft');
             $('#expenseCreateForm').submit();
         });
 
-        $('#btnPostExpense').on('click', function () {
+        $('#btnPostExpense').on('click', function() {
             // Check if branch is selected
 
             $('#expenseStatus').val('posted');
