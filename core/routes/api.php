@@ -18,6 +18,7 @@ use App\Http\Controllers\api\OrderController;
 use App\Http\Controllers\api\ProductController;
 use App\Http\Controllers\api\AssignSpecimenController;
 use App\Http\Controllers\api\CourseClassController;
+use App\Http\Controllers\api\DepartmentController;
 use App\Http\Controllers\api\ProfileController;
 use App\Http\Controllers\api\TeacherController;
 use App\Http\Controllers\api\LibraryController;
@@ -25,6 +26,8 @@ use App\Http\Controllers\api\InstitutionController;
 use App\Http\Controllers\api\MrAuthController;
 use App\Http\Controllers\api\MrLocationController;
 use App\Http\Controllers\api\SpotSaleController;
+use App\Http\Controllers\api\SubjectController;
+use App\Http\Controllers\api\UpazilaController;
 use Illuminate\Http\Request;
 
 
@@ -112,7 +115,11 @@ Route::prefix('mr')->name('api.mr.')->group(function () {
 
         //Dropdowns for delivery entry
         Route::get('/teachers', [TeacherController::class, 'index'])->name('teachers.index');
+        Route::post('/teachers', [TeacherController::class, 'store'])->name('teachers.store');
+
         Route::get('/libraries', [LibraryController::class, 'index'])->name('libraries.index');
+        Route::post('/libraries', [LibraryController::class, 'store'])->name('libraries.store');
+
         Route::get('/institutions', [InstitutionController::class, 'index'])->name('institutions.index');
         Route::get('/delivery-products', [ProductController::class, 'dropdown'])->name('delivery-products.index');
 
@@ -143,5 +150,17 @@ Route::prefix('mr')->name('api.mr.')->group(function () {
         //student courseClass
         Route::get('/course-classes', [CourseClassController::class, 'index'])->name('course-classes.index');
         Route::get('/course-classes/{id}', [CourseClassController::class, 'show'])->name('course-classes.show');
+
+        //Department
+        Route::get('/departments', [DepartmentController::class, 'index'])->name('departments.index');
+        Route::get('/departments/{id}', [DepartmentController::class, 'show'])->name('departments.show');
+
+        // Subject
+        Route::get('/subjects', [SubjectController::class, 'index'])->name('subjects.index');
+        Route::get('/subjects/{id}', [SubjectController::class, 'show'])->name('subjects.show');
+
+        // Upazila
+        Route::get('/upazilas', [UpazilaController::class, 'index'])->name('upazilas.index');
+        Route::get('/upazilas/{id}', [UpazilaController::class, 'show'])->name('upazilas.show');
     });
 });

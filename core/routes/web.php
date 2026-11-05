@@ -21,6 +21,7 @@ use App\Http\Controllers\backend\CouponController;
 use App\Http\Controllers\backend\CustomerController;
 use App\Http\Controllers\backend\CustomerLedgerController;
 use App\Http\Controllers\backend\CostPerResultController;
+use App\Http\Controllers\backend\CourierMarketingController;
 use App\Http\Controllers\backend\DailyPaymentSummaryController;
 use App\Http\Controllers\backend\DailyVisitController;
 use App\Http\Controllers\backend\DepartmentController;
@@ -65,6 +66,7 @@ use App\Http\Controllers\backend\MarketingRepresentativeController;
 use App\Http\Controllers\backend\InstitutionController;
 use App\Http\Controllers\backend\LibraryController;
 use App\Http\Controllers\backend\MrLocationController;
+use App\Http\Controllers\backend\MrDesignationController;
 use App\Http\Controllers\backend\ProductDistributionController;
 use App\Http\Controllers\backend\SubjectController;
 use App\Http\Controllers\backend\TeacherController;
@@ -232,11 +234,24 @@ Route::middleware(['web', 'auth', 'perm', 'branchscope'])->group(function () {
         Route::get('department/select2', [DepartmentController::class, 'select2'])->name('department.select2');
     });
 
+    // MR Designation Management
+    Route::prefix('mr-designation')->group(function () {
+        Route::get('mr-designation', [MrDesignationController::class, 'index'])->name('mr-designation.index');
+        Route::get('create-modal', [MrDesignationController::class, 'createModal'])->name('mr-designation.createModal');
+        Route::post('list', [MrDesignationController::class, 'listAjax'])->name('mr-designation.list.ajax');
+        Route::post('mr-designation', [MrDesignationController::class, 'store'])->name('mr-designation.store');
+        Route::get('edit-modal/{mrDesignation}', [MrDesignationController::class, 'editModal'])->whereNumber('mrDesignation')->name('mr-designation.editModal');
+        Route::put('{mrDesignation}', [MrDesignationController::class, 'update'])->name('mr-designation.update');
+        Route::delete('delete/{mrDesignation}', [MrDesignationController::class, 'destroy'])->name('mr-designation.destroy');
+        Route::get('mr-designation/select2', [MrDesignationController::class, 'select2'])->name('mr-designation.select2');
+    });
+
     // Marketing Representative Management (backend)
     Route::prefix('marketing-representative')->name('marketing-representative.')->group(function () {
         Route::get('marketing-representatives', [MarketingRepresentativeController::class, 'index'])->name('marketing-representatives.index');
         Route::post('marketing-representatives/list', [MarketingRepresentativeController::class, 'listAjax'])->name('marketing-representatives.list.ajax');
         Route::get('marketing-representatives/create-modal', [MarketingRepresentativeController::class, 'createModal'])->name('marketing-representatives.createModal');
+        Route::get('marketing-representatives/districts-select2', [MarketingRepresentativeController::class, 'districtsSelect2'])->name('marketing-representatives.districts.select2');
         Route::get('marketing-representatives/upazilas-select2', [MarketingRepresentativeController::class, 'upazilasSelect2'])->name('marketing-representatives.upazilas.select2');
         Route::get('marketing-representatives/select2', [MarketingRepresentativeController::class, 'select2'])->name('marketing-representatives.select2');
         Route::post('marketing-representatives', [MarketingRepresentativeController::class, 'store'])->name('marketing-representatives.store');
@@ -349,6 +364,7 @@ Route::middleware(['web', 'auth', 'perm', 'branchscope'])->group(function () {
         Route::post('/list-ajax', [AssignSpecimenController::class, 'listAjax'])->name('listAjax');
         Route::get('/create', [AssignSpecimenController::class, 'createModal'])->name('create');
         Route::post('/store', [AssignSpecimenController::class, 'store'])->name('store');
+        Route::get('/teachers-by-phone-select2', [AssignSpecimenController::class, 'teachersByPhoneSelect2'])->name('teachersByPhone.select2');
         Route::get('/status-modal/{assignSpecimen}', [AssignSpecimenController::class, 'statusModal'])->name('statusModal');
         Route::get('/edit/{assignSpecimen}', [AssignSpecimenController::class, 'editModal'])->whereNumber('assignSpecimen')->name('edit');
         Route::put('/update/{assignSpecimen}', [AssignSpecimenController::class, 'update'])->name('update');
@@ -587,6 +603,38 @@ Route::middleware(['web', 'auth', 'perm', 'branchscope'])->group(function () {
 
     Route::get('/cost-per-result', [CostPerResultController::class, 'index'])->name('cost-per-result.index');
     Route::post('/cost-per-result', [CostPerResultController::class, 'costPerResult'])->name('cost-per-result.submit');
+
+    // Courier Marketing Management
+    // Route::prefix('courier-marketing')->name('courier-marketings.')->group(function () {
+    //     Route::get('courier-marketing', [CourierMarketingController::class, 'index'])->name('index');
+    //     Route::post('courier-marketing/list', [CourierMarketingController::class, 'listAjax'])->name('list.ajax');
+    //     Route::get('courier-marketing/create-modal', [CourierMarketingController::class, 'createModal'])->name('createModal');
+    //     Route::get('courier-marketing/representatives-select2', [CourierMarketingController::class, 'representativesSelect2'])->name('representatives.select2');
+    //     Route::post('courier-marketing', [CourierMarketingController::class, 'store'])->name('store');
+    //     Route::get('courier-marketing/{courierMarketing}', [CourierMarketingController::class, 'show'])->whereNumber('courierMarketing')->name('show');
+    //     Route::get('courier-marketing/{courierMarketing}/edit-modal', [CourierMarketingController::class, 'editModal'])->whereNumber('courierMarketing')->name('editModal');
+    //     Route::put('courier-marketing/{courierMarketing}', [CourierMarketingController::class, 'update'])->whereNumber('courierMarketing')->name('update');
+    //     Route::delete('courier-marketing/{courierMarketing}', [CourierMarketingController::class, 'destroy'])->whereNumber('courierMarketing')->name('destroy');
+    // });
+
+    Route::prefix('courier-marketing')->name('courier-marketings.')->group(function () {
+        Route::get('/', [CourierMarketingController::class, 'index'])->name('index');
+        Route::post('list', [CourierMarketingController::class, 'listAjax'])->name('list.ajax');
+        Route::get('create-modal', [CourierMarketingController::class, 'createModal'])->name('createModal');
+
+        // Controller-er Select2 & Item Fetch Routes
+        Route::get('approved-requests-select2', [CourierMarketingController::class, 'approvedRequestsSelect2'])->name('approvedRequests.select2');
+        Route::get('request-items', [CourierMarketingController::class, 'requestItems'])->name('requestItems');
+        Route::get('teachers-select2', [CourierMarketingController::class, 'teachersSelect2'])->name('teachers.select2');
+
+        Route::post('/', [CourierMarketingController::class, 'store'])->name('store');
+        Route::get('{courierMarketing}', [CourierMarketingController::class, 'show'])->whereNumber('courierMarketing')->name('show');
+        Route::get('{courierMarketing}/edit-modal', [CourierMarketingController::class, 'editModal'])->whereNumber('courierMarketing')->name('editModal');
+        Route::put('{courierMarketing}', [CourierMarketingController::class, 'update'])->whereNumber('courierMarketing')->name('update');
+        Route::patch('{courierMarketing}/status', [CourierMarketingController::class, 'updateStatus'])->whereNumber('courierMarketing')->name('updateStatus');
+        Route::post('{courierMarketing}/confirm-receiving', [CourierMarketingController::class, 'confirmReceiving'])->whereNumber('courierMarketing')->name('confirmReceiving');
+        Route::delete('{courierMarketing}', [CourierMarketingController::class, 'destroy'])->whereNumber('courierMarketing')->name('destroy');
+    });
 });
 
 /* ==========================================================================

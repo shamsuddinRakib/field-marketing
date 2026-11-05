@@ -33,28 +33,37 @@
                     name="email" class="form-control radius-8" placeholder="rahim@example.com">
                 <div class="invalid-feedback d-block email-error" style="display:none"></div>
             </div>
-            <div class="col-md-6 mb-16"><label class="form-label text-sm mb-6">Organization</label><input
-                    name="organization" class="form-control radius-8"></div>
+            <div class="col-md-6 mb-16"><label class="form-label text-sm mb-6">Designation</label><select
+                    name="mr_designation_id" class="form-control radius-8 js-designation-select"></select>
+                <div class="invalid-feedback d-block mr_designation_id-error" style="display:none"></div>
+            </div>
             <div class="col-md-6 mb-16"><label class="form-label text-sm mb-6">Branch</label><select name="branch_id"
                     class="form-control radius-8 js-branch-select"></select>
                 <div class="invalid-feedback d-block branch_id-error" style="display:none"></div>
             </div>
-            <div class="col-md-6 mb-16"><label class="form-label text-sm mb-6">Upazila</label><select name="upazila_id"
-                    class="form-control radius-8 js-upazila-select"></select></div>
-            <div class="col-md-6 mb-16"><label class="form-label text-sm mb-6">District</label><input
-                    name="district_name" class="form-control radius-8" readonly><input type="hidden"
-                    name="district_id"></div>
-            <div class="col-md-6 mb-16"><label class="form-label text-sm mb-6">Division</label><input
-                    name="division_name" class="form-control radius-8" readonly><input type="hidden"
-                    name="division_id"></div>
-            <div class="col-12 mb-16"><label class="form-label text-sm mb-6">Address</label>
-                <textarea name="address" class="form-control radius-8" rows="2"></textarea>
+            <div class="col-md-6 mb-20">
+                <label class="form-label text-sm mb-6 d-block">District (Multiple) <span class="text-danger">*</span></label>
+                <select name="district_ids[]" class="form-control radius-8 js-district-select" multiple="multiple" data-placeholder="Select District(s)"></select>
+                <div class="invalid-feedback d-block district_ids-error" style="display:none"></div>
             </div>
-            <div class="col-md-6 mb-16"><label class="form-label text-sm mb-6">Status</label><select name="status"
+            <div class="col-md-6 mb-20">
+                <label class="form-label text-sm mb-6 d-block">Upazila (Multiple)</label>
+                <select name="upazila_ids[]" class="form-control radius-8 js-upazila-select" multiple="multiple" data-placeholder="Select District first" disabled></select>
+                <div class="invalid-feedback d-block upazila_ids-error" style="display:none"></div>
+            </div>
+            <div class="col-md-6 mb-20">
+                <label class="form-label text-sm mb-6 d-block">Division</label>
+                <input name="division_name" class="form-control radius-8 bg-light" placeholder="Auto calculated from district" readonly>
+                <input type="hidden" name="division_id">
+            </div>
+            <div class="col-md-6 mb-20"><label class="form-label text-sm mb-6 d-block">Status</label><select name="status"
                     class="form-select radius-8">
                     <option value="1" selected>Active</option>
                     <option value="0">Inactive</option>
                 </select></div>
+            <div class="col-12 mb-16"><label class="form-label text-sm mb-6">Address</label>
+                <textarea name="address" class="form-control radius-8" rows="2" placeholder="Enter Address"></textarea>
+            </div>
         </div>
         <div class="d-flex align-items-center justify-content-center gap-3 mt-12"><button type="button"
                 class="btn border border-danger-600 text-danger-600 px-40 py-11 radius-8"
@@ -62,3 +71,12 @@
                 class="btn btn-primary px-48 py-12 radius-8">Save</button></div>
     </form>
 </div>
+
+<script>
+    (function() {
+        const $modal = $('#AjaxModal');
+        if (typeof window.initMarketingRepresentativeTerritory === 'function') {
+            window.initMarketingRepresentativeTerritory($modal);
+        }
+    })();
+</script>

@@ -144,7 +144,6 @@ class DepartmentController extends Controller
         return view('backend.modules.departments.edit_modal', compact('department'));
     }
 
-
     public function update(Request $request, Department $department)
     {
         $validated = $request->validate([
@@ -199,6 +198,7 @@ class DepartmentController extends Controller
 
         return redirect()->route('department.index')->with('success', 'department deleted.');
     }
+
     public function select2(Request $r)
     {
 

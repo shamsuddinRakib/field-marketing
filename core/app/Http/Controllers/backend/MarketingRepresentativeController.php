@@ -4,6 +4,8 @@ namespace App\Http\Controllers\backend;
 
 use App\Http\Controllers\Controller;
 use App\Models\backend\MarketingRepresentative;
+use App\Models\backend\MarketingRepresentativeTerritory;
+use App\Models\backend\District;
 use App\Models\backend\Role;
 use App\Models\backend\Upazila;
 use Illuminate\Http\Request;
@@ -26,7 +28,7 @@ class MarketingRepresentativeController extends Controller
 
     public function editModal(MarketingRepresentative $representative)
     {
-        $representative->load(['user', 'branch', 'upazila', 'district', 'division']);
+        $representative->load(['user', 'branch', 'upazila', 'district', 'division', 'mrDesignation', 'territories.upazila', 'territories.district', 'territories.division']);
 
         return view('backend.modules.marketing_representatives.edit_modal', compact('representative'));
     }
@@ -34,7 +36,7 @@ class MarketingRepresentativeController extends Controller
     public function listAjax(Request $request)
     {
         // index must match the DataTable column order in index.blade.php
-        $columns = ['id', 'name', 'current_fund', 'total_product', 'organization', 'branch_name', 'upazila_name', 'status', 'actions'];
+        $columns = ['id', 'name', 'designation', 'current_fund', 'branch_name', 'upazila_name', 'status', 'actions'];
         $draw = (int) $request->input('draw');
         $start = (int) $request->input('start', 0);
         $length = (int) $request->input('length', 10);
@@ -42,10 +44,13 @@ class MarketingRepresentativeController extends Controller
         $orderDirection = strtolower($request->input('order.0.dir', 'desc')) === 'asc' ? 'asc' : 'desc';
         $search = trim($request->input('search.value', ''));
 
+        $designationTable = (new \App\Models\backend\MrDesignation())->getTable();
+
         $query = MarketingRepresentative::query()
             ->leftJoin('users as us', 'us.id', '=', 'marketing_representatives.user_id')
             ->leftJoin('branches as b', 'b.id', '=', 'marketing_representatives.branch_id')
             ->leftJoin('upazilas as u', 'u.id', '=', 'marketing_representatives.upazila_id')
+            ->leftJoin("{$designationTable} as des", 'des.id', '=', 'marketing_representatives.mr_designation_id')
             ->leftJoinSub(
                 \App\Models\backend\CurrentFund::query()
                     ->select('user_id')
@@ -84,6 +89,7 @@ class MarketingRepresentativeController extends Controller
                 'us.name as user_name',
                 'us.phone as user_phone',
                 'us.email as user_email',
+                'des.designation_name',
                 'b.name as branch_name',
                 'u.upazila_name',
                 \Illuminate\Support\Facades\DB::raw('COALESCE(cf.current_fund, 0) as current_fund'),
@@ -100,7 +106,7 @@ class MarketingRepresentativeController extends Controller
                     ->orWhere('marketing_representatives.employee_id', 'like', "%{$search}%")
                     ->orWhere('us.phone', 'like', "%{$search}%")
                     ->orWhere('us.email', 'like', "%{$search}%")
-                    ->orWhere('marketing_representatives.organization', 'like', "%{$search}%")
+                    ->orWhere('des.designation_name', 'like', "%{$search}%")
                     ->orWhere('u.upazila_name', 'like', "%{$search}%")
                     ->orWhere('b.name', 'like', "%{$search}%");
             });
@@ -111,6 +117,7 @@ class MarketingRepresentativeController extends Controller
         // name / mobile / email live in the `users` table, not in marketing_representatives
         $orderBy = match ($orderColumn) {
             'name' => 'us.name',
+            'designation', 'organization' => 'des.designation_name',
             'current_fund' => 'current_fund',
             'mobile' => 'us.phone',
             'email' => 'us.email',
@@ -122,7 +129,14 @@ class MarketingRepresentativeController extends Controller
         };
         $query->orderBy($orderBy, $orderDirection);
 
-        $data = $query->skip($start)->take($length)->get()->map(function ($representative) {
+        $rows = $query->skip($start)->take($length)->get();
+        $repIds = $rows->pluck('id')->all();
+        $territoriesByRep = MarketingRepresentativeTerritory::with('upazila')
+            ->whereIn('marketing_representative_id', $repIds)
+            ->get()
+            ->groupBy('marketing_representative_id');
+
+        $data = $rows->map(function ($representative) use ($territoriesByRep) {
             $status = $representative->status
                 ? '<span class="bg-success-focus text-success-600 border border-success-main px-12 py-4 radius-4 fw-medium text-sm">Active</span>'
                 : '<span class="bg-danger-focus text-danger-600 border border-danger-main px-12 py-4 radius-4 fw-medium text-sm">Inactive</span>';
@@ -139,9 +153,16 @@ class MarketingRepresentativeController extends Controller
 
             $actions = '<div class="d-inline-flex align-items-center justify-content-end gap-1 w-100">'
                 . '<a href="' . $showUrl . '" class="w-32-px h-32-px rounded-circle d-inline-flex align-items-center justify-content-center bg-info-focus text-info-main" title="View"><iconify-icon icon="lucide:eye"></iconify-icon></a>'
-                . '<a href="#" class="w-32-px h-32-px rounded-circle d-inline-flex align-items-center justify-content-center bg-success-focus text-success-main AjaxModal" data-ajax-modal="' . $editUrl . '" data-size="lg" data-onload="MarketingRepresentativesIndex.onLoad" data-onsuccess="MarketingRepresentativesIndex.onSaved" title="Edit"><iconify-icon icon="lucide:edit"></iconify-icon></a>'
+                . '<a href="#" class="w-32-px h-32-px rounded-circle d-inline-flex align-items-center justify-content-center bg-success-focus text-success-main AjaxModal" data-ajax-modal="' . $editUrl . '" data-size="xl" data-onload="MarketingRepresentativesIndex.onLoad" data-onsuccess="MarketingRepresentativesIndex.onSaved" title="Edit"><iconify-icon icon="lucide:edit"></iconify-icon></a>'
                 . '<a href="#" class="w-32-px h-32-px rounded-circle d-inline-flex align-items-center justify-content-center bg-danger-focus text-danger-main btn-representative-delete" data-url="' . $deleteUrl . '" title="Delete"><iconify-icon icon="mdi:delete"></iconify-icon></a>'
                 . '</div>';
+
+            $repTerritories = $territoriesByRep->get($representative->id);
+            if ($repTerritories && $repTerritories->isNotEmpty()) {
+                $upazilaDisplay = e($repTerritories->map(fn($t) => $t->upazila?->upazila_name)->filter()->implode(', '));
+            } else {
+                $upazilaDisplay = e($representative->upazila_name ?: '-');
+            }
 
             return [
                 (int) $representative->id,
@@ -153,7 +174,7 @@ class MarketingRepresentativeController extends Controller
                     <div class="text-sm text-secondary">' . '<strong>Phone:</strong> ' . e($representative->user_phone ?: '-') . '</div>
                     <div class="text-sm text-secondary">' . '<strong>Email:</strong> ' . e($representative->user_email ?: '-') . '</div>
                 </div>',
-                e($representative->organization ?: '-'),
+                e($representative->designation_name ?: '-'),
 
                 '<div>
                     <div class="fw-semibold">
@@ -171,7 +192,7 @@ class MarketingRepresentativeController extends Controller
                 </div>',
 
                 e($representative->branch_name ?: '-'),
-                e($representative->upazila_name ?: '-'),
+                $upazilaDisplay,
                 $status,
                 $actions,
             ];
@@ -211,9 +232,60 @@ class MarketingRepresentativeController extends Controller
                     $data['password']
                 );
 
+                $districtIds = (array) ($data['district_ids'] ?? []);
+                $upazilaIds = (array) ($data['upazila_ids'] ?? []);
+                if (empty($upazilaIds) && !empty($data['upazila_id'])) {
+                    $upazilaIds = [$data['upazila_id']];
+                }
+                unset($data['district_ids'], $data['upazila_ids']);
+
+                $locInfo = function_exists('getParentLocationsMultiple')
+                    ? getParentLocationsMultiple($upazilaIds)
+                    : ['territories' => [], 'district_ids' => [], 'division_ids' => []];
+
+                $allDistrictIds = array_unique(array_filter(array_merge($districtIds, $locInfo['district_ids'])));
+                if (!empty($allDistrictIds)) {
+                    $data['district_id'] = reset($allDistrictIds);
+                    $firstDist = District::whereIn('district_id', $allDistrictIds)->first();
+                    $data['division_id'] = $firstDist?->district_division_id;
+                }
+                if (!empty($locInfo['division_ids'])) {
+                    $data['division_id'] = $locInfo['division_ids'][0];
+                }
+                if (!empty($upazilaIds)) {
+                    $data['upazila_id'] = $upazilaIds[0];
+                }
+
                 $data['user_id'] = $user->id;
 
-                return MarketingRepresentative::create($data);
+                $representative = MarketingRepresentative::create($data);
+
+                $coveredDistricts = [];
+                if (!empty($locInfo['territories'])) {
+                    foreach ($locInfo['territories'] as $t) {
+                        MarketingRepresentativeTerritory::create([
+                            'marketing_representative_id' => $representative->id,
+                            'upazila_id'                  => $t['upazila_id'],
+                            'district_id'                 => $t['district_id'],
+                            'division_id'                 => $t['division_id'],
+                        ]);
+                        if (!empty($t['district_id'])) {
+                            $coveredDistricts[] = $t['district_id'];
+                        }
+                    }
+                }
+                $remainingDistricts = array_diff($allDistrictIds, array_unique($coveredDistricts));
+                foreach ($remainingDistricts as $dId) {
+                    $distObj = District::where('district_id', $dId)->first();
+                    MarketingRepresentativeTerritory::create([
+                        'marketing_representative_id' => $representative->id,
+                        'upazila_id'                  => null,
+                        'district_id'                 => $dId,
+                        'division_id'                 => $distObj?->district_division_id,
+                    ]);
+                }
+
+                return $representative;
             });
         } catch (\Throwable $e) {
             report($e);
@@ -263,7 +335,57 @@ class MarketingRepresentativeController extends Controller
                     $data['password']
                 );
 
+                $districtIds = (array) ($data['district_ids'] ?? []);
+                $upazilaIds = (array) ($data['upazila_ids'] ?? []);
+                if (empty($upazilaIds) && !empty($data['upazila_id'])) {
+                    $upazilaIds = [$data['upazila_id']];
+                }
+                unset($data['district_ids'], $data['upazila_ids']);
+
+                $locInfo = function_exists('getParentLocationsMultiple')
+                    ? getParentLocationsMultiple($upazilaIds)
+                    : ['territories' => [], 'district_ids' => [], 'division_ids' => []];
+
+                $allDistrictIds = array_unique(array_filter(array_merge($districtIds, $locInfo['district_ids'])));
+                if (!empty($allDistrictIds)) {
+                    $data['district_id'] = reset($allDistrictIds);
+                    $firstDist = District::whereIn('district_id', $allDistrictIds)->first();
+                    $data['division_id'] = $firstDist?->district_division_id;
+                }
+                if (!empty($locInfo['division_ids'])) {
+                    $data['division_id'] = $locInfo['division_ids'][0];
+                }
+                if (!empty($upazilaIds)) {
+                    $data['upazila_id'] = $upazilaIds[0];
+                }
+
                 $representative->update($data);
+
+                $representative->territories()->delete();
+                $coveredDistricts = [];
+                if (!empty($locInfo['territories'])) {
+                    foreach ($locInfo['territories'] as $t) {
+                        MarketingRepresentativeTerritory::create([
+                            'marketing_representative_id' => $representative->id,
+                            'upazila_id'                  => $t['upazila_id'],
+                            'district_id'                 => $t['district_id'],
+                            'division_id'                 => $t['division_id'],
+                        ]);
+                        if (!empty($t['district_id'])) {
+                            $coveredDistricts[] = $t['district_id'];
+                        }
+                    }
+                }
+                $remainingDistricts = array_diff($allDistrictIds, array_unique($coveredDistricts));
+                foreach ($remainingDistricts as $dId) {
+                    $distObj = District::where('district_id', $dId)->first();
+                    MarketingRepresentativeTerritory::create([
+                        'marketing_representative_id' => $representative->id,
+                        'upazila_id'                  => null,
+                        'district_id'                 => $dId,
+                        'division_id'                 => $distObj?->district_division_id,
+                    ]);
+                }
             });
         } catch (\Throwable $e) {
             report($e);
@@ -281,7 +403,7 @@ class MarketingRepresentativeController extends Controller
 
     public function show(MarketingRepresentative $representative)
     {
-        $representative->load(['user', 'branch', 'upazila', 'district', 'division']);
+        $representative->load(['user', 'branch', 'upazila', 'district', 'division', 'mrDesignation', 'territories.upazila', 'territories.district', 'territories.division']);
 
         $userId = $representative->user_id;
 
@@ -329,13 +451,54 @@ class MarketingRepresentativeController extends Controller
         ]);
     }
 
+    public function districtsSelect2(Request $request)
+    {
+        $term = trim($request->input('q', ''));
+        $districts = District::with('district_division')
+            ->when($term !== '', function ($q) use ($term) {
+                $q->where('district_name', 'like', "%{$term}%")
+                    ->orWhere('district_bn_name', 'like', "%{$term}%");
+            })
+            ->orderBy('district_name')
+            ->limit(64)
+            ->get();
+
+        return response()->json(['results' => $districts->map(function ($district) {
+            $division = $district->district_division;
+            return [
+                'id'            => $district->district_id,
+                'text'          => $district->district_name,
+                'division_id'   => $division?->id,
+                'division_name' => $division?->name,
+            ];
+        })->values()]);
+    }
+
     public function upazilasSelect2(Request $request)
     {
         $term = trim($request->input('q', ''));
-        $upazilas = Upazila::with('upazila_district.district_division')
-            ->when($term !== '', fn($query) => $query->where('upazila_name', 'like', "%{$term}%"))
-            ->orderBy('upazila_name')
-            ->limit(30)
+        $districtIds = $request->input('district_ids');
+        if (is_string($districtIds)) {
+            $districtIds = array_filter(explode(',', $districtIds));
+        }
+
+        // Upazila is dependent on District. If no district is selected, do not return any upazila.
+        if (empty($districtIds)) {
+            return response()->json(['results' => []]);
+        }
+
+        $query = Upazila::with('upazila_district.district_division')
+            ->whereIn('upazila_district_id', (array) $districtIds);
+
+        if ($term !== '') {
+            $query->where(function ($q) use ($term) {
+                $q->where('upazila_name', 'like', "%{$term}%")
+                    ->orWhere('upazila_bn_name', 'like', "%{$term}%");
+            });
+        }
+
+        $upazilas = $query->orderBy('upazila_name')
+            ->limit(100)
             ->get();
 
         return response()->json(['results' => $upazilas->map(function ($upazila) {
@@ -343,11 +506,11 @@ class MarketingRepresentativeController extends Controller
             $division = $district?->district_division;
 
             return [
-                'id' => $upazila->id,
-                'text' => $upazila->upazila_name,
-                'district_id' => $district?->district_id,
+                'id'            => $upazila->id,
+                'text'          => $upazila->upazila_name . ($district ? " ({$district->district_name})" : ''),
+                'district_id'   => $district?->district_id,
                 'district_name' => $district?->district_name,
-                'division_id' => $division?->id,
+                'division_id'   => $division?->id,
                 'division_name' => $division?->name,
             ];
         })->values()]);
@@ -371,8 +534,12 @@ class MarketingRepresentativeController extends Controller
             'password' => [$representative ? 'nullable' : 'required', 'string', 'min:8', 'confirmed'],
             'mobile' => ['nullable', 'string', 'max:50', Rule::unique('users', 'phone')->ignore($userId)],
             'email' => ['nullable', 'email', 'max:191', Rule::unique('users', 'email')->ignore($userId)],
-            'organization' => ['nullable', 'string', 'max:191'],
+            'mr_designation_id' => ['nullable', 'integer'],
             'branch_id' => ['nullable', 'integer', 'exists:branches,id'],
+            'district_ids' => ['nullable', 'array'],
+            'district_ids.*' => ['integer'],
+            'upazila_ids' => ['nullable', 'array'],
+            'upazila_ids.*' => ['integer', 'exists:upazilas,id'],
             'upazila_id' => ['nullable', 'integer', 'exists:upazilas,id'],
             'district_id' => ['nullable', 'integer', 'exists:districts,district_id'],
             'division_id' => ['nullable', 'integer', 'exists:divisions,id'],
@@ -398,7 +565,7 @@ class MarketingRepresentativeController extends Controller
 
         return response()->json(['results' => $representatives->map(function ($representative) {
             return [
-                'id' => $representative->user->id,
+                'id' => $representative->user->id ?? '-',
                 'text' => $representative->user?->name ?? 'N/A',
                 'employee_id' => $representative->employee_id,
                 'mobile' => $representative->user?->phone ?? null,

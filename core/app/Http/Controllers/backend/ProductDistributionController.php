@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\backend\BookRequest;
 use App\Models\backend\CurrentStock;
 use App\Models\backend\MarketingRepresentative;
+use App\Models\backend\Product;
 use App\Models\backend\ProductDistribution;
 use App\Models\backend\ProductDistributionItem;
 use App\Services\BookRequestAvailabilityService;
@@ -312,5 +313,73 @@ class ProductDistributionController extends Controller
         }
 
         return response()->json(['ok' => true, 'msg' => 'Status Updated Successfully']);
+    }
+
+    public function productsSelect2(Request $request)
+    {
+        $repId            = (int) $request->input('marketing_representative_id');
+        $excludeGroupId   = $request->input('exclude_request_group_id');
+        $excludeRequestId = $request->input('exclude_request_id') ? (int) $request->input('exclude_request_id') : null;
+        $term             = trim($request->input('q', ''));
+
+        if (!$repId) {
+            return response()->json(['results' => []]);
+        }
+
+        $availability = app(BookRequestAvailabilityService::class)->forRepresentative(
+            $repId,
+            $excludeGroupId,
+            $excludeRequestId
+        );
+
+        if (empty($availability)) {
+            return response()->json(['results' => []]);
+        }
+
+        $productIds = array_keys($availability);
+
+        $products = Product::query()
+            ->whereIn('id', $productIds)
+            ->when($term !== '', function ($q) use ($term) {
+                $q->where('name', 'like', "%{$term}%");
+            })
+            ->get();
+
+        $results = $products->map(function ($product) use ($availability) {
+            $avail = $availability[$product->id]['available_quantity'] ?? 0;
+            return [
+                'id'                 => $product->id,
+                'text'               => $product->name . " (Available: {$avail})",
+                'available_quantity' => $avail,
+            ];
+        })->values();
+
+        return response()->json(['results' => $results]);
+    }
+
+    public function distributionsSelect2(Request $request)
+    {
+        $term = trim($request->input('q', ''));
+        $query = ProductDistribution::query()
+            ->with(['user', 'items.product'])
+            ->where('status', 'delivered')
+            ->when($term !== '', function ($q) use ($term) {
+                $q->where('id', $term)
+                    ->orWhereHas('user', fn($u) => $u->where('name', 'like', "%{$term}%"));
+            })
+            ->orderByDesc('id')
+            ->limit(30);
+
+        $items = $query->get();
+
+        return response()->json([
+            'results' => $items->map(function ($dist) {
+                $userName = $dist->user?->name ?? '#' . $dist->user_id;
+                return [
+                    'id'   => $dist->id,
+                    'text' => "Distribution #{$dist->id} - {$userName} (" . ($dist->created_at ? $dist->created_at->format('d M Y') : '—') . ')',
+                ];
+            })->values(),
+        ]);
     }
 }

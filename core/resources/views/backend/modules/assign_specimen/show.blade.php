@@ -65,6 +65,18 @@
                         @endif
                     </div>
                 </div>
+                @if ($assignSpecimen->teacher_id)
+                    <div class="col-md-6">
+                        <small class="text-muted d-block">Institution</small>
+                        <span>{{ optional($assignSpecimen->teacher->institution)->institution_name ?? '—' }}</span>
+                    </div>
+                    <div class="col-md-6">
+                        <small class="text-muted d-block">Type</small>
+                        <span class="badge text-sm fw-semibold bg-primary px-12 py-6 radius-4 text-capitalize">
+                            {{ $assignSpecimen->assign_inst_type ?? '—' }}
+                        </span>
+                    </div>
+                @endif
                 <div class="col-md-6">
                     <small class="text-muted d-block">Note</small>
                     <span>{{ $assignSpecimen->note ?? '—' }}</span>

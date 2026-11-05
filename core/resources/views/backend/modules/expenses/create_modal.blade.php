@@ -53,20 +53,21 @@
 
                     <div class="col-md-6">
                         <label class="form-label text-sm">From Location</label>
-                        <input type="text" name="from_location" class="form-control form-control-sm radius-8" placeholder="e.g. Dhanmondi" maxlength="255">
+                        <input type="text" name="from_location" class="form-control form-control-sm radius-8"
+                            placeholder="e.g. Dhanmondi" maxlength="255">
                     </div>
 
                     <div class="col-md-6">
                         <label class="form-label text-sm">To Location</label>
-                        <input type="text" name="to_location" class="form-control form-control-sm radius-8"placeholder="e.g. Paltan" maxlength="255">
+                        <input type="text" name="to_location"
+                            class="form-control form-control-sm radius-8"placeholder="e.g. Paltan" maxlength="255">
                     </div>
 
                     <div class="col-md-6">
                         <label class="form-label text-sm">Expense Date <span class="text-danger">*</span></label>
                         <input type="date" name="expense_date" class="form-control form-control-sm radius-8"
-                            value="{{ now()->toDateString() }}" required>
+                            value="{{ now()->toDateString() }}" min="{{ now()->toDateString() }}" required>
                     </div>
-
                     <div class="col-md-6">
                         <label class="form-label text-sm">Attachment</label>
                         <input type="file" name="attachment" class="form-control form-control-sm radius-8 p-1"

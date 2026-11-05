@@ -54,10 +54,12 @@
                             value="{{ old('to_location', $expense->to_location) }}" placeholder="e.g. Paltan"
                             maxlength="255">
                     </div>
+
                     <div class="col-md-6">
                         <label class="form-label text-sm">Expense Date <span class="text-danger">*</span></label>
                         <input type="date" name="expense_date" class="form-control form-control-sm radius-8"
-                            value="{{ $expense->expense_date }}" required>
+                            value="{{ $expense->expense_date }}"
+                            min="{{ min(now()->toDateString(), $expense->expense_date) }}" required>
                     </div>
 
                     <div class="col-md-6">

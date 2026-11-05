@@ -1086,4 +1086,84 @@ if (! function_exists('getCartWeightBasedShipping')) {
 
         }
 
+        // Location Hierarchy for Multiple Upazilas
+        if (! function_exists('getParentLocationsMultiple')) {
+            function getParentLocationsMultiple($upazilaIds)
+            {
+                if (empty($upazilaIds)) {
+                    return [
+                        'territories'    => [],
+                        'upazila_ids'    => [],
+                        'district_ids'   => [],
+                        'district_names' => [],
+                        'division_ids'   => [],
+                        'division_names' => [],
+                    ];
+                }
+
+                if (!is_array($upazilaIds)) {
+                    $upazilaIds = [$upazilaIds];
+                }
+
+                $upazilaIds = array_values(array_filter(array_map('intval', $upazilaIds)));
+
+                if (empty($upazilaIds)) {
+                    return [
+                        'territories'    => [],
+                        'upazila_ids'    => [],
+                        'district_ids'   => [],
+                        'district_names' => [],
+                        'division_ids'   => [],
+                        'division_names' => [],
+                    ];
+                }
+
+                $upazilas = Upazila::with('upazila_district.district_division')
+                    ->whereIn('id', $upazilaIds)
+                    ->get();
+
+                $territories   = [];
+                $districtIds   = [];
+                $districtNames = [];
+                $divisionIds   = [];
+                $divisionNames = [];
+
+                foreach ($upazilas as $upazila) {
+                    $district = $upazila->upazila_district;
+                    $division = $district ? $district->district_division : null;
+
+                    $districtId = $district ? $district->district_id : null;
+                    $divisionId = $division ? $division->id : null;
+
+                    $territories[] = [
+                        'upazila_id'    => $upazila->id,
+                        'upazila_name'  => $upazila->upazila_name,
+                        'district_id'   => $districtId,
+                        'district_name' => $district ? $district->district_name : null,
+                        'division_id'   => $divisionId,
+                        'division_name' => $division ? $division->name : null,
+                    ];
+
+                    if ($districtId && !in_array($districtId, $districtIds)) {
+                        $districtIds[]   = $districtId;
+                        $districtNames[] = $district->district_name;
+                    }
+
+                    if ($divisionId && !in_array($divisionId, $divisionIds)) {
+                        $divisionIds[]   = $divisionId;
+                        $divisionNames[] = $division->name;
+                    }
+                }
+
+                return [
+                    'territories'    => $territories,
+                    'upazila_ids'    => $upazilas->pluck('id')->all(),
+                    'district_ids'   => $districtIds,
+                    'district_names' => $districtNames,
+                    'division_ids'   => $divisionIds,
+                    'division_names' => $divisionNames,
+                ];
+            }
+        }
+
 }

@@ -94,8 +94,19 @@ class ExpenseController extends Controller
                   </a>'
                 : '—';
 
-            // ---------------- ACTION BUTTONS ----------------
+            //  ACTION BUTTONS 
             $actions = '<div class="d-inline-flex align-items-center gap-1">';
+
+            // View Details (always available)
+            $actions .= '
+            <a href="#"
+               class="w-32-px h-32-px rounded-circle d-inline-flex align-items-center justify-content-center
+                      bg-info-focus text-info-main AjaxModal"
+               data-ajax-modal="' . route('expenses.show', $b->id) . '"
+               data-size="lg"
+               title="View Details">
+                <iconify-icon icon="mdi:eye"></iconify-icon>
+            </a>';
 
             // ✏️ Edit + 🗑 Delete only for draft
             if ($b->status !== 'posted') {
@@ -121,7 +132,7 @@ class ExpenseController extends Controller
             </a>';
             }
 
-            // 🖨 Print (always available)
+            // Print (always available)
             $actions .= '
         <a href="' . route('expenses.invoice', $b->id) . '"
            target="_blank"
@@ -133,7 +144,7 @@ class ExpenseController extends Controller
 
             $actions .= '</div>';
 
-            // ---------------- TABLE ROW ----------------
+            // TABLE ROW
             $data[] = [
                 $b->id,
                 e($b->user->name ?? '—'),
@@ -176,7 +187,7 @@ class ExpenseController extends Controller
         $data = $req->validate([
             'name' => 'required|string|max:255',
             'user_id' => 'required|integer|exists:users,id',
-            'expense_date' => 'required|date',
+            'expense_date' => 'required|date|after_or_equal:today',
 
             'from_location' => 'nullable|string|max:255',
             'to_location' => 'nullable|string|max:255',
@@ -209,7 +220,7 @@ class ExpenseController extends Controller
 
         try {
 
-            /* ================= EXPENSE ================= */
+            /* EXPENSE */
             $expense = Expense::create([
                 'user_id' => $data['user_id'],
                 'posted_at' => now(),
@@ -224,7 +235,7 @@ class ExpenseController extends Controller
                 'created_by' => $userId,
             ]);
 
-            /* ================= ITEMS ================= */
+            /* ITEMS */
             foreach ($data['items'] as $item) {
                 ExpenseItem::create([
                     'expense_id' => $expense->id,
@@ -235,7 +246,7 @@ class ExpenseController extends Controller
             }
 
 
-            /* ================= JOURNAL ENTRY ================= */
+            /* JOURNAL ENTRY */
             if ($data['status'] === 'posted') {
 
                 CurrentFund::updateOrCreate(
@@ -311,7 +322,7 @@ class ExpenseController extends Controller
         $data = $req->validate([
             'user_id' => 'required|integer|exists:users,id',
             'name' => 'required|string|max:255',
-            'expense_date' => 'required|date',
+            'expense_date' => 'required|date|after_or_equal:today',
             'from_location' => 'nullable|string|max:255',
             'to_location' => 'nullable|string|max:255',
             'reference' => 'nullable|string|max:255',
@@ -338,7 +349,7 @@ class ExpenseController extends Controller
 
         try {
 
-            /* ================= UPDATE EXPENSE ================= */
+            /* UPDATE EXPENSE */
             $expense->update([
                 'user_id' => $data['user_id'],
                 'name' => $data['name'],
@@ -354,7 +365,7 @@ class ExpenseController extends Controller
                 'status' => $data['status'],
             ]);
 
-            /* ================= RESET ITEMS ================= */
+            /* RESET ITEMS */
             $expense->items()->delete();
 
             foreach ($data['items'] as $item) {
@@ -367,7 +378,7 @@ class ExpenseController extends Controller
 
 
 
-            /* ================= POSTING (JOURNAL) ================= */
+            /* POSTING (JOURNAL) */
             if ($data['status'] === 'posted') {
 
                 CurrentFund::updateOrCreate(
@@ -397,6 +408,18 @@ class ExpenseController extends Controller
                 'msg' => $e->getMessage(),
             ], 500);
         }
+    }
+
+    public function show(Expense $expense)
+    {
+        $expense->load([
+            'user:id,name,phone',
+            'branch:id,name',
+            'creator:id,name',
+            'items.category:id,name',
+        ]);
+
+        return view('backend.modules.expenses.show', compact('expense'));
     }
 
     public function invoice(Expense $expense)

@@ -7,6 +7,7 @@ use App\Models\backend\AssignSpecimen;
 use App\Models\backend\AssignSpecimenItem;
 use App\Models\backend\CurrentStock;
 use App\Models\backend\StockLedger;
+use App\Models\backend\Teacher;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -26,7 +27,7 @@ class AssignSpecimenController extends Controller
         $searchVal = trim($request->input('search.value', ''));
 
         $base = AssignSpecimen::query()
-            ->select(['id', 'user_id', 'teacher_id', 'library_id', 'note', 'status', 'created_at'])
+            ->select(['id', 'user_id', 'teacher_id', 'library_id', 'assign_inst_type', 'note', 'status', 'created_at'])
             ->with([
                 'user:id,name,phone',
                 'teacher:id,teacher_name,phone',
@@ -92,8 +93,7 @@ class AssignSpecimenController extends Controller
 
 
             $whenCol = $b->created_at
-                ? $b->created_at->format('d M Y')
-                : '—';
+                ? $b->created_at->format('d M Y') : '—';
 
             $qty = (float) ($b->items_qty ?? 0);
 
@@ -180,6 +180,7 @@ class AssignSpecimenController extends Controller
             'customer_type'       => ['required', 'in:teacher,library'],
             'teacher_id'          => ['nullable', 'integer', 'exists:teachers,id', 'required_if:customer_type,teacher'],
             'library_id'          => ['nullable', 'integer', 'exists:libraries,id', 'required_if:customer_type,library'],
+            'assign_inst_type'    => ['nullable', 'string', 'in:school,college,coaching,batch', 'required_if:customer_type,teacher'],
             'note'                => ['nullable', 'string', 'max:255'],
             'items'               => ['required', 'array', 'min:1'],
             'items.*.product_id'  => ['required', 'integer', 'exists:products,id'],
@@ -195,11 +196,12 @@ class AssignSpecimenController extends Controller
         DB::beginTransaction();
         try {
             $specimen = AssignSpecimen::create([
-                'user_id'    => $data['user_id'],
-                'teacher_id' => $data['customer_type'] === 'teacher' ? $data['teacher_id'] : null,
-                'library_id' => $data['customer_type'] === 'library' ? $data['library_id'] : null,
-                'note'       => $data['note'] ?? null,
-                'status'     => 'pending',
+                'user_id'          => $data['user_id'],
+                'teacher_id'       => $data['customer_type'] === 'teacher' ? $data['teacher_id'] : null,
+                'library_id'       => $data['customer_type'] === 'library' ? $data['library_id'] : null,
+                'assign_inst_type' => $data['customer_type'] === 'teacher' ? ($data['assign_inst_type'] ?? null) : null,
+                'note'             => $data['note'] ?? null,
+                'status'           => 'pending',
             ]);
 
             foreach ($merged as $productId => $qty) {
@@ -222,7 +224,7 @@ class AssignSpecimenController extends Controller
 
     public function show(AssignSpecimen $assignSpecimen)
     {
-        $assignSpecimen->load(['items.product:id,name', 'user:id,name,phone', 'teacher:id,teacher_name,phone', 'library:id,library_name,phone']);
+        $assignSpecimen->load(['items.product:id,name', 'user:id,name,phone', 'teacher.institution', 'library:id,library_name,phone']);
 
         return view('backend.modules.assign_specimen.show', compact('assignSpecimen'));
     }
@@ -233,7 +235,7 @@ class AssignSpecimenController extends Controller
             abort(403, 'Approved record cannot be edited');
         }
 
-        $assignSpecimen->load(['items.product:id,name', 'user:id,name', 'teacher:id,teacher_name', 'library:id,library_name']);
+        $assignSpecimen->load(['items.product:id,name', 'user:id,name', 'teacher.institution', 'library:id,library_name']);
 
         return view('backend.modules.assign_specimen.edit', compact('assignSpecimen'));
     }
@@ -249,6 +251,7 @@ class AssignSpecimenController extends Controller
             'customer_type'       => ['required', 'in:teacher,library'],
             'teacher_id'          => ['nullable', 'integer', 'exists:teachers,id', 'required_if:customer_type,teacher'],
             'library_id'          => ['nullable', 'integer', 'exists:libraries,id', 'required_if:customer_type,library'],
+            'assign_inst_type'    => ['nullable', 'string', 'in:school,college,coaching,batch', 'required_if:customer_type,teacher'],
             'note'                => ['nullable', 'string', 'max:255'],
             'items'               => ['required', 'array', 'min:1'],
             'items.*.product_id'  => ['required', 'integer', 'exists:products,id'],
@@ -264,10 +267,11 @@ class AssignSpecimenController extends Controller
         DB::beginTransaction();
         try {
             $assignSpecimen->update([
-                'user_id'    => $data['user_id'],
-                'teacher_id' => $data['customer_type'] === 'teacher' ? $data['teacher_id'] : null,
-                'library_id' => $data['customer_type'] === 'library' ? $data['library_id'] : null,
-                'note'       => $data['note'] ?? null,
+                'user_id'          => $data['user_id'],
+                'teacher_id'       => $data['customer_type'] === 'teacher' ? $data['teacher_id'] : null,
+                'library_id'       => $data['customer_type'] === 'library' ? $data['library_id'] : null,
+                'assign_inst_type' => $data['customer_type'] === 'teacher' ? ($data['assign_inst_type'] ?? null) : null,
+                'note'             => $data['note'] ?? null,
             ]);
 
             $assignSpecimen->items()->delete();
@@ -287,6 +291,38 @@ class AssignSpecimenController extends Controller
 
             return response()->json(['ok' => false, 'msg' => $e->getMessage()], 500);
         }
+    }
+
+    public function teachersByPhoneSelect2(Request $request)
+    {
+        $term = trim($request->input('q', ''));
+
+        $query = Teacher::query()
+            ->with('institution')
+            ->whereNotNull('phone')
+            ->where('phone', '!=', '')
+            ->when($term !== '', function ($q) use ($term) {
+                $q->where(function ($b) use ($term) {
+                    $b->where('phone', 'like', "%{$term}%")
+                        ->orWhere('teacher_name', 'like', "%{$term}%");
+                });
+            })
+            ->orderBy('phone')
+            ->limit(30);
+
+        $teachers = $query->get();
+
+        return response()->json([
+            'results' => $teachers->map(function ($teacher) {
+                $instName = $teacher->institution?->institution_name ?? '';
+                return [
+                    'id'               => $teacher->id,
+                    'text'             => $teacher->phone . ($teacher->teacher_name ? ' (' . $teacher->teacher_name . ')' : ''),
+                    'teacher_name'     => $teacher->teacher_name ?? '',
+                    'institution_name' => $instName ?: '—',
+                ];
+            })->values(),
+        ]);
     }
 
     public function destroy(AssignSpecimen $assignSpecimen)
