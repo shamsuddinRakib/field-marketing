@@ -32,8 +32,6 @@
         </div>
     </div>
 
-
-
     <form id="product_form" action="{{ route('product.products.update', $product->id) }}" method="POST"
         enctype="multipart/form-data">
         @csrf
@@ -49,7 +47,6 @@
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
         @endif
-
 
         <div class=" ">
             <div class="  ">
@@ -72,187 +69,185 @@
                                 <div class="row">
 
 
-                                    <div class="col-lg-5 col-sm-6 col-12">
+                                    {{-- Row 1: Identification (3 equal columns) --}}
+                                    <div class="col-lg-4 col-md-6 col-12">
                                         <div class="mb-3">
                                             <label class="form-label">Name <span class="star-sign">*</span></label>
                                             <input type="text" class="form-control" id="name" name="name"
-                                                value="{{ $product->name }}">
-
+                                                value="{{ $product->name }}" placeholder="Enter product name">
                                         </div>
-
                                     </div>
 
-                                    <div class="col-lg-4 col-sm-6 col-12">
-                                        <div class="mb-3 ">
-                                            <label class="form-label">Slug<span class="star-sign">*</span></label>
+                                    <div class="col-lg-4 col-md-6 col-12">
+                                        <div class="mb-3">
+                                            <label class="form-label">Slug <span class="star-sign">*</span></label>
                                             <input type="text" class="form-control" id="slug" name="slug"
-                                                value="{{ $product->slug }}">
+                                                value="{{ $product->slug }}" placeholder="Enter product slug">
                                         </div>
                                     </div>
 
-                                    <div class="col-lg-3 col-sm-6 col-12">
-                                        <label for="sku" class="form-label">Product SKU</label>
-                                        <input type="text" name="sku" class="form-control" placeholder="e.g. TS001"
-                                            id="sku" value="{{ $product->sku }}">
-
+                                    <div class="col-lg-4 col-md-6 col-12">
+                                        <div class="mb-3">
+                                            <label for="product_code" class="form-label">Product Code <span class="badge bg-secondary-focus text-secondary-main text-xs px-2 py-0.5">Auto</span></label>
+                                            <input type="text" name="product_code" class="form-control" placeholder="Auto-generated"
+                                                id="product_code" value="{{ $product->product_code }}" readonly>
+                                        </div>
                                     </div>
 
-                                    {{-- <div class="col-md-3 mb-16">
-                                        <label class="form-label text-sm mb-8">Category Type</label>
-                                        <select name="category_type_id" id="category_type"
-                                            class="form-control js-category-select">
-                                            <option value="{{ $product->category_type_id }}" selected>
-                                                {{ $product->category_type->name }}</option>
-                                        </select>
-                                        <div class="invalid-feedback d-block category_id-error" style="display:none">
+                                    {{-- Row 2: Category, Sub-Category, Brand (3 equal columns) --}}
+                                    <div class="col-lg-4 col-md-6 col-12">
+                                        <div class="mb-3">
+                                            <label class="form-label">Category</label>
+                                            <select name="category_id" id="category" class="form-control js-category-select">
+                                                <option value="{{ $product->category_id }}" selected>
+                                                    {{ $product->category->name }}</option>
+                                            </select>
+                                            <div class="invalid-feedback d-block category_id-error" style="display:none"></div>
                                         </div>
-                                    </div> --}}
-                                    <div class="col-md-3 mb-16">
-                                        <label class="form-label text-sm mb-8">Category</label>
-                                        <select name="category_id" id="category" class="form-control js-category-select">
-                                            <option value="{{ $product->category_id }}" selected>
-                                                {{ $product->category->name }}</option>
-                                        </select>
-                                        <div class="invalid-feedback d-block category_id-error" style="display:none">
+                                    </div>
+
+                                    <div class="col-lg-4 col-md-6 col-12">
+                                        <div class="mb-3">
+                                            <label class="form-label">Sub-Category</label>
+                                            <select name="subcategory_id" id="subcategory"
+                                                class="form-control js-category-select">
+                                                @if($product->subcategory)
+                                                <option value="{{ $product->subcategory_id }}" selected>
+                                                    {{ $product->subcategory->name }}</option>
+                                                @endif
+                                            </select>
+                                            <div class="invalid-feedback d-block category_id-error" style="display:none"></div>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-lg-4 col-md-6 col-12">
+                                        <div class="mb-3">
+                                            <label class="form-label">Brand</label>
+                                            <select name="brand_id" id="brand" class="form-control js-product-type-select">
+                                                <option value="{{ $product->brand_id }}" selected>{{ $product->brand->name }}</option>
+                                            </select>
+                                            <div class="invalid-feedback d-block brand_type_id-error" style="display:none"></div>
+                                        </div>
+                                    </div>
+
+                                    {{-- Row 3: Academic / Publication Details (3 equal columns) --}}
+                                    <div class="col-lg-4 col-md-6 col-12">
+                                        <div class="mb-3">
+                                            <label for="edition" class="form-label">Edition</label>
+                                            <select name="edition" id="edition" class="form-control form-select select2">
+                                                <option value="">Select or Type Edition...</option>
+                                                @php
+                                                    $editions = ['1st Edition', '2nd Edition', '3rd Edition', '4th Edition', '5th Edition', '6th Edition', '7th Edition', '8th Edition', '9th Edition', '10th Edition', 'Revised Edition', 'Special Edition', 'Latest Edition'];
+                                                    $selectedEdition = old('edition', $product->edition);
+                                                @endphp
+                                                @if ($selectedEdition && !in_array($selectedEdition, $editions))
+                                                    <option value="{{ $selectedEdition }}" selected>{{ $selectedEdition }}</option>
+                                                @endif
+                                                @foreach ($editions as $ed)
+                                                    <option value="{{ $ed }}" {{ $selectedEdition == $ed ? 'selected' : '' }}>{{ $ed }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-lg-4 col-md-6 col-12">
+                                        <div class="mb-3">
+                                            <label for="product_publish_year" class="form-label">Publish Year</label>
+                                            <select name="product_publish_year" id="product_publish_year" class="form-control form-select select2">
+                                                <option value="">Select Publish Year...</option>
+                                                @php
+                                                    $currYear = (int) date('Y');
+                                                @endphp
+                                                @for ($y = $currYear + 2; $y >= $currYear - 15; $y--)
+                                                    <option value="{{ $y }}" {{ (old('product_publish_year', $product->product_publish_year) == $y) ? 'selected' : '' }}>{{ $y }}</option>
+                                                @endfor
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-lg-4 col-md-6 col-12">
+                                        <div class="mb-3">
+                                            <label for="product_exam_year" class="form-label">Exam Year</label>
+                                            <select name="product_exam_year" id="product_exam_year" class="form-control form-select select2">
+                                                <option value="">Select Exam Year...</option>
+                                                @php
+                                                    $currYear = (int) date('Y');
+                                                @endphp
+                                                @for ($y = $currYear + 3; $y >= $currYear - 5; $y--)
+                                                    <option value="{{ $y }}" {{ (old('product_exam_year', $product->product_exam_year) == $y) ? 'selected' : '' }}>{{ $y }}</option>
+                                                @endfor
+                                            </select>
                                         </div>
                                     </div>
 
                                     
-                                    <div class="col-md-3 mb-16">
-                                        <label class="form-label text-sm mb-8">Sub-Category</label>
-                                        <select name="subcategory_id" id="subcategory"
-                                            class="form-control js-category-select">
-                                            @if($product->subcategory)
-                                            <option value="{{ $product->subcategory_id }}" selected>
-                                                {{ $product->subcategory->name }}</option>
-                                                @endif
-                                                
-                                        </select>
-                                        <div class="invalid-feedback d-block category_id-error" style="display:none">
-                                        </div>
-                                    </div>
 
 
-
-                                    {{-- <div class="row"> --}}
-                                    {{-- <div class="col-lg-3 col-sm-6 col-12">
-                                        <label class="form-label text-sm mb-8">Product Type</label>
-                                        <select name="product_type_id" id="product_type"
-                                            class="form-control js-product-type-select">
-                                            <option value="{{ $product->product_type_id }}" selected>
-                                                {{ $product->product_type->name }}</option>
-                                        </select>
-                                        <div class="invalid-feedback d-block product_type_id-error" style="display:none">
-                                        </div>
-                                    </div> --}}
-
-                                    {{-- <div class="col-lg-3 col-sm-6 col-12">
-                                        <label class="form-label text-sm mb-8">Unit</label>
-                                        <select name="unit_id" id="unit"
-                                            class="form-control js-product-type-select">
-                                            <option value="{{ $product->unit_id }}" selected>{{ $product->unit->name }}
-                                            </option>
-                                        </select>
-                                        <div class="invalid-feedback d-block brand_type_id-error" style="display:none">
-                                        </div>
-                                    </div> --}}
-
-
-
-                                    {{-- <div class="row"> --}}
+                                    {{-- Row 4: Pricing Details (4 equal columns) --}}
                                     <div class="col-lg-3 col-sm-6 col-12">
-                                        <label class="form-label text-sm mb-8">Brand</label>
-                                        <select name="brand_id" id="brand" class="form-control js-product-type-select">
-                                            <option value="{{ $product->brand_id }}" selected>{{ $product->brand->name }}
-                                            </option>
-                                        </select>
-                                        <div class="invalid-feedback d-block brand_type_id-error" style="display:none">
-                                        </div>
-                                    </div>
-
-
-
-
-
-
-
-                                    <div class="col-lg-3 col-sm-6 col-12">
-                                        <div class="mb-3 ">
-                                            <label class="form-label">Purchase Price<span
-                                                    class="star-sign">*</span></label>
+                                        <div class="mb-3">
+                                            <label class="form-label">Purchase Price <span class="star-sign">*</span></label>
                                             <input type="number" class="form-control" name="cost_price"
-                                                value="{{ $product->cost_price }}">
+                                                value="{{ $product->cost_price }}" placeholder="0">
                                         </div>
                                     </div>
 
                                     <div class="col-lg-3 col-sm-6 col-12">
-                                        <div class="mb-3 add-product">
-                                            <label class="form-label">MRP Price<span class="star-sign">*</span></label>
+                                        <div class="mb-3">
+                                            <label class="form-label">MRP Price <span class="star-sign">*</span></label>
                                             <input type="number" step="0.01" class="form-control" min="0"
                                                 name="mrp" id="mrp" value="{{ $product->mrp }}">
                                         </div>
                                     </div>
 
-                                    <div class="col-lg-3 mb-3">
-                                        <label class="form-label">Discount</label>
-                                        <div class="input-group">
-                                            <select name="discount_type" class="form-select" id="discount_type">
-                                                <option value="0"
-                                                    {{ $product->discount_type == 0 ? 'checked' : '' }}>
-                                                    Percentage(%)</option>
-                                                <option value="1"
-                                                    {{ $product->discount_type == 1 ? 'checked' : '' }}>Flat
-                                                </option>
-                                            </select>
-                                            <input type="number" name="discount_value" min="0"
-                                                class="form-control" placeholder="Enter discount" id="discount_value"
-                                                value="{{ $product->discount_value }}" required>
+                                    <div class="col-lg-3 col-sm-6 col-12">
+                                        <div class="mb-3">
+                                            <label class="form-label">Discount</label>
+                                            <div class="input-group">
+                                                <select name="discount_type" class="form-select" id="discount_type">
+                                                    <option value="0" {{ $product->discount_type == 0 ? 'selected' : '' }}>Percentage(%)</option>
+                                                    <option value="1" {{ $product->discount_type == 1 ? 'selected' : '' }}>Flat</option>
+                                                </select>
+                                                <input type="number" name="discount_value" min="0"
+                                                    class="form-control" placeholder="0" id="discount_value"
+                                                    value="{{ $product->discount_value }}" required>
+                                            </div>
                                         </div>
                                     </div>
 
-
-
                                     <div class="col-lg-3 col-sm-6 col-12">
                                         <div class="mb-3">
-                                            <label class="form-label">Sale Price<span class="star-sign">*</span></label>
+                                            <label class="form-label">Sale Price <span class="star-sign">*</span></label>
                                             <input type="text" class="form-control" name="price" id="sale_price"
                                                 value="{{ $product->price }}" readonly>
                                         </div>
                                     </div>
+                  
+                                    <div class="col-lg-12 row mt-10">              
 
-                        
-
-
-                                    <div class="col-lg-12 row mt-10">
-                                       
-
-                                        <div class="col-lg-6 col-sm-6 col-12 ">
-                                            <div class="">
-                                                <label class="form-label ">Description</label>
-                                                <textarea rows="4" cols="5" class="form-control h-100" name="description"
-                                                    placeholder="Enter text here">{{ $product->description }}</textarea>
-
-                                            </div>
-                                        </div>
-
-                                        <div class="col-lg-6 col-sm-6 col-12 ">
-                                            <div class="">
-                                                <label class="form-label ">Short Description</label>
-                                                <textarea rows="4" cols="5" class="form-control h-100" name="short_description"
-                                                    placeholder="Enter text here">{{ $product->short_description }}</textarea>
-
-                                            </div>
+                                    {{-- Row 5: Descriptions (2 columns) --}}
+                                    <div class="col-lg-6 col-12">
+                                        <div class="mb-3">
+                                            <label class="form-label">Description</label>
+                                            <textarea rows="4" class="form-control" name="description"
+                                                placeholder="Enter text here">{{ $product->description }}</textarea>
                                         </div>
                                     </div>
 
+                                    <div class="col-lg-6 col-12">
+                                        <div class="mb-3">
+                                            <label class="form-label">Short Description</label>
+                                            <textarea rows="4" class="form-control" name="short_description"
+                                                placeholder="Enter text here">{{ $product->short_description }}</textarea>
+                                        </div>
+                                    </div>
 
                                 </div>
                                 <div class="row">
                                     <div class="my-3 fw-bold mt-5">Image Section</div>
 
                                     <div class="col-12 row  m-auto rounded mb-3 dark-mode p-3 mt-">
-
-                                        
+                                      
                                         <div class="col-lg-3 col-sm-6 col-12">
                                             <div class="mb-3 ">
                                                 <label class="form-label">Thumbnail Image<span
@@ -347,9 +342,6 @@
                                                     </div>
                                                 </div>
 
-
-
-
                                             </div>
                                             <div class="row mt-3 justify-content-between">
                                                 <div class="col-lg-3 col-sm-6 col-12 mt-8">
@@ -373,8 +365,6 @@
                                                 </div>
                                             </div>
                                         </div>
-
-
                                     </div>
                                 </div>
                             </div>
@@ -404,11 +394,7 @@
     <script>
         $(document).ready(function() {
 
-       
-
             const products = @json($products);
-
-
 
             function generateSku() {
                 const name = ($('#name').val().slice(0, 3)).toUpperCase();
@@ -416,8 +402,6 @@
                 $('#sku').val(name ? name + Math.floor(1000000 + Math.random() * 9000000) : '');
             }
             $('#name').on('input', generateSku);
-
-     
 
             $('#mrp,#discount_type,#discount_value').on('input change', function() {
                 setTimeout(changePrice, 0); // wait one microtask
@@ -427,8 +411,6 @@
             function changePrice() {
                 $('.price').val((parseFloat($('#sale_price').val())).toFixed(2));
             }
-
-
 
             function setDiscountRange() {
                 const type = $('#discount_type').val();
@@ -441,7 +423,6 @@
             }
             setDiscountRange();
             $('#discount_type,#mrp').on('input', setDiscountRange);
-
 
             function calculatePrice() {
                 const discountType = $('#discount_type').val(); // string
@@ -460,9 +441,6 @@
             };
 
             $('#mrp,#discount_type,#discount_value').on('input', calculatePrice);
-
-         
-
 
             $('#category_type').select2({
                 placeholder: 'Search category type...',
@@ -687,10 +665,25 @@
             }
         });
 
+        // Custom fields select2
+        $('#product_publish_year').select2({
+            placeholder: 'Select Publish Year...',
+            allowClear: true,
+            width: '100%'
+        });
 
+        $('#product_exam_year').select2({
+            placeholder: 'Select Exam Year...',
+            allowClear: true,
+            width: '100%'
+        });
 
-
-
+        $('#edition').select2({
+            placeholder: 'Select or Type Edition...',
+            allowClear: true,
+            tags: true,
+            width: '100%'
+        });
 
         // Event listener for name field
         $('#name').on('input', function() {

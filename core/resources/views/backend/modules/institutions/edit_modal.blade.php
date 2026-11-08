@@ -10,7 +10,6 @@
       <div class="col-md-6 mb-16"><label class="form-label text-sm mb-6">Institution Name <span class="text-danger">*</span></label><input name="institution_name" value="{{ old('institution_name', $institution->institution_name) }}" class="form-control radius-8" required><div class="invalid-feedback d-block institution_name-error" style="display:none"></div></div>
       <div class="col-md-6 mb-16"><label class="form-label text-sm mb-6">Code</label><input name="code" value="{{ old('code', $institution->code) }}" class="form-control radius-8"><div class="invalid-feedback d-block code-error" style="display:none"></div></div>
       <div class="col-md-6 mb-16"><label class="form-label text-sm mb-6">Email</label><input type="email" name="email" value="{{ old('email', $institution->email) }}" class="form-control radius-8"><div class="invalid-feedback d-block email-error" style="display:none"></div></div>
-      <div class="col-md-6 mb-16"><label class="form-label text-sm mb-6">Phone</label><input name="phone" value="{{ old('phone', $institution->phone) }}" class="form-control radius-8"><div class="invalid-feedback d-block phone-error" style="display:none"></div></div>
 
        <div class="col-md-6 mb-16">
         <label class="form-label text-sm mb-6">Upazila</label>

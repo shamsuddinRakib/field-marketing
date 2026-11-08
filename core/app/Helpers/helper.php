@@ -961,17 +961,7 @@ if (! function_exists('getCartWeightBasedShipping')) {
         }
     }
 
-    if (! function_exists('generateInvoiceNo')) {
-
-        /**
-         * Generate invoice / voucher number
-         *
-         * @param string $prefix   e.g. EXP, PUR, SAL
-         * @param int|null $branchId
-         * @param string $table    default expenses
-         * @param string $column   default invoice_no
-         * @return string
-         */
+    if (! function_exists('generateInvoiceNo')) {      
         function generateInvoiceNo(
             string $prefix,
             ?int $branchId = null,
@@ -1167,3 +1157,567 @@ if (! function_exists('getCartWeightBasedShipping')) {
         }
 
 }
+
+if (!function_exists('clean_phone_number')) {
+    /**
+     * Clean and normalize a Bangladeshi phone number.
+     * Handles multiple numbers (takes first), converts Bangla digits (০-৯) to English (0-9),
+     * strips +88 / 88 / 0088, removes spaces/dashes, and prepends missing leading 0 (e.g. 17XXXXXXXX -> 017XXXXXXXX).
+     *
+     * @param string|null $phone
+     * @return string
+     */
+    function clean_phone_number(?string $phone): string
+    {
+        if (empty($phone)) {
+            return '';
+        }
+
+        // If multiple numbers separated by slash, comma, semicolon, newline or pipe, take the first number
+        $parts = preg_split('/[\/;,|\n]/', (string) $phone);
+        $phone = trim($parts[0] ?? '');
+        if ($phone === '') {
+            return '';
+        }
+
+        // Convert Bangla numbers (০-৯) to English digits (0-9)
+        $banglaDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+        $englishDigits = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+        $phone = str_replace($banglaDigits, $englishDigits, $phone);
+
+        // Remove all non-numeric characters (hyphens, spaces, dots, etc.)
+        $clean = preg_replace('/[^0-9]/', '', $phone);
+
+        // If starts with 00880, strip 0088
+        if (str_starts_with($clean, '00880')) {
+            $clean = substr($clean, 4);
+        }
+        // If starts with 880, strip 88
+        elseif (str_starts_with($clean, '880')) {
+            $clean = substr($clean, 2);
+        }
+
+        // If 10 digits starting with '1' (Excel automatically strips leading 0 from numbers: e.g. 17XXXXXXXX -> 017XXXXXXXX)
+        if (strlen($clean) === 10 && str_starts_with($clean, '1')) {
+            $clean = '0' . $clean;
+        }
+
+        return $clean;
+    }
+}
+
+if (!function_exists('get_bd_district_bangla_map')) {
+    /**
+     * Complete mapping of all 64 Bangladesh districts (Bangla variations -> English district_name in DB)
+     */
+    function get_bd_district_bangla_map(): array
+    {
+        return [
+            // Rangpur Division (id: 7)
+            'কুড়িগ্রাম'       => 'Kurigram',
+            'কুড়িগ্রাম'       => 'Kurigram',
+            'দিনাজপুর'        => 'Dinajpur',
+            'গাইবান্ধা'       => 'Gaibandha',
+            'লালমনিরহাট'      => 'Lalmonirhat',
+            'নীলফামারী'       => 'Nilphamari',
+            'নীলফামারি'       => 'Nilphamari',
+            'পঞ্চগড়'          => 'Panchagarh',
+            'পঞ্চগড়'          => 'Panchagarh',
+            'রংপুর'           => 'Rangpur',
+            'ঠাকুরগাঁও'       => 'Thakurgaon',
+            'ঠাকুরগাও'       => 'Thakurgaon',
+
+            // Mymensingh Division (id: 8)
+            'জামালপুর'        => 'Jamalpur',
+            'ময়মনসিংহ'        => 'Mymensingh',
+            'ময়মনসিং'         => 'Mymensingh',
+            'নেত্রকোণা'       => 'Netrokona',
+            'নেত্রকোনা'       => 'Netrokona',
+            'শেরপুর'          => 'Sherpur',
+
+            // Rajshahi Division (id: 2)
+            'রাজশাহী'         => 'Rajshahi',
+            'বগুড়া'           => 'Bogra',
+            'বগুড়া'           => 'Bogra',
+            'বগুরা'           => 'Bogra',
+            'জয়পুরহাট'        => 'Joypurhat',
+            'জয়পুরহাঁট'       => 'Joypurhat',
+            'নওগাঁ'           => 'Naogaon',
+            'নওগা'            => 'Naogaon',
+            'নাটোর'           => 'Natore',
+            'নাবাবগঞ্জ'       => 'Chapainawabganj',
+            'চাঁপাইনবাবগঞ্জ'   => 'Chapainawabganj',
+            'চাপাইনবাবগঞ্জ'   => 'Chapainawabganj',
+            'পাবনা'           => 'Pabna',
+            'সিরাজগঞ্জ'       => 'Sirajganj',
+
+            // Khulna Division (id: 3)
+            'কুষ্টিয়া'        => 'Kushtia',
+            'কুষ্টিয়া'        => 'Kushtia',
+            'খুলনা'           => 'Khulna',
+            'বাগেরহাট'        => 'Bagerhat',
+            'চুয়াডাঙ্গা'       => 'Chuadanga',
+            'চুয়াডাঙ্গা'       => 'Chuadanga',
+            'যশোর'            => 'Jessore',
+            'ঝিনাইদহ'         => 'Jhenaidah',
+            'মাগুরা'          => 'Magura',
+            'মেহেরপুর'        => 'Meherpur',
+            'নড়াইল'           => 'Narail',
+            'নড়াইল'           => 'Narail',
+            'সাতক্ষীরা'       => 'Satkhira',
+            'সাতক্ষিরা'       => 'Satkhira',
+
+            // Dhaka Division (id: 6)
+            'ঢাকা'            => 'Dhaka',
+            'ঢাকা মহানগর'     => 'Dhaka Mahanagari',
+            'ফরিদপুর'         => 'Faridpur',
+            'গাজীপুর'         => 'Gazipur',
+            'গোপালগঞ্জ'       => 'Gopalganj',
+            'কিশোরগঞ্জ'       => 'Kishoreganj',
+            'মাদারীপুর'       => 'Madaripur',
+            'মাদারিপুর'       => 'Madaripur',
+            'মানিকগঞ্জ'       => 'Manikganj',
+            'মুন্সীগঞ্জ'       => 'Munshiganj',
+            'মুন্সিগঞ্জ'       => 'Munshiganj',
+            'নারায়ণগঞ্জ'      => 'Narayanganj',
+            'নারায়নগঞ্জ'      => 'Narayanganj',
+            'নরসিংদী'         => 'Narsingdi',
+            'নরসিংদি'         => 'Narsingdi',
+            'রাজবাড়ী'         => 'Rajbari',
+            'রাজবাড়ি'         => 'Rajbari',
+            'শরীয়তপুর'        => 'Shariatpur',
+            'শরিয়তপুর'        => 'Shariatpur',
+            'টাঙ্গাইল'        => 'Tangail',
+
+            // Barisal Division (id: 4)
+            'বরিশাল'          => 'Barisal',
+            'বরগুনা'          => 'Barguna',
+            'ভোলা'            => 'Bhola',
+            'ঝালকাঠি'         => 'Jhalakati',
+            'ঝালকাঠী'         => 'Jhalakati',
+            'পটুয়াখালী'       => 'Patuakhali',
+            'পটুয়াখালি'       => 'Patuakhali',
+            'পিরোজপুর'        => 'Pirojpur',
+
+            // Chattogram Division (id: 1)
+            'চট্টগ্রাম'       => 'Chattogram',
+            'কক্সবাজার'       => "Cox's Bazar",
+            'বান্দরবান'       => 'Bandarban',
+            'ব্রাহ্মণবাড়িয়া'   => 'Brahmanbaria',
+            'ব্রাহ্মণবাড়িয়া'   => 'Brahmanbaria',
+            'বি-বাড়িয়া'       => 'Brahmanbaria',
+            'চাঁদপুর'         => 'Chandpur',
+            'কুমিল্লা'        => 'Comilla',
+            'ফেনী'            => 'Feni',
+            'ফেনি'            => 'Feni',
+            'খাগড়াছড়ি'       => 'Khagrachhari',
+            'খাগড়াছড়ি'       => 'Khagrachhari',
+            'লক্ষ্মীপুর'       => 'Lakshmipur',
+            'লক্ষীপুর'        => 'Lakshmipur',
+            'নোয়াখালী'        => 'Noakhali',
+            'নোয়াখালি'        => 'Noakhali',
+            'রাঙ্গামাটি'      => 'Rangamati',
+            'রাঙামাটি'        => 'Rangamati',
+
+            // Sylhet Division (id: 5)
+            'সিলেট'           => 'Sylhet',
+            'হবিগঞ্জ'         => 'Habiganj',
+            'মৌলভীবাজার'      => 'Moulvibazar',
+            'সুনামগঞ্জ'       => 'Sunamganj',
+        ];
+    }
+}
+
+if (!function_exists('bangla_to_english_phonetic')) {
+    /**
+     * Transliterates a Bangla upazila name to English for matching against English upazila_name.
+     */
+    function bangla_to_english_phonetic(?string $bangla): string
+    {
+        if (empty($bangla)) {
+            return '';
+        }
+
+        $s = trim((string) $bangla);
+        $s = preg_replace('/[\x{200B}-\x{200D}\x{FEFF}]/u', '', $s);
+        $s = preg_replace('/\s*(জেলা|উপজেলা|থানা|district|upazila|upazilla|thana)\b/ui', '', $s);
+        $s = trim($s);
+
+        // Normalize decomposed nukta: ড+় -> ড়, ঢ+় -> ঢ়, য+় -> য়
+        $s = str_replace(
+            ["\xE0\xA6\xA1\xE0\xA6\xBC", "\xE0\xA6\xA2\xE0\xA6\xBC", "\xE0\xA6\xAF\xE0\xA6\xBC"],
+            ['ড়', 'ঢ়', 'য়'],
+            $s
+        );
+
+        $customMap = [
+            'সদর'           => 'sadar',
+            'রৌমারি'        => 'rowmari',
+            'রৌমারী'        => 'rowmari',
+            'রাজিবপুর'      => 'rajibpur',
+            'চর রাজিবপুর'   => 'char rajibpur',
+            'চররাজিবপুর'    => 'char rajibpur',
+            'চিলমারী'       => 'chilmari',
+            'চিলমারি'       => 'chilmari',
+            'উলিপুর'        => 'ulipur',
+            'নাগেশ্বরী'     => 'nageshwari',
+            'নাগেশ্বরি'     => 'nageshwari',
+            'ভুরুঙ্গামারী'   => 'bhurungamari',
+            'ভুরুঙ্গামারি'   => 'bhurungamari',
+            'ভূরুঙ্গামারী'   => 'bhurungamari',
+            'ফুলবাড়ী'       => 'phulbari',
+            'ফুলবাড়ি'       => 'phulbari',
+            'ফুলবাড়ি'       => 'phulbari',
+            'রাজারহাট'      => 'rajarhat',
+            'গাংনী'         => 'gangni',
+            'মুজিবনগর'      => 'mujibnagar',
+            'মিরপুর'        => 'mirpur',
+            'কুমারখালী'     => 'kumarkhali',
+            'খোকসা'         => 'khoksa',
+            'ভেড়ামারা'      => 'bheramara',
+            'দৌলতপুর'      => 'daulatpur',
+            'বোয়ালিয়া'      => 'boalia',
+            'মতিহার'        => 'matihar',
+            'রাজপাড়া'      => 'rajpara',
+            'পবা'           => 'paba',
+            'বাঘা'          => 'bagha',
+            'বাঘমারা'       => 'bagmara',
+            'চারঘাট'        => 'charghat',
+            'দুর্গাপুর'      => 'durgapur',
+            'গোদাগাড়ী'      => 'godagari',
+            'মোহনপুর'       => 'mohanpur',
+            'পুঠিয়া'        => 'puthia',
+            'তানোর'         => 'tanore',
+        ];
+
+        $cleanBangla = mb_strtolower($s);
+        if (isset($customMap[$cleanBangla])) {
+            return $customMap[$cleanBangla];
+        }
+
+        $charMap = [
+            'ক' => 'k', 'খ' => 'kh', 'গ' => 'g', 'ঘ' => 'gh', 'ঙ' => 'ng',
+            'চ' => 'ch', 'ছ' => 'chh', 'জ' => 'j', 'ঝ' => 'jh', 'ঞ' => 'n',
+            'ট' => 't', 'ঠ' => 'th', 'ড' => 'd', 'ঢ' => 'dh', 'ণ' => 'n',
+            'ত' => 't', 'থ' => 'th', 'দ' => 'd', 'ধ' => 'dh', 'ন' => 'n',
+            'প' => 'p', 'ফ' => 'ph', 'ব' => 'b', 'ভ' => 'bh', 'ম' => 'm',
+            'য' => 'j', 'র' => 'r', 'ল' => 'l', 'শ' => 'sh', 'ষ' => 'sh', 'স' => 's', 'হ' => 'h',
+            'ড়' => 'r', 'ঢ়' => 'rh', 'য়' => 'y', 'ৎ' => 't', 'ং' => 'ng', 'ঃ' => 'h', 'ঁ' => '',
+            'অ' => 'a', 'আ' => 'a', 'ই' => 'i', 'ঈ' => 'i', 'উ' => 'u', 'ঊ' => 'u',
+            'ঋ' => 'ri', 'এ' => 'e', 'ঐ' => 'oi', 'ও' => 'o', 'ঔ' => 'ou',
+            'া' => 'a', 'ি' => 'i', 'ী' => 'i', 'ু' => 'u', 'ূ' => 'u', 'ৃ' => 'ri',
+            'ে' => 'e', 'ৈ' => 'oi', 'ো' => 'o', 'ৌ' => 'ou', '্' => '',
+        ];
+
+        $out = '';
+        $len = mb_strlen($s);
+        for ($i = 0; $i < $len; $i++) {
+            $ch = mb_substr($s, $i, 1);
+            $out .= $charMap[$ch] ?? $ch;
+        }
+
+        return mb_strtolower(preg_replace('/[\s\-_]+/u', '', $out));
+    }
+}
+
+if (!function_exists('bd_canonical_term')) {
+    /**
+     * Normalize a Bangladeshi geo term (district, upazila, division).
+     * Strips zero-width characters, BOM, common suffixes (জেলা, উপজেলা, থানা),
+     * and normalizes Unicode nukta characters.
+     */
+    function bd_canonical_term(?string $term): string
+    {
+        if (empty($term)) {
+            return '';
+        }
+
+        $s = trim((string) $term);
+        $s = preg_replace('/[\x{200B}-\x{200D}\x{FEFF}]/u', '', $s);
+        $s = preg_replace('/\s*(জেলা|উপজেলা|থানা|district|dist|upazila|upazilla|thana)\b/ui', '', $s);
+        $s = trim($s);
+
+        // Normalize decomposed nukta: ড+় -> ড়, ঢ+় -> ঢ়, য+় -> য়
+        $s = str_replace(
+            ["\xE0\xA6\xA1\xE0\xA6\xBC", "\xE0\xA6\xA2\xE0\xA6\xBC", "\xE0\xA6\xAF\xE0\xA6\xBC"],
+            ['ড়', 'ঢ়', 'য়'],
+            $s
+        );
+
+        return mb_strtolower($s);
+    }
+}
+
+if (!function_exists('resolve_district_by_name')) {
+    /**
+     * Resolve a District model by its English or Bangla name across all districts in BD.
+     * Uses in-memory static cache for lightning performance during batch imports.
+     *
+     * @param string|null $name
+     * @return \App\Models\backend\District|null
+     */
+    function resolve_district_by_name(?string $name): ?\App\Models\backend\District
+    {
+        if (empty($name)) {
+            return null;
+        }
+
+        $canonical = bd_canonical_term($name);
+        if ($canonical === '') {
+            return null;
+        }
+
+        static $districtsCache = null;
+        if ($districtsCache === null) {
+            $districtsCache = \App\Models\backend\District::with('district_division')->get();
+        }
+
+        // 1. Direct Bangla Map (handles all 64 districts in Bangla)
+        $banglaMap = get_bd_district_bangla_map();
+        if (isset($banglaMap[$canonical])) {
+            $targetEnglish = mb_strtolower($banglaMap[$canonical]);
+            foreach ($districtsCache as $d) {
+                if (mb_strtolower((string)$d->district_name) === $targetEnglish) {
+                    return $d;
+                }
+            }
+        }
+
+        // 2. Exact match in English (or if DB has Bangla in district_bn_name)
+        foreach ($districtsCache as $d) {
+            $dName = mb_strtolower(trim((string)$d->district_name));
+            $dBnName = mb_strtolower(trim((string)$d->district_bn_name));
+
+            if (($dName !== '' && $dName === $canonical) || ($dBnName !== '' && $dBnName === $canonical)) {
+                return $d;
+            }
+        }
+
+        // 3. Common English spelling aliases
+        $aliases = [
+            'chittagong'       => 'chattogram',
+            'bogra'            => 'bogra',
+            'bogura'           => 'bogra',
+            'comilla'          => 'comilla',
+            'cumilla'          => 'comilla',
+            'barisal'          => 'barisal',
+            'barishal'         => 'barisal',
+            'jessore'          => 'jessore',
+            'jashore'          => 'jessore',
+            'kustia'           => 'kushtia',
+            'kushtia'          => 'kushtia',
+            'kurigram'         => 'kurigram',
+            'nawabganj'        => 'chapainawabganj',
+            'chapainawabgonj'  => 'chapainawabganj',
+            'sirajgonj'        => 'sirajganj',
+            'sunamgonj'        => 'sunamganj',
+            'habigonj'         => 'habiganj',
+            'moulvibazar'      => 'moulvibazar',
+            'moulovibazar'     => 'moulvibazar',
+            'b.baria'          => 'brahmanbaria',
+            'b-baria'          => 'brahmanbaria',
+            'bbaria'           => 'brahmanbaria',
+            'laxmipur'         => 'lakshmipur',
+            'jhalokati'        => 'jhalakati',
+            'jhalakathi'       => 'jhalakati',
+            'coxsbazar'        => "cox's bazar",
+            'coxbazar'         => "cox's bazar",
+            'cox bazar'        => "cox's bazar",
+            'mymensing'        => 'mymensingh',
+            'netrakona'        => 'netrokona',
+            'panchagar'        => 'panchagarh',
+            'gaibanda'         => 'gaibandha',
+            'jaipurhat'        => 'joypurhat',
+            'munshigonj'       => 'munshiganj',
+            'manikgonj'        => 'manikganj',
+            'narayangonj'      => 'narayanganj',
+            'kishoregonj'      => 'kishoreganj',
+            'gopalgonj'        => 'gopalganj',
+        ];
+
+        if (isset($aliases[$canonical])) {
+            $target = $aliases[$canonical];
+            foreach ($districtsCache as $d) {
+                if (mb_strtolower((string)$d->district_name) === $target) {
+                    return $d;
+                }
+            }
+        }
+
+        // 4. Safe Partial match (STRICT: length >= 3 and NEVER with empty string)
+        if (mb_strlen($canonical) >= 3) {
+            foreach ($districtsCache as $d) {
+                $dName = mb_strtolower(trim((string)$d->district_name));
+                if ($dName !== '' && (str_contains($dName, $canonical) || str_contains($canonical, $dName))) {
+                    return $d;
+                }
+            }
+        }
+
+        return null;
+    }
+}
+
+if (!function_exists('resolve_upazila_by_name')) {
+    /**
+     * Resolve an Upazila model by its name, optionally scoped by district ID.
+     * Uses in-memory district-scoped caching for high speed across hundreds of rows.
+     *
+     * @param string|null $name
+     * @param int|null $districtId
+     * @return \App\Models\backend\Upazila|null
+     */
+    function resolve_upazila_by_name(?string $name, ?int $districtId = null): ?\App\Models\backend\Upazila
+    {
+        if (empty($name)) {
+            return null;
+        }
+
+        $canonical = bd_canonical_term($name);
+        if ($canonical === '') {
+            return null;
+        }
+
+        static $upazilasByDistrict = [];
+        if ($districtId && !isset($upazilasByDistrict[$districtId])) {
+            $upazilasByDistrict[$districtId] = \App\Models\backend\Upazila::with('upazila_district.district_division')
+                ->where('upazila_district_id', $districtId)
+                ->get();
+        }
+
+        $candidates = $districtId ? ($upazilasByDistrict[$districtId] ?? collect()) : null;
+
+        if ($candidates && $candidates->isNotEmpty()) {
+            // 1. Special Sadar match (e.g. user wrote "সদর" or "Sadar")
+            if (in_array($canonical, ['সদর', 'sadar'])) {
+                foreach ($candidates as $u) {
+                    $uName = mb_strtolower((string)$u->upazila_name);
+                    if (str_contains($uName, 'sadar')) {
+                        return $u;
+                    }
+                }
+            }
+
+            // 2. Exact English match (if Excel had English)
+            foreach ($candidates as $u) {
+                $uName = mb_strtolower(trim((string)$u->upazila_name));
+                $uBnName = mb_strtolower(trim((string)$u->upazila_bn_name));
+                if (($uName !== '' && $uName === $canonical) || ($uBnName !== '' && $uBnName === $canonical)) {
+                    return $u;
+                }
+            }
+
+            // 3. Phonetic Bangla transliteration match (e.g. রৌমারি -> rowmari -> Rowmari)
+            $phonetic = bangla_to_english_phonetic($name);
+            if ($phonetic !== '') {
+                foreach ($candidates as $u) {
+                    $uNameClean = mb_strtolower(preg_replace('/[\s\-_]+/u', '', (string)$u->upazila_name));
+                    if ($uNameClean === $phonetic || str_contains($uNameClean, $phonetic) || str_contains($phonetic, $uNameClean)) {
+                        return $u;
+                    }
+                }
+            }
+
+            // 4. Safe partial match under this district (STRICT: length >= 3)
+            if (mb_strlen($canonical) >= 3) {
+                foreach ($candidates as $u) {
+                    $uName = mb_strtolower(trim((string)$u->upazila_name));
+                    if ($uName !== '' && (str_contains($uName, $canonical) || str_contains($canonical, $uName))) {
+                        return $u;
+                    }
+                }
+            }
+        }
+
+        // Global fallback across all upazilas (only if clean term has at least 3 characters!)
+        if (mb_strlen($canonical) >= 3) {
+            $query = \App\Models\backend\Upazila::with('upazila_district.district_division');
+            if ($districtId) {
+                $query->where('upazila_district_id', $districtId);
+            }
+
+            // Phonetic match across all upazilas
+            $phonetic = bangla_to_english_phonetic($name);
+            if ($phonetic !== '') {
+                $u = (clone $query)->whereRaw("LOWER(REPLACE(REPLACE(upazila_name, ' ', ''), '-', '')) LIKE ?", ["%{$phonetic}%"])->first();
+                if ($u) {
+                    return $u;
+                }
+            }
+
+            // Try exact match in English
+            $upazila = (clone $query)->where(function ($q) use ($canonical) {
+                $q->where('upazila_name', $canonical);
+            })->first();
+
+            if ($upazila) {
+                return $upazila;
+            }
+
+            // Try LIKE match in English
+            return (clone $query)->where(function ($q) use ($canonical) {
+                $q->where('upazila_name', 'like', "%{$canonical}%");
+            })->first();
+        }
+
+        return null;
+    }
+}
+
+//unique_product_code
+if (! function_exists('generate_product_code')) {
+   
+    function generate_product_code($customPrefix = null)
+    {
+        $prefix      = $customPrefix ?? 'PRD-'; 
+        $startNumber = 1;                       
+        $padLength   = 3;                    
+
+        try {
+            $prefixLen = strlen($prefix);
+
+            if ($prefixLen > 0) {
+                $maxNum = DB::table('products')
+                    ->where('product_code', 'LIKE', $prefix . '%')
+                    ->selectRaw("MAX(CAST(SUBSTRING(product_code, ?) AS UNSIGNED)) as max_no", [$prefixLen + 1])
+                    ->value('max_no');
+
+                $nextNumber = $maxNum !== null ? ((int) $maxNum + 1) : $startNumber;
+                $code = $prefix . str_pad($nextNumber, $padLength, '0', STR_PAD_LEFT);
+            } else {
+                $maxNum = DB::table('products')
+                    ->whereNotNull('product_code')
+                    ->where('product_code', '!=', '')
+                    ->whereRaw("product_code REGEXP '^[0-9]+$'")
+                    ->selectRaw("MAX(CAST(product_code AS UNSIGNED)) as max_no")
+                    ->value('max_no');
+
+                if ($maxNum !== null) {
+                    $nextNumber = (int) $maxNum + 1;
+                } else {
+                    $maxId = DB::table('products')->max('id') ?? 0;
+                    $nextNumber = max($startNumber, $maxId + 1);
+                }
+
+                $code = (string) $nextNumber;
+            }
+
+            
+            while (DB::table('products')->where('product_code', $code)->exists()) {
+                $nextNumber++;
+                $code = ($prefixLen > 0)
+                    ? $prefix . str_pad($nextNumber, $padLength, '0', STR_PAD_LEFT)
+                    : (string) $nextNumber;
+            }
+
+            return $code;
+
+        } catch (\Throwable $e) {
+            
+            $fallbackId = (DB::table('products')->max('id') ?? 0) + 1;
+            return (!empty($prefix) ? $prefix : '') . str_pad($fallbackId, $padLength, '0', STR_PAD_LEFT);
+        }
+    }
+}
+
+

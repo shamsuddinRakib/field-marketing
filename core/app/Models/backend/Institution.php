@@ -13,7 +13,7 @@ class Institution extends Model
         'institution_name',
         'code',
         'email',
-        'phone',
+        // 'phone', // Removed: Phone belongs to Teacher module
         'upazila_id',
         'district_id',
         'division_id',

@@ -554,22 +554,35 @@ class MarketingRepresentativeController extends Controller
         return $data;
     }
 
-    public function select2()
+    public function select2(Request $request)
     {
-        $term = trim(request('q', ''));
+        $term = trim($request->input('q', ''));
+        $useRepId = $request->boolean('use_rep_id') || $request->input('id_type') === 'rep_id';
+
         $representatives = MarketingRepresentative::with('user')
-            ->when($term !== '', fn($query) => $query->whereHas('user', fn($q) => $q->where('name', 'like', "%{$term}%")))
+            ->when($term !== '', function ($query) use ($term) {
+                $query->where('employee_id', 'like', "%{$term}%")
+                    ->orWhereHas('user', function ($q) use ($term) {
+                        $q->where('name', 'like', "%{$term}%")
+                          ->orWhere('phone', 'like', "%{$term}%");
+                    });
+            })
             ->orderBy('id', 'desc')
             ->limit(30)
             ->get();
 
-        return response()->json(['results' => $representatives->map(function ($representative) {
+        return response()->json(['results' => $representatives->map(function ($representative) use ($useRepId) {
+            $name = $representative->user?->name ?? 'Representative';
+            $label = $name . ($representative->employee_id ? " ({$representative->employee_id})" : '');
+
             return [
-                'id' => $representative->user->id ?? '-',
-                'text' => $representative->user?->name ?? 'N/A',
-                'employee_id' => $representative->employee_id,
-                'mobile' => $representative->user?->phone ?? null,
-                'email' => $representative->user?->email ?? null,
+                'id'                => $useRepId ? $representative->id : ($representative->user?->id ?? $representative->id),
+                'representative_id' => $representative->id,
+                'user_id'           => $representative->user?->id,
+                'text'              => $label,
+                'employee_id'       => $representative->employee_id,
+                'mobile'            => $representative->user?->phone ?? null,
+                'email'             => $representative->user?->email ?? null,
             ];
         })->values()]);
     }

@@ -17,50 +17,6 @@ class ProductController extends Controller
         return view('backend.modules.products.index');
     }
 
-    // public function productList()
-    // {
-    //     $products = Product::with(['category'])
-    //         ->where('parent_id', null)
-    //         ->paginate(100);
-
-    //     // $html =  view('backend.modules.products.product_list', compact('products'))->render();
-
-    //     return response()->json(['products' => $products]);
-    // }
-
-    // public function productList()
-    // {
-    //     try {
-    //         $branchId = current_branch_id();
-    //         $products = Product::query()
-    //             ->with(['category:id,name'])
-    //             ->whereNull('products.parent_id')
-    //             ->select(
-    //                 'products.id',
-    //                 'products.name',
-    //                 'products.price',
-    //                 'products.cost_price',
-    //                 'products.mrp',
-    //                 'products.image',
-    //                 'products.category_id',
-    //                 \DB::raw("(SELECT SUM(sc.quantity) FROM stock_currents sc
-    //                            LEFT JOIN products p2 ON sc.product_id = p2.id
-    //                            WHERE sc.branch_id = $branchId
-    //                            AND (sc.product_id = products.id OR p2.parent_id = products.id)) as stock")
-    //             )
-    //             ->paginate(100);
-
-    //         return response()->json(['products' => $products], 200);
-    //     } catch (\Throwable $e) {
-    //         \Log::error("PRODUCT LIST ERROR", [
-    //             'error' => $e->getMessage(),
-    //         ]);
-
-    //         return response()->json([
-    //             'message' => 'Server error loading products',
-    //         ], 500);
-    //     }
-    // }
     public function productList()
     {
         try {
@@ -250,9 +206,14 @@ class ProductController extends Controller
         return response()->json(['products' => $products]);
     }
 
+    public function generateProductCode($prefix = null)
+    {
+        return generate_product_code($prefix);
+    }
+
     public function listAjax(Request $request)
     {
-        $columns   = ['id', 'price', 'is_active', 'has_variants', 'name', 'category_id', 'subcategory_id', 'brand_id', 'thumbnail_image'];
+        $columns   = ['id', 'name', 'edition', 'product_publish_year', 'price', 'thumbnail_image', 'is_active', 'id'];
         $draw      = (int) $request->input('draw');
         $start     = (int) $request->input('start', 0);
         $length    = (int) $request->input('length', 10);
@@ -260,7 +221,11 @@ class ProductController extends Controller
         $orderDir  = strtolower($request->input('order.0.dir', 'desc')) === 'asc' ? 'asc' : 'desc';
         $searchVal = trim($request->input('search.value', ''));
 
-        $base = Product::query()->select(['id', 'price', 'is_active', 'has_variants', 'name', 'category_id', 'subcategory_id', 'brand_id', 'thumbnail_image'])->where('parent_id', null);
+        $base = Product::query()->select([
+            'id', 'price', 'is_active', 'has_variants', 'name', 
+            'category_id', 'subcategory_id', 'brand_id', 'thumbnail_image',
+            'product_code', 'product_publish_year', 'product_exam_year', 'edition'
+        ])->where('parent_id', null);
 
         $total = (clone $base)->count();
 
@@ -268,7 +233,11 @@ class ProductController extends Controller
             $base->where(function ($q) use ($searchVal) {
                 $q->where('name', 'like', "%{$searchVal}%")
                     ->orWhere('slug', 'like', "%{$searchVal}%")
-                    ->orWhere('sku', 'like', "%{$searchVal}%");
+                    ->orWhere('sku', 'like', "%{$searchVal}%")
+                    ->orWhere('product_code', 'like', "%{$searchVal}%")
+                    ->orWhere('edition', 'like', "%{$searchVal}%")
+                    ->orWhere('product_publish_year', 'like', "%{$searchVal}%")
+                    ->orWhere('product_exam_year', 'like', "%{$searchVal}%");
             });
         }
 
@@ -281,9 +250,27 @@ class ProductController extends Controller
 
         $data = [];
         foreach ($rows as $b) {
-            $nameCol = '<p>' . e($b->name) .
-                ($b->has_variants === 1 ? ' <a href="' . route('product.products.show', $b->id) . '" class="badge bg-success">Has Child</a>' : '') .
-                '</p>';
+
+            $nameCol = '<div class="d-flex flex-column gap-1">' .
+                '<p class="mb-0 fw-semibold text-primary-light">' . e($b->name) .
+                ($b->has_variants === 1 ? ' <a href="' . route('product.products.show', $b->id) . '" class="badge bg-success ms-1">Has Child</a>' : '') .
+                '</p>' .
+                (!empty($b->product_code) ? '<div><span class="badge bg-primary-subtle text-primary-600 px-8 py-2 radius-4 fw-medium">Code: ' . e($b->product_code) . '</span></div>' : '') .
+                '<span class="text-xs text-muted"><strong>Category:</strong> ' . e($b->category->name ?? 'N/A') .
+                ' | <strong>Brand:</strong> ' . e($b->brand->name ?? 'N/A') . '</span>' .
+                '</div>';
+
+            $editionCol = !empty($b->edition)
+                ? '<span class="badge bg-info-subtle text-info-700 px-10 py-4 radius-4 fw-medium text-sm">' . e($b->edition) . '</span>'
+                : '<span class="text-muted text-sm">-</span>';
+
+            $publishYear = !empty($b->product_publish_year) ? e($b->product_publish_year) : '-';
+            $examYear    = !empty($b->product_exam_year) ? e($b->product_exam_year) : '-';
+
+            $yearCol = '<div class="d-flex flex-column gap-1 text-sm">' .
+                '<div><span class="text-secondary-light fw-normal">Published Year:</span> <span class="fw-semibold text-primary-light">' . $publishYear . '</span></div>' .
+                '<div><span class="text-secondary-light fw-normal">Exam Year:</span> <span class="fw-semibold text-primary-light">' . $examYear . '</span></div>' .
+                '</div>';
 
             $actions = '<div class="d-inline-flex justify-content-end gap-1 w-100">
                 <a href="' . route('product.products.editModal', $b->id) . '" class="w-32-px h-32-px rounded-circle d-inline-flex align-items-center justify-content-center
@@ -301,25 +288,17 @@ class ProductController extends Controller
                     <iconify-icon icon="mdi:delete"></iconify-icon>
                 </a>
             </div>';
-            $image  = '<div  style="width:70px"><img src="' . image($b->thumbnail_image) . '" alt="img"></div>';
+            $image  = '<div style="width:70px"><img src="' . image($b->thumbnail_image) . '" alt="img"></div>';
             $status = $b->is_active
                 ? '<span class="badge text-sm fw-semibold bg-dark-success-gradient px-20 py-9 radius-4 text-white">Active</span>'
                 : '<span class="badge text-sm fw-semibold bg-dark-warning-gradient px-20 py-9 radius-4 text-white">Inactive</span>';
-            // $size  = ($b->size && $b->size->name) ? $b->size->name : '';
-            // $color = ($b->color && $b->color->name) ? $b->color->name : '';
-
-            // $size_color = '<p>' . $size . '<br><span class="text-sm">' . $color . '</span></p>';
-            $category   = ' <span class="text-sm">Category: ' . ($b->category->name ?? 'N/A'). '</span><br>
-                        <span class="text-sm">Sub-Category: ' . ($b->subcategory?->name ?? 'N/A') . '</span>';
 
             $data[] = [
                 $b->id,
                 $nameCol,
-                $category,
-                // $b->product_type->name,
-                $b->brand->name,
+                $editionCol,
+                $yearCol,
                 $b->price,
-                // $size_color,
                 $image,
                 $status,
                 $actions,
@@ -336,8 +315,8 @@ class ProductController extends Controller
 
     public function createModal()
     {
-        // @perm গার্ড চাইলে দিন
-        return view('backend.modules.products.create'); // partial only
+        $product_code = $this->generateProductCode();
+        return view('backend.modules.products.create', compact('product_code'));
     }
 
     public function store(Request $req)
@@ -345,10 +324,15 @@ class ProductController extends Controller
 
         $data = $req->validate(
             [
-                'name'              => ['required', 'string', 'max:150', 'unique:products,name'],
-                'slug'              => ['required', 'string', 'max:150', 'unique:products,slug'],
-                'sku'               => ['required', 'string', 'max:150', 'unique:products,sku'],
-                'has_variant'       => ['required', 'integer'],
+                'name'                 => ['required', 'string', 'max:150', 'unique:products,name'],
+                'slug'                 => ['required', 'string', 'max:150', 'unique:products,slug'],
+                // 'sku'               => ['required', 'string', 'max:150', 'unique:products,sku'],
+                'sku'                  => ['nullable', 'string', 'max:150'],
+                'product_code'         => ['nullable', 'string', 'max:50', 'unique:products,product_code'],
+                'product_publish_year' => ['nullable', 'max:20'],
+                'product_exam_year'    => ['nullable', 'max:20'],
+                'edition'              => ['nullable', 'string', 'max:50'],
+                'has_variant'          => ['required', 'integer'],
                 // 'category_type_id'  => ['required', 'integer'],
                 'category_id'       => ['required', 'integer'],
                 'subcategory_id'    => ['nullable', 'integer'],
@@ -432,11 +416,18 @@ class ProductController extends Controller
             $metaImagePath = uploadImage($req->file('meta_image'), 'product/meta_images');
         }
 
-        $product = product::create([
-            'name'              => ucwords($data['name']),
-            'slug'              => $data['slug'],
-            'sku'               => $data['sku'],
-            'barcode'           => $data['sku'],
+        $productCode = !empty($req->product_code) ? $req->product_code : $this->generateProductCode();
+        //$barcodeValue = !empty($data['sku']) ? $data['sku'] : $productCode;
+
+        $product = Product::create([
+            'name'                 => ucwords($data['name']),
+            'slug'                 => $data['slug'],
+            'sku'                  => $data['sku'] ?? null,
+            'product_code'         => $productCode,
+            'product_publish_year' => $req->product_publish_year ?? null,
+            'product_exam_year'    => $req->product_exam_year ?? null,
+            'edition'              => $req->edition ?? null,
+            //'barcode'              => $barcodeValue,
             // 'category_type_id'  => $data['category_type_id'],
             'category_id'       => $data['category_id'],
             'subcategory_id'    => $data['subcategory_id'] ?? null,
@@ -494,7 +485,7 @@ class ProductController extends Controller
                         'name'             => ucwords($names[$i]),
                         'slug'             => Str::slug($child_data['child_name'][$i], '_'),
                         'sku'              => $skus[$i],
-                        'barcode'          => $skus[$i],
+                        //'barcode'          => $skus[$i],
                         // 'category_type_id' => $data['category_type_id'],
                         'category_id'      => $data['category_id'],
                         'subcategory_id'   => $data['subcategory_id'],
@@ -526,7 +517,7 @@ class ProductController extends Controller
                             'name'             => ucwords($names[$i]),
                             'slug'             => Str::slug($child_data['child_name'][$i], '_'),
                             'sku'              => $skus[$i],
-                            'barcode'          => $skus[$i],
+                            // 'barcode'          => $skus[$i],
                             // 'category_type_id' => $data['category_type_id'],
                             'category_id'      => $data['category_id'],
                             'subcategory_id'   => $data['subcategory_id'],
@@ -555,7 +546,7 @@ class ProductController extends Controller
                             'name'             => ucwords($names[$i]),
                             'slug'             => Str::slug($child_data['child_name'][$i], '_'),
                             'sku'              => $skus[$i],
-                            'barcode'          => $skus[$i],
+                            // 'barcode'          => $skus[$i],
                             // 'category_type_id' => $data['category_type_id'],
                             'category_id'      => $data['category_id'],
                             'subcategory_id'   => $data['subcategory_id'],
@@ -583,7 +574,7 @@ class ProductController extends Controller
                             'parent_id'        => $product->id,
                             'name'             => ucwords($names[$i]),
                             'sku'              => $skus[$i],
-                            'barcode'          => $skus[$i],
+                            // 'barcode'          => $skus[$i],
                             'slug'             => Str::slug($child_data['child_name'][$i], '_'),
                             // 'category_type_id' => $data['category_type_id'],
                             'category_id'      => $data['category_id'],
@@ -613,6 +604,10 @@ class ProductController extends Controller
 
     public function editModal(Product $product)
     {
+        if (empty($product->product_code)) {
+            $product->product_code = $this->generateProductCode();
+        }
+
         $colors = Product::where('parent_id', $product->id)
             ->with('color')
             ->get()
@@ -646,9 +641,14 @@ class ProductController extends Controller
         $validator = Validator::make(
             $req->all(),
             [
-                'name'              => ['required', 'string', 'max:150'],
-                'slug'              => ['required', 'string', 'max:150'],
-                'sku'               => ['required', 'string', 'max:150'],
+                'name'                 => ['required', 'string', 'max:150'],
+                'slug'                 => ['required', 'string', 'max:150'],
+                // 'sku'               => ['required', 'string', 'max:150'],
+                'sku'                  => ['nullable', 'string', 'max:150'],
+                'product_code'         => ['nullable', 'string', 'max:50', 'unique:products,product_code,' . $product->id],
+                'product_publish_year' => ['nullable', 'max:20'],
+                'product_exam_year'    => ['nullable', 'max:20'],
+                'edition'              => ['nullable', 'string', 'max:50'],
                 // 'category_type_id'  => ['required', 'integer'],
                 'category_id'       => ['required', 'integer'],
                 'subcategory_id'    => ['nullable', 'integer'],
@@ -793,10 +793,17 @@ class ProductController extends Controller
             $final_price = $data['mrp'] - (($data['mrp'] * $data['discount_value']) / 100);
         }
 
-        $product->name             = ucwords($data['name']);
-        $product->slug             = $data['slug'];
-        $product->sku              = $data['sku'];
-        $product->barcode          = $data['sku'];
+        $productCode = !empty($req->product_code) ? $req->product_code : ($product->product_code ?: $this->generateProductCode());
+        // $barcodeValue = !empty($req->sku) ? $req->sku : ($product->barcode ?: $productCode);
+
+        $product->name                 = ucwords($data['name']);
+        $product->slug                 = $data['slug'];
+        $product->sku                  = $req->sku ?? $product->sku;
+        $product->product_code         = $productCode;
+        $product->product_publish_year = $req->product_publish_year ?? null;
+        $product->product_exam_year    = $req->product_exam_year ?? null;
+        $product->edition              = $req->edition ?? null;
+        // $product->barcode              = $barcodeValue;
         // $product->category_type_id = $data['category_type_id'];
         $product->category_id      = $data['category_id'];
         $product->subcategory_id   = $data['subcategory_id'] ?? null;
@@ -862,7 +869,7 @@ class ProductController extends Controller
                 if ($child_product) {
                     $child_product->name             = $child_data['child_name'][$i];
                     $child_product->sku              = $child_data['child_sku'][$i];
-                    $child_product->barcode          = $child_data['child_sku'][$i];
+                    // $child_product->barcode          = $child_data['child_sku'][$i];
                     $child_product->color_id         = $child_data['child_color_id'][$i] ?? null;
                     $child_product->size_id          = $child_data['child_size_id'][$i] ?? null;
                     $child_product->paper_id         = $child_data['child_paper_id'][$i] ?? null;
@@ -879,7 +886,7 @@ class ProductController extends Controller
                         'name'             => ucwords($child_data['child_name'][$i]),
                         'slug'             => Str::slug($child_data['child_name'][$i], '_'),
                         'sku'              => $child_data['child_sku'][$i],
-                        'barcode'          => $child_data['child_sku'][$i],
+                        // 'barcode'          => $child_data['child_sku'][$i],
                         // 'category_type_id' => $data['category_type_id'],
                         'category_id'      => $data['category_id'],
                         'subcategory_id'   => $data['subcategory_id'],
@@ -1347,17 +1354,17 @@ class ProductController extends Controller
     }
 
     // Show barcode view
-    public function barcodeIndex()
-    {
-        $products = Product::query()
-            ->where(function ($q) {
-                $q->whereNotNull('barcode')
-                    ->orWhereNotNull('sku');
-            })
-            ->get();
+    // public function barcodeIndex()
+    // {
+    //     $products = Product::query()
+    //         ->where(function ($q) {
+    //             $q->whereNotNull('barcode')
+    //                 ->orWhereNotNull('sku');
+    //         })
+    //         ->get();
 
-        return view('backend.modules.products.barcode', compact('products'));
-    }
+    //     return view('backend.modules.products.barcode', compact('products'));
+    // }
 
     // public function barcodePreview(Product $product)
     // {
@@ -1373,26 +1380,26 @@ class ProductController extends Controller
     //     ]);
     // }
 
-    public function barcodePreview(Product $product, Request $request)
-    {
-        $qty = max((int) $request->qty, 1);
-        $barcodeValue = $product->barcode ?: $product->sku;
+    // public function barcodePreview(Product $product, Request $request)
+    // {
+    //     $qty = max((int) $request->qty, 1);
+    //     $barcodeValue = $product->barcode ?: $product->sku;
 
-        if (! $barcodeValue) {
-            return response()->json([
-                'success' => false,
-            ]);
-        }
+    //     if (! $barcodeValue) {
+    //         return response()->json([
+    //             'success' => false,
+    //         ]);
+    //     }
 
-        $html = view('backend.modules.products.barcode_preview', compact(
-            'product',
-            'barcodeValue',
-            'qty'
-        ))->render();
+    //     $html = view('backend.modules.products.barcode_preview', compact(
+    //         'product',
+    //         'barcodeValue',
+    //         'qty'
+    //     ))->render();
 
-        return response()->json([
-            'success' => true,
-            'html'    => $html,
-        ]);
-    }
+    //     return response()->json([
+    //         'success' => true,
+    //         'html'    => $html,
+    //     ]);
+    // }
 }

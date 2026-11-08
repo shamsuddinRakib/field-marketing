@@ -115,3 +115,87 @@
         </div>
     </div>
 </div>
+
+{{-- Secondary Nested Modal (For Quick Add while inside another modal, e.g. Add Institution) --}}
+<div class="modal fade" id="secondaryAjaxModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" style="z-index: 1060;">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content radius-16 border-0 shadow-lg">
+            {{-- Secondary AJAX content will be loaded here --}}
+        </div>
+    </div>
+</div>
+
+<style>
+/* ==========================================================================
+   Global Modal Scroll & Viewport Stabilization Fix
+   Ensures modals scroll smoothly, never freeze or clip off-screen
+   ========================================================================== */
+.modal {
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Fix Bootstrap modal-dialog-centered vertical clipping bug on dynamic content */
+.modal-dialog-centered {
+    display: flex;
+    align-items: center;
+    min-height: calc(100% - (var(--bs-modal-margin, 1.75rem) * 2));
+}
+
+.modal-dialog-centered::before {
+    display: block;
+    height: calc(100vh - (var(--bs-modal-margin, 1.75rem) * 2));
+    height: -webkit-min-content;
+    height: -moz-min-content;
+    height: min-content;
+    content: "";
+}
+
+.modal-dialog-centered .modal-content {
+    margin: auto;
+}
+
+/* Guard against vertical clipping on smaller laptop screens or tall dynamic modals */
+@media (max-height: 860px) {
+    .modal-dialog-centered {
+        align-items: flex-start !important;
+        margin-top: 1.5rem !important;
+        margin-bottom: 1.5rem !important;
+    }
+}
+
+/* Maintain body scroll lock when modal is open */
+body.modal-open {
+    overflow: hidden !important;
+}
+
+#secondaryAjaxModal .modal-content {
+    border-radius: 16px;
+    border: none;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.22);
+}
+#secondaryAjaxModal .select2-container .select2-selection--single {
+    height: 44px !important;
+    border-radius: 8px !important;
+    border: 1px solid #d1d5db !important;
+    display: flex !important;
+    align-items: center !important;
+}
+#secondaryAjaxModal .select2-container--default .select2-selection--single .select2-selection__rendered {
+    line-height: 42px !important;
+    padding-left: 14px !important;
+    font-size: 14px !important;
+    color: var(--text-primary-light, #212529) !important;
+}
+#secondaryAjaxModal .select2-container--default .select2-selection--single .select2-selection__arrow {
+    height: 42px !important;
+    right: 12px !important;
+}
+#secondaryAjaxModal .select2-dropdown {
+    border-radius: 8px !important;
+    border: 1px solid #d1d5db !important;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1) !important;
+    z-index: 1075 !important;
+}
+</style>

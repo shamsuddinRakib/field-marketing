@@ -8,7 +8,7 @@
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-24">
         <div>
             <h6 class="fw-semibold mb-0">Courier Management List</h6>
-            <p class="m-0">Manage Courier</p>
+            <p class="m-0">Manage Teacher Book Dispatches & Call Center Verifications</p>
         </div>
         <ul class="d-flex align-items-center gap-2">
             <li class="fw-medium">
@@ -31,13 +31,12 @@
                 <ul class="table-top-head list-unstyled d-flex align-items-center gap-2 mb-0">
                     @include('backend.include.buttons')
                 </ul>
-                @if (auth()->user()->canDo('courier-marketing.store'))
+                @if (auth()->user()->canDo('courier-marketings.store') || auth()->user()->isSuper())
                     <button type="button"
                         class="btn btn-primary btn-sm px-12 py-8 radius-8 d-flex align-items-center gap-2 AjaxModal"
-                        data-ajax-modal="{{ route('courier-marketings.createModal') }}"
-                        data-size="lg" data-onload="CourierMarketingIndex.onLoad"
-                        data-onsuccess="CourierMarketingIndex.onSaved">
-                        <iconify-icon icon="ic:baseline-plus" class="text-xl"></iconify-icon>Add Courier
+                        data-ajax-modal="{{ route('courier-marketings.createModal') }}" data-size="lg"
+                        data-onload="CourierMarketingIndex.onLoad" data-onsuccess="CourierMarketingIndex.onSaved">
+                        <iconify-icon icon="ic:baseline-plus" class="text-xl"></iconify-icon>Add Courier Dispatch
                     </button>
                 @endif
             </div>
@@ -48,12 +47,12 @@
                 <thead>
                     <tr>
                         <th style="width:60px">S.L</th>
-                        <th>Representative Name</th>
-                        <th>Teacher Name</th>
-                        <th>Product Name</th>
-                        <th>Quantity</th>
+                        <th>Representative</th>
+                        <th>Teacher</th>
+                        <th>Institution</th>
+                        <th>Products Dispatched</th>
+                        <th>Total Qty</th>
                         <th>Courier Company</th>
-                        <th>Tracking Number</th>
                         <th>Dispatch Date</th>
                         <th>Status</th>
                         <th>Actions</th>
@@ -69,53 +68,13 @@
     <script>
         var DATATABLE_URL = "{{ route('courier-marketings.list.ajax') }}";
 
-        function renderRequestItems($modal, items) {
-            const $container = $modal.find('.courier-marketing-product-items');
-            $container.empty();
-
-            const availableItems = (items || []).filter(item => parseInt(item.available_quantity, 10) > 0);
-
-            if (!availableItems.length) {
-                $container.html('<div class="col-12"><div class="alert alert-warning py-8 px-12 mb-0 text-sm">No available quantity remaining for this approved request.</div></div>');
-                return;
-            }
-
-            availableItems.forEach((item, index) => {
-                const $row = $($('#courier-marketing-product-template').html().trim());
-                $row.find('.js-product-name').val(item.product_name);
-                $row.find('.js-book-request-item-id')
-                    .attr('name', `product_items[${index}][book_request_item_id]`)
-                    .val(item.book_request_item_id);
-
-                $row.find('.js-item-id-error').addClass(`product_items.${index}.book_request_item_id-error`);
-
-                const $qty = $row.find('.js-quantity-input');
-                $qty.attr('name', `product_items[${index}][quantity]`)
-                    .attr('max', item.available_quantity)
-                    .val(item.available_quantity);
-
-                $row.find('.js-qty-error').addClass(`product_items.${index}.quantity-error`);
-                $row.find('.js-dist-hint').text(
-                    `Approved: ${item.approved_quantity} | Dispatched: ${item.previously_dispatched} | Available: ${item.available_quantity}`
-                );
-
-                $container.append($row);
-            });
-
-            if ($container.find('.courier-marketing-product-row').length <= 1) {
-                $container.find('.btn-remove-product').prop('disabled', true);
-            }
-        }
-
         function reindexProductRows($container) {
-            $container.find('.courier-marketing-product-row').each(function(index) {
-                $(this).find('.js-book-request-item-id').attr('name', `product_items[${index}][book_request_item_id]`);
+            const rows = $container.find('.courier-product-row');
+            rows.each(function(index) {
+                $(this).find('.js-product-select').attr('name', `product_items[${index}][product_id]`);
                 $(this).find('.js-quantity-input').attr('name', `product_items[${index}][quantity]`);
             });
-            $container.find('.btn-remove-product').prop(
-                'disabled',
-                $container.find('.courier-marketing-product-row').length <= 1
-            );
+            rows.find('.btn-remove-row').prop('disabled', rows.length <= 1);
         }
 
         window.CourierMarketingIndex = {
@@ -125,91 +84,66 @@
                     $(this).find('.modal-dialog').removeClass('modal-dialog-scrollable');
                 });
 
-                // Approved Book Request Select2
-                $modal.find('.js-book-request-select').each(function() {
-                    const $select = $(this);
-                    if ($select.hasClass('select2-hidden-accessible')) $select.select2('destroy');
-                    $select.select2({
-                        dropdownParent: $modal,
-                        width: '100%',
-                        placeholder: 'Select approved book request',
-                        allowClear: true,
-                        ajax: {
-                            url: "{{ route('courier-marketings.approvedRequests.select2') }}",
-                            dataType: 'json',
-                            delay: 200,
-                            data: params => ({ q: params.term || '' }),
-                            processResults: data => data
-                        }
-                    }).off('select2:select.loadItems').on('select2:select.loadItems', function(e) {
-                        const bookRequestId = e.params.data.id;
-                        $.get("{{ route('courier-marketings.requestItems') }}", { book_request_id: bookRequestId })
-                            .done(function(res) {
-                                if (res.ok) renderRequestItems($modal, res.items);
-                            });
-                    }).off('select2:clear.loadItems').on('select2:clear.loadItems', function() {
-                        $modal.find('.courier-marketing-product-items').html(
-                            '<div class="col-12 text-muted text-sm py-8">Select an approved Book Request to load products.</div>'
-                        );
-                    });
+                // 1. Auto-init all .js-s2 and .js-s2-ajax dropdowns using global S2 helper
+                if (window.S2 && typeof window.S2.auto === 'function') {
+                    window.S2.auto($modal);
+                }
+
+                // 2. Teacher Phone Select2 Auto-fill on select / clear
+                $modal.find('.js-teacher-phone-select').off('select2:select.autofill').on('select2:select.autofill', function(e) {
+                    const data = e.params.data || {};
+                    $modal.find('#autoTeacherName').val(data.teacher_name || '—');
+                    $modal.find('#autoInstitutionName').val(data.institution_name || '—');
+                    const locText = data.location ? (data.location + (data.address ? ' — ' + data.address : '')) : (data.address || '—');
+                    $modal.find('#autoLocationAddress').val(locText);
+                }).off('select2:clear.autofill').on('select2:clear.autofill', function() {
+                    $modal.find('#autoTeacherName').val('');
+                    $modal.find('#autoInstitutionName').val('');
+                    $modal.find('#autoLocationAddress').val('');
                 });
 
-                // Teacher Select2
-                $modal.find('.js-teacher-select').each(function() {
-                    const $select = $(this);
-                    if ($select.hasClass('select2-hidden-accessible')) $select.select2('destroy');
-                    $select.select2({
-                        dropdownParent: $modal,
-                        width: '100%',
-                        placeholder: 'Select teacher',
-                        allowClear: true,
-                        ajax: {
-                            url: "{{ route('courier-marketings.teachers.select2') }}",
-                            dataType: 'json',
-                            delay: 200,
-                            data: params => ({ q: params.term || '' }),
-                            processResults: data => data
-                        }
-                    });
+                // 3. Add More Product Row
+                $modal.off('click.addProd', '#btnAddProductRow').on('click.addProd', '#btnAddProductRow', function(e) {
+                    e.preventDefault();
+                    const $container = $modal.find('#courierProductItemsContainer');
+                    const templateHtml = $('#courier-product-row-template').html();
+                    if (!templateHtml) return;
+
+                    const $newRow = $(templateHtml.trim());
+                    $container.append($newRow);
+                    reindexProductRows($container);
+
+                    if (window.S2 && typeof window.S2.auto === 'function') {
+                        window.S2.auto($newRow);
+                    }
+                });
+
+                // 4. Remove Product Row
+                $modal.off('click.remProd', '.btn-remove-row').on('click.remProd', '.btn-remove-row', function(e) {
+                    e.preventDefault();
+                    const $container = $modal.find('#courierProductItemsContainer');
+                    if ($container.find('.courier-product-row').length <= 1) return;
+                    $(this).closest('.courier-product-row').remove();
+                    reindexProductRows($container);
                 });
             },
             onSaved: function(res) {
                 $('.AjaxDataTable').DataTable().ajax.reload(null, false);
-                if (window.Swal) Swal.fire({
-                    icon: 'success',
-                    title: 'Saved',
-                    text: res?.msg || 'Saved',
-                    timer: 1000,
-                    showConfirmButton: false
-                });
+                if (window.Swal) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Saved',
+                        text: res?.msg || 'Saved successfully',
+                        timer: 1000,
+                        showConfirmButton: false
+                    });
+                }
             }
         };
 
-        // Keep alias in case any button calls CourierMarketingsIndex
         window.CourierMarketingsIndex = window.CourierMarketingIndex;
 
-        $(document).on('click', '.btn-remove-product', function() {
-            const $items = $(this).closest('.courier-marketing-product-items');
-            if ($items.find('.courier-marketing-product-row').length <= 1) return;
-            $(this).closest('.courier-marketing-product-row').remove();
-            reindexProductRows($items);
-        });
-
-        // Block quantity over Available
-        $(document).on('input', '.courier-marketing-product-row .js-quantity-input', function() {
-            const $row = $(this).closest('.courier-marketing-product-row');
-            const max = parseInt($(this).attr('max'), 10);
-            if (isNaN(max)) return;
-            const val = parseInt($(this).val(), 10);
-            if (!isNaN(val) && val > max) {
-                $(this).val(max);
-                const $err = $row.find('.js-qty-error');
-                if ($err.length) {
-                    $err.text('Quantity cannot exceed available quantity (' + max + ').').show();
-                }
-            }
-        });
-
+        // Delete confirmation
         $(document).on('click', '.btn-courier-marketing-delete', function(e) {
             e.preventDefault();
             const url = $(this).data('url');
@@ -224,26 +158,31 @@
                     }
                 }).done(function(res) {
                     $('.AjaxDataTable').DataTable().ajax.reload(null, false);
-                    if (window.Swal) Swal.fire({
-                        icon: 'success',
-                        title: 'Deleted',
-                        text: res?.msg || 'Deleted',
-                        timer: 1000,
-                        showConfirmButton: false
-                    });
+                    if (window.Swal) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Deleted',
+                            text: res?.msg || 'Deleted',
+                            timer: 1000,
+                            showConfirmButton: false
+                        });
+                    }
                 }).fail(function(xhr) {
                     const msg = xhr.responseJSON?.msg || 'Delete failed';
-                    if (window.Swal) Swal.fire({
-                        icon: 'error',
-                        title: 'Failed',
-                        text: msg
-                    });
+                    if (window.Swal) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Failed',
+                            text: msg
+                        });
+                    }
                 });
             };
+
             if (window.Swal) {
                 Swal.fire({
                     icon: 'warning',
-                    title: 'Delete courier entry?',
+                    title: 'Delete courier dispatch?',
                     text: 'This action cannot be undone.',
                     showCancelButton: true,
                     confirmButtonText: 'Yes, delete',
@@ -251,7 +190,9 @@
                 }).then(function(result) {
                     if (result.isConfirmed) remove();
                 });
-            } else if (confirm('Delete this courier entry?')) remove();
+            } else if (confirm('Delete this courier dispatch?')) {
+                remove();
+            }
         });
     </script>
 @endsection

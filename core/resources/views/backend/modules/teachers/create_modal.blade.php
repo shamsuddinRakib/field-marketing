@@ -15,8 +15,14 @@
                     class="form-control radius-8" placeholder="Enter Phone Number">
                 <div class="invalid-feedback d-block phone-error" style="display:none"></div>
             </div>
-            <div class="col-md-6 mb-16"><label class="form-label text-sm mb-6">Institution</label><select
-                    name="institution_id" class="form-control radius-8 js-institution-select"></select>
+            <div class="col-md-6 mb-16">
+                <div class="d-flex align-items-center justify-content-between mb-6">
+                    <label class="form-label text-sm mb-0">Institution</label>
+                    <button type="button" class="btn btn-xs btn-outline-primary radius-6 d-inline-flex align-items-center gap-1 js-quick-add-institution" style="padding: 2px 8px; font-size: 11px;">
+                        <iconify-icon icon="ic:baseline-plus"></iconify-icon> Add Institution
+                    </button>
+                </div>
+                <select name="institution_id" class="form-control radius-8 js-institution-select" data-placeholder="Select Institution"></select>
                 <div class="invalid-feedback d-block institution_id-error" style="display:none"></div>
             </div>
             <div class="col-md-6 mb-16"><label class="form-label text-sm mb-6">Designation</label><input
@@ -30,15 +36,13 @@
                 </select>
                 <div class="invalid-feedback d-block department-error" style="display:none"></div>
             </div>
-            <div class="col-md-6 mb-16"><label class="form-label text-sm mb-6">Subject</label><select name="subject"
-                    class="form-control radius-8 js-subject-select" data-placeholder="Select Subject">
-                    <option value=""></option>
+            <div class="col-md-6 mb-16"><label class="form-label text-sm mb-6">Subject</label><select name="subject[]"
+                    class="form-control radius-8 js-subject-select" multiple="multiple" data-placeholder="Select Subject(s)">
                 </select>
                 <div class="invalid-feedback d-block subject-error" style="display:none"></div>
             </div>
-            <div class="col-md-6 mb-16"><label class="form-label text-sm mb-6">Class</label><select name="class_name"
-                    class="form-control radius-8 js-class-select" data-placeholder="Select Class">
-                    <option value=""></option>
+            <div class="col-md-6 mb-16"><label class="form-label text-sm mb-6">Class</label><select name="class_name[]"
+                    class="form-control radius-8 js-class-select" multiple="multiple" data-placeholder="Select Class(es)">
                 </select>
                 <div class="invalid-feedback d-block class_name-error" style="display:none"></div>
             </div>
@@ -48,6 +52,26 @@
                     <option value="0">Inactive</option>
                 </select>
                 <div class="invalid-feedback d-block status-error" style="display:none"></div>
+            </div>
+            <div class="col-md-4 mb-16">
+                <label class="form-label text-sm mb-6">Upazila <small class="text-muted">(Auto)</small></label>
+                <input type="text" id="teacher_upazila_display" class="form-control radius-8 bg-light" placeholder="Auto-populated" readonly>
+                <input type="hidden" name="upazila_id" id="teacher_upazila_id">
+            </div>
+            <div class="col-md-4 mb-16">
+                <label class="form-label text-sm mb-6">District <small class="text-muted">(Auto)</small></label>
+                <input type="text" id="teacher_district_display" class="form-control radius-8 bg-light" placeholder="Auto-populated" readonly>
+                <input type="hidden" name="district_id" id="teacher_district_id">
+            </div>
+            <div class="col-md-4 mb-16">
+                <label class="form-label text-sm mb-6">Division <small class="text-muted">(Auto)</small></label>
+                <input type="text" id="teacher_division_display" class="form-control radius-8 bg-light" placeholder="Auto-populated" readonly>
+                <input type="hidden" name="division_id" id="teacher_division_id">
+            </div>
+            <div class="col-12 mb-16">
+                <label class="form-label text-sm mb-6">Address</label>
+                <textarea name="address" rows="2" class="form-control radius-8" placeholder="Enter Teacher Address"></textarea>
+                <div class="invalid-feedback d-block address-error" style="display:none"></div>
             </div>
         </div>
         <div class="d-flex align-items-center justify-content-center gap-3 mt-12"><button type="button"

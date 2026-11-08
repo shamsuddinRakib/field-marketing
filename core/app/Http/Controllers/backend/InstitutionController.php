@@ -28,6 +28,165 @@ class InstitutionController extends Controller
         return view('backend.modules.institutions.edit_modal', compact('institution'));
     }
 
+    public function importModal()
+    {
+        return view('backend.modules.institutions.import_modal');
+    }
+
+    public function importChunk(Request $request)
+    {
+        if (!Schema::hasTable('institutions')) {
+            return response()->json(['ok' => false, 'msg' => 'Institutions table not found.'], 422);
+        }
+
+        $rows = $request->input('rows', []);
+        if (!is_array($rows) || empty($rows)) {
+            return response()->json(['ok' => true, 'inserted' => 0, 'skipped' => 0, 'errors' => []]);
+        }
+
+        $inserted = 0;
+        $skipped = 0;
+        $insertedItems = [];
+        $skippedItems = [];
+        $errors = [];
+
+        foreach ($rows as $index => $row) {
+            $rowNum = $row['row_num'] ?? ($index + 1);
+            $name = trim($row['institution_name'] ?? $row['name'] ?? '');
+            if ($name === '') {
+                continue; // ignore empty rows / headers
+            }
+
+            // EIIN / Code
+            $code = trim($row['code'] ?? $row['eiin'] ?? '');
+            if (mb_strlen($code) > 50) {
+                $code = mb_substr($code, 0, 50);
+            }
+
+            $email = trim($row['email'] ?? '');
+            if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $email = '';
+            }
+            $districtName = trim($row['district'] ?? '');
+            $upazilaName = trim($row['upazila'] ?? $row['upazilla'] ?? '');
+            $divisionName = trim($row['division'] ?? '');
+            $address = trim($row['address'] ?? '');
+            $statusRaw = trim($row['status'] ?? 'Active');
+            $status = in_array(strtolower($statusRaw), ['1', 'active', 'true', 'সক্রিয়']) ? 1 : 0;
+
+            // Resolve District
+            $district = function_exists('resolve_district_by_name') ? resolve_district_by_name($districtName) : null;
+            $districtId = $district ? $district->district_id : null;
+            $divisionId = $district ? $district->district_division_id : null;
+
+            // Resolve Upazila
+            $upazila = function_exists('resolve_upazila_by_name') ? resolve_upazila_by_name($upazilaName, $districtId) : null;
+            $upazilaId = $upazila ? $upazila->id : null;
+
+            // If district wasn't found directly, but upazila was found: inherit district and division from upazila
+            if (!$districtId && $upazila && $upazila->upazila_district) {
+                $districtId = $upazila->upazila_district->district_id;
+                $divisionId = $upazila->upazila_district->district_division_id;
+            }
+
+            // If division was passed and divisionId not resolved yet:
+            if (!$divisionId && $divisionName !== '') {
+                $div = \App\Models\backend\Division::where('name', 'like', "%{$divisionName}%")
+                    ->orWhere('bn_name', 'like', "%{$divisionName}%")
+                    ->first();
+                if ($div) {
+                    $divisionId = $div->id;
+                }
+            }
+
+            if ($districtId && $districtId != 1) {
+                $bogusRecord = Institution::where('institution_name', $name)
+                    ->where('district_id', 1)
+                    ->where('upazila_id', 1)
+                    ->first();
+                if ($bogusRecord) {
+                    $bogusRecord->update([
+                        'district_id' => $districtId,
+                        'upazila_id'  => $upazilaId,
+                        'division_id' => $divisionId,
+                        'address'     => $address !== '' ? $address : $bogusRecord->address,
+                    ]);
+                    $inserted++;
+                    $locText = $district ? ($district->district_bn_name ?: $district->district_name) : $districtName;
+                    $insertedItems[] = [
+                        'row'      => $rowNum,
+                        'name'     => $name,
+                        'district' => $locText . ' (Updated from Barguna to ' . $locText . ')',
+                    ];
+                    continue;
+                }
+            }
+
+            // Duplicate Check: Skip if already exists
+            $existsQuery = Institution::query();
+            $locText = $district ? ($district->district_bn_name ?: $district->district_name) : $districtName;
+            $matchReason = '';
+            if ($code !== '') {
+                $existsQuery->where('code', $code);
+                $matchReason = "EIIN / Code '{$code}' already exists in database";
+            } else {
+                $existsQuery->where('institution_name', $name);
+                if ($districtId) {
+                    $existsQuery->where('district_id', $districtId);
+                }
+                if ($upazilaId) {
+                    $existsQuery->where('upazila_id', $upazilaId);
+                }
+                $matchReason = "Already exists in database" . ($locText ? " ({$locText})" : '');
+            }
+
+            if ($existsQuery->exists()) {
+                $skipped++;
+                $skippedItems[] = [
+                    'row'      => $rowNum,
+                    'name'     => $name,
+                    'district' => $locText ?: '-',
+                    'reason'   => $matchReason,
+                ];
+                continue; 
+            }
+
+            try {
+                Institution::create([
+                    'institution_name' => $name,
+                    'code'             => $code !== '' ? $code : null,
+                    'email'            => $email !== '' ? $email : null,
+                    'district_id'      => $districtId,
+                    'upazila_id'       => $upazilaId,
+                    'division_id'      => $divisionId,
+                    'address'          => $address !== '' ? $address : null,
+                    'status'           => $status,
+                ]);
+                $inserted++;
+                $insertedItems[] = [
+                    'row'      => $rowNum,
+                    'name'     => $name,
+                    'district' => $locText ?: '-',
+                ];
+            } catch (\Throwable $e) {
+                $errors[] = [
+                    'row'     => $rowNum,
+                    'name'    => $name,
+                    'message' => $e->getMessage(),
+                ];
+            }
+        }
+
+        return response()->json([
+            'ok'             => true,
+            'inserted'       => $inserted,
+            'skipped'        => $skipped,
+            'inserted_items' => $insertedItems,
+            'skipped_items'  => $skippedItems,
+            'errors'         => $errors,
+        ]);
+    }
+
     public function listAjax(Request $request)
     {
         // If table does not exist yet, return empty DataTable response to avoid 500
@@ -40,7 +199,7 @@ class InstitutionController extends Controller
             ]);
         }
 
-        $columns = ['id', 'institution_name', 'code', 'email', 'phone', 'upazila_name', 'district_name', 'division_name', 'address', 'status'];
+        $columns = ['id', 'institution_name', 'code', 'email', 'upazila_name', 'district_name', 'division_name', 'address', 'status'];
         $draw = (int) $request->input('draw');
         $start = (int) $request->input('start', 0);
         $length = (int) $request->input('length', 10);
@@ -61,7 +220,7 @@ class InstitutionController extends Controller
                 $builder->where('institutions.institution_name', 'like', "%{$search}%")
                     ->orWhere('institutions.code', 'like', "%{$search}%")
                     ->orWhere('institutions.email', 'like', "%{$search}%")
-                    ->orWhere('institutions.phone', 'like', "%{$search}%")
+                    // ->orWhere('institutions.phone', 'like', "%{$search}%") // Removed: belongs to Teacher module
                     ->orWhere('institutions.address', 'like', "%{$search}%")
                     ->orWhere('u.upazila_name', 'like', "%{$search}%")
                     ->orWhere('d.district_name', 'like', "%{$search}%")
@@ -104,7 +263,6 @@ class InstitutionController extends Controller
                 e($institutionName ?: '-'),
                 e($institution->code ?: '-'),
                 e($institution->email ?: '-'),
-                e($institution->phone ?: '-'),
                 e($institution->upazila_name ?: '-'),
                 e($institution->district_name ?: '-'),
                 e($institution->division_name ?: '-'),
@@ -129,7 +287,13 @@ class InstitutionController extends Controller
         }
         $institution = Institution::create($this->validated($request));
 
-        return response()->json(['ok' => true, 'id' => $institution->id, 'msg' => 'Institution created.']);
+        return response()->json([
+            'ok' => true,
+            'id' => $institution->id,
+            'institution_name' => $institution->institution_name,
+            'code' => $institution->code,
+            'msg' => 'Institution created.'
+        ]);
     }
 
     public function update(Request $request, Institution $institution)
@@ -205,7 +369,7 @@ class InstitutionController extends Controller
             'institution_name' => ['required', 'string', 'max:191'],
             'code' => ['nullable', 'string', 'max:100', Rule::unique('institutions', 'code')->ignore($institution?->id)],
             'email' => ['nullable', 'email', 'max:191'],
-            'phone' => ['nullable', 'string', 'max:50'],
+            // 'phone' => ['nullable', 'string', 'max:50'], // Removed: Phone belongs to Teacher module
             'upazila_id' => ['nullable', 'integer', 'exists:upazilas,id'],
             'district_id' => ['nullable', 'integer', 'exists:districts,district_id'],
             'division_id' => ['nullable', 'integer', 'exists:divisions,id'],
