@@ -68,13 +68,30 @@
                 @if ($assignSpecimen->teacher_id)
                     <div class="col-md-6">
                         <small class="text-muted d-block">Institution</small>
-                        <span>{{ optional($assignSpecimen->teacher->institution)->institution_name ?? '—' }}</span>
+                        <span>{{ $assignSpecimen->teacher?->institution?->institution_name ?? '—' }}</span>
                     </div>
                     <div class="col-md-6">
                         <small class="text-muted d-block">Type</small>
                         <span class="badge text-sm fw-semibold bg-primary px-12 py-6 radius-4 text-capitalize">
                             {{ $assignSpecimen->assign_inst_type ?? '—' }}
                         </span>
+                    </div>
+                @endif
+                @php
+                    $upzName = $assignSpecimen->upazila?->upazila_name ?? ($assignSpecimen->teacher?->upazila?->upazila_name ?? ($assignSpecimen->teacher?->institution?->upazila?->upazila_name ?? ($assignSpecimen->library?->upazila?->upazila_name ?? '')));
+                    $distName = $assignSpecimen->district?->district_name ?? ($assignSpecimen->teacher?->district?->district_name ?? ($assignSpecimen->teacher?->institution?->district?->district_name ?? ($assignSpecimen->library?->district?->district_name ?? '')));
+                    $divName = $assignSpecimen->division?->name ?? ($assignSpecimen->division?->bn_name ?? ($assignSpecimen->teacher?->division?->name ?? ($assignSpecimen->teacher?->division?->bn_name ?? ($assignSpecimen->library?->division?->name ?? ''))));
+                    $locText = implode(', ', array_filter([$upzName, $distName, $divName]));
+                    $addrText = $assignSpecimen->address ?: ($assignSpecimen->teacher?->address ?: ($assignSpecimen->teacher?->institution?->address ?: ($assignSpecimen->library?->address ?? '')));
+                @endphp
+                <div class="col-md-6">
+                    <small class="text-muted d-block">Location</small>
+                    <span>{{ $locText ?: '—' }}</span>
+                </div>
+                @if ($addrText)
+                    <div class="col-md-6">
+                        <small class="text-muted d-block">Address</small>
+                        <span>{{ $addrText }}</span>
                     </div>
                 @endif
                 <div class="col-md-6">

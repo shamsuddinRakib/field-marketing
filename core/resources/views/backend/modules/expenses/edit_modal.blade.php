@@ -40,26 +40,10 @@
                 </div>
 
                 <div class="row g-3">
-
-                    <div class="col-md-6">
-                        <label class="form-label text-sm">From Location</label>
-                        <input type="text" name="from_location" class="form-control form-control-sm radius-8"
-                            value="{{ old('from_location', $expense->from_location) }}" placeholder="e.g. Dhanmondi"
-                            maxlength="255">
-                    </div>
-
-                    <div class="col-md-6">
-                        <label class="form-label text-sm">To Location</label>
-                        <input type="text" name="to_location" class="form-control form-control-sm radius-8"
-                            value="{{ old('to_location', $expense->to_location) }}" placeholder="e.g. Paltan"
-                            maxlength="255">
-                    </div>
-
                     <div class="col-md-6">
                         <label class="form-label text-sm">Expense Date <span class="text-danger">*</span></label>
                         <input type="date" name="expense_date" class="form-control form-control-sm radius-8"
-                            value="{{ $expense->expense_date }}"
-                            min="{{ min(now()->toDateString(), $expense->expense_date) }}" required>
+                            value="{{ $expense->expense_date }}" required>
                     </div>
 
                     <div class="col-md-6">
@@ -85,53 +69,70 @@
         </div>
 
         {{-- ================= EXPENSE ITEMS ================= --}}
-        <table class="table table-sm align-middle" id="expenseItemsTable">
-            <thead class="table-light">
-                <tr>
-                    <th style="width:30%">Category</th>
-                    <th>Description</th>
-                    <th class="text-end" style="width:140px">Amount</th>
-                    <th style="width:40px"></th>
-                </tr>
-            </thead>
-            <tbody>
-
-                @foreach ($expense->items as $i => $item)
-                    <tr class="expense-item-row">
-                        <td>
-                            <select name="items[{{ $i }}][expense_category_id]"
-                                class="form-control form-control-sm js-s2-ajax"
-                                data-url="{{ route('expenseCategories.select2') }}" required>
-                                @if ($item->category)
-                                    <option value="{{ $item->category->id }}" selected>
-                                        {{ $item->category->name }}
-                                    </option>
-                                @endif
-                            </select>
-                        </td>
-
-                        <td>
-                            <input type="text" name="items[{{ $i }}][description]"
-                                class="form-control form-control-sm" value="{{ $item->description }}">
-                        </td>
-
-                        <td>
-                            <input type="number" step="0.01" min="0"
-                                name="items[{{ $i }}][amount]"
-                                class="form-control form-control-sm text-end expense-amount"
-                                value="{{ $item->amount }}" required>
-                        </td>
-
-                        <td class="text-center">
-                            <button type="button" class="btn btn-sm btn-outline-danger btnRemoveRow">
-                                ✕
-                            </button>
-                        </td>
+        <div class="table-responsive">
+            <table class="table table-sm align-middle" id="expenseItemsTable">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width:20%">From Location</th>
+                        <th style="width:20%">To Location</th>
+                        <th style="width:22%">Category <span class="text-danger">*</span></th>
+                        <th>Description</th>
+                        <th class="text-end" style="width:130px">Amount <span class="text-danger">*</span></th>
+                        <th style="width:40px"></th>
                     </tr>
-                @endforeach
+                </thead>
+                <tbody>
 
-            </tbody>
-        </table>
+                    @foreach ($expense->items as $i => $item)
+                        <tr class="expense-item-row">
+                            <td>
+                                <input type="text" name="items[{{ $i }}][from_location]"
+                                    class="form-control form-control-sm"
+                                    value="{{ $item->from_location ?: ($expense->from_location ?? '') }}"
+                                    placeholder="e.g. Dhanmondi">
+                            </td>
+                            <td>
+                                <input type="text" name="items[{{ $i }}][to_location]"
+                                    class="form-control form-control-sm"
+                                    value="{{ $item->to_location ?: ($expense->to_location ?? '') }}"
+                                    placeholder="e.g. Paltan">
+                            </td>
+                            <td>
+                                <select name="items[{{ $i }}][expense_category_id]"
+                                    class="form-control form-control-sm js-s2-ajax"
+                                    data-url="{{ route('expenseCategories.select2') }}" required>
+                                    @if ($item->category)
+                                        <option value="{{ $item->category->id }}" selected>
+                                            {{ $item->category->name }}
+                                        </option>
+                                    @endif
+                                </select>
+                            </td>
+
+                            <td>
+                                <input type="text" name="items[{{ $i }}][description]"
+                                    class="form-control form-control-sm" value="{{ $item->description }}"
+                                    placeholder="Optional note">
+                            </td>
+
+                            <td>
+                                <input type="number" step="0.01" min="0"
+                                    name="items[{{ $i }}][amount]"
+                                    class="form-control form-control-sm text-end expense-amount"
+                                    value="{{ $item->amount }}" required>
+                            </td>
+
+                            <td class="text-center">
+                                <button type="button" class="btn btn-sm btn-outline-danger btnRemoveRow">
+                                    ✕
+                                </button>
+                            </td>
+                        </tr>
+                    @endforeach
+
+                </tbody>
+            </table>
+        </div>
 
         <div class="d-flex justify-content-end mb-8">
             <button type="button" id="btnAddExpenseItem" class="btn btn-sm btn-outline-primary">

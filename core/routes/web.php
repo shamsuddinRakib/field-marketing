@@ -369,6 +369,7 @@ Route::middleware(['web', 'auth', 'perm', 'branchscope'])->group(function () {
         Route::get('/create', [AssignSpecimenController::class, 'createModal'])->name('create');
         Route::post('/store', [AssignSpecimenController::class, 'store'])->name('store');
         Route::get('/teachers-by-phone-select2', [AssignSpecimenController::class, 'teachersByPhoneSelect2'])->name('teachersByPhone.select2');
+        Route::get('/institutions-select2', [AssignSpecimenController::class, 'institutionsSelect2'])->name('institutions.select2');
         Route::get('/status-modal/{assignSpecimen}', [AssignSpecimenController::class, 'statusModal'])->name('statusModal');
         Route::get('/edit/{assignSpecimen}', [AssignSpecimenController::class, 'editModal'])->whereNumber('assignSpecimen')->name('edit');
         Route::put('/update/{assignSpecimen}', [AssignSpecimenController::class, 'update'])->name('update');

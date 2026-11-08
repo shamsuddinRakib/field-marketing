@@ -19,54 +19,27 @@
                 <h6 class="mb-12 fw-semibold">Expense Information</h6>
                 <div class="row g-3">
                     <div class="col-md-6 mb-20">
-                        <label class="form-label text-sm mb-8">Select <span class="text-danger">*</span></label>
+                        <label class="form-label text-sm mb-8">Select Representative <span class="text-danger">*</span></label>
                         <select class="form-control form-control-sm  js-s2-ajax" name="user_id" id="user"
                             data-url="{{ route('marketing-representative.marketing-representatives.select2') }}"
-                            data-placeholder="Select Marketing Reprenstative">
+                            data-placeholder="Select Marketing Representative">
 
                         </select>
                         <div class="invalid-feedback d-block user_id-error" style="display:none"></div>
                     </div>
-                    <!-- <div class="col-md-6 mb-20">
-
-                        <label class="form-label text-sm mb-8">Select Visit <span class="text-danger">*</span></label>
-                        <select class="form-control form-control-sm  js-s2-ajax" name="daily_visit_id" id="visit"
-                            data-url="{{ route('daily-visit.select2') }}" data-placeholder="Select Daily Visit">
-
-                        </select>
-                        <div class="invalid-feedback d-block user_id-error" style="display:none"></div>
-                    </div> -->
 
                     <div class="col-md-6">
                         <label class="form-label text-sm">Expense Name <span class="text-danger">*</span></label>
                         <input type="text" name="name" class="form-control form-control-sm radius-8"
-                            placeholder="e.g. Office Monthly Expense" required>
+                            value="Daily Field Expense" placeholder="e.g. Daily Field Expense" required>
                     </div>
                 </div>
 
                 <div class="row g-3">
-                    {{-- <div class="col-md-6">
-                        <label class="form-label text-sm">Expense Name <span class="text-danger">*</span></label>
-                        <input type="text" name="name" class="form-control form-control-sm radius-8"
-                            placeholder="e.g. Office Monthly Expense" required>
-                    </div> --}}
-
-                    <div class="col-md-6">
-                        <label class="form-label text-sm">From Location</label>
-                        <input type="text" name="from_location" class="form-control form-control-sm radius-8"
-                            placeholder="e.g. Dhanmondi" maxlength="255">
-                    </div>
-
-                    <div class="col-md-6">
-                        <label class="form-label text-sm">To Location</label>
-                        <input type="text" name="to_location"
-                            class="form-control form-control-sm radius-8"placeholder="e.g. Paltan" maxlength="255">
-                    </div>
-
                     <div class="col-md-6">
                         <label class="form-label text-sm">Expense Date <span class="text-danger">*</span></label>
                         <input type="date" name="expense_date" class="form-control form-control-sm radius-8"
-                            value="{{ now()->toDateString() }}" min="{{ now()->toDateString() }}" required>
+                            value="{{ now()->toDateString() }}" required>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label text-sm">Attachment</label>
@@ -85,37 +58,49 @@
         </div>
 
         {{-- ================= EXPENSE ITEMS ================= --}}
-        <table class="table table-sm align-middle" id="expenseItemsTable">
-            <thead class="table-light">
-                <tr>
-                    <th style="width:30%">Category</th>
-                    <th>Description</th>
-                    <th class="text-end" style="width:140px">Amount</th>
-                    <th style="width:40px"></th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr class="expense-item-row">
-                    <td>
-                        <select name="items[0][expense_category_id]" class="form-control form-control-sm js-s2-ajax"
-                            data-url="{{ route('expenseCategories.select2') }}" required></select>
-                    </td>
-                    <td>
-                        <input type="text" name="items[0][description]" class="form-control form-control-sm"
-                            placeholder="Optional">
-                    </td>
-                    <td>
-                        <input type="number" step="0.01" min="0" name="items[0][amount]"
-                            class="form-control form-control-sm text-end expense-amount" required>
-                    </td>
-                    <td class="text-center">
-                        <button type="button" class="btn btn-sm btn-outline-danger btnRemoveRow">
-                            ✕
-                        </button>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
+        <div class="table-responsive">
+            <table class="table table-sm align-middle" id="expenseItemsTable">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width:20%">From Location</th>
+                        <th style="width:20%">To Location</th>
+                        <th style="width:22%">Category <span class="text-danger">*</span></th>
+                        <th>Description</th>
+                        <th class="text-end" style="width:130px">Amount <span class="text-danger">*</span></th>
+                        <th style="width:40px"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="expense-item-row">
+                        <td>
+                            <input type="text" name="items[0][from_location]" class="form-control form-control-sm"
+                                placeholder="e.g. Dhanmondi">
+                        </td>
+                        <td>
+                            <input type="text" name="items[0][to_location]" class="form-control form-control-sm"
+                                placeholder="e.g. Paltan">
+                        </td>
+                        <td>
+                            <select name="items[0][expense_category_id]" class="form-control form-control-sm js-s2-ajax"
+                                data-url="{{ route('expenseCategories.select2') }}" required></select>
+                        </td>
+                        <td>
+                            <input type="text" name="items[0][description]" class="form-control form-control-sm"
+                                placeholder="Optional note">
+                        </td>
+                        <td>
+                            <input type="number" step="0.01" min="0" name="items[0][amount]"
+                                class="form-control form-control-sm text-end expense-amount" required>
+                        </td>
+                        <td class="text-center">
+                            <button type="button" class="btn btn-sm btn-outline-danger btnRemoveRow">
+                                ✕
+                            </button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
         <div class="d-flex justify-content-end mb-8">
             <button type="button" id="btnAddExpenseItem" class="btn btn-sm btn-outline-primary">
                 + Add Item

@@ -186,6 +186,7 @@ class LibraryController extends Controller
     {
         $term = trim($request->input('q', ''));
         $libraries = Library::query()
+            ->with(['upazila', 'district', 'division'])
             ->when($term !== '', function ($q) use ($term) {
                 $q->where(function ($b) use ($term) {
                     $b->where('library_name', 'like', "%{$term}%")
@@ -199,8 +200,12 @@ class LibraryController extends Controller
         return response()->json(['results' => $libraries->map(function ($lib) {
             $name = $lib->library_name;
             return [
-                'id' => $lib->id,
-                'text' => $name . ($lib->code ? " ({$lib->code})" : ''),
+                'id'            => $lib->id,
+                'text'          => $name . ($lib->code ? " ({$lib->code})" : ''),
+                'upazila_id'    => $lib->upazila_id,
+                'district_id'   => $lib->district_id,
+                'division_id'   => $lib->division_id,
+                'address'       => $lib->address ?? '',
             ];
         })->values()]);
     }

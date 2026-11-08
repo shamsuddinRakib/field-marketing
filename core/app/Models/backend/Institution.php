@@ -39,4 +39,9 @@ class Institution extends Model
     {
         return $this->belongsTo(Division::class);
     }
+
+    public function teachers()
+    {
+        return $this->hasMany(Teacher::class, 'institution_id');
+    }
 }

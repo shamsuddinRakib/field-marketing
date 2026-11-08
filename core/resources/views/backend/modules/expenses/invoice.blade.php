@@ -72,16 +72,20 @@
         <table class="table table-bordered table-sm">
             <thead class="table-light">
                 <tr>
-                    <th>#</th>
+                    <th style="width: 40px">#</th>
+                    <th>From Location</th>
+                    <th>To Location</th>
                     <th>Category</th>
                     <th>Description</th>
-                    <th class="text-end">Amount</th>
+                    <th class="text-end" style="width: 120px">Amount</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach ($expense->items as $i => $item)
                     <tr>
                         <td>{{ $i + 1 }}</td>
+                        <td>{{ $item->from_location ?: ($expense->from_location ?? '—') }}</td>
+                        <td>{{ $item->to_location ?: ($expense->to_location ?? '—') }}</td>
                         <td>{{ $item->category?->name ?? '—' }}</td>
                         <td>{{ $item->description ?? '—' }}</td>
                         <td class="text-end">{{ number_format($item->amount, 2) }}</td>
@@ -90,7 +94,7 @@
             </tbody>
             <tfoot>
                 <tr>
-                    <th colspan="3" class="text-end">Total</th>
+                    <th colspan="5" class="text-end">Total</th>
                     <th class="text-end">{{ number_format($expense->total_amount, 2) }}</th>
                 </tr>
             </tfoot>

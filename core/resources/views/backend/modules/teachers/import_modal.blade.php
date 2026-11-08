@@ -175,13 +175,18 @@
                         <strong class="text-primary">Phone Number *:</strong> <code>PHONE</code>, <code>Mobile</code>
                     </span>
                     <span class="badge bg-white text-dark border px-10 py-6 text-xs">
+                        <strong class="text-primary">Institution:</strong> <code>INSTITUTE NAME</code>,
+                        <code>Institution</code>
+                    </span>
+                    <span class="badge bg-white text-dark border px-10 py-6 text-xs">
                         <strong class="text-primary">Subject:</strong> <code>SUBJECT</code>
                     </span>
                     <span class="badge bg-white text-dark border px-10 py-6 text-xs">
                         <strong class="text-primary">Class:</strong> <code>CLASS</code>
                     </span>
                     <span class="badge bg-white text-dark border px-10 py-6 text-xs">
-                        <strong class="text-primary">Location:</strong> <code>DISTRICT</code>, <code>UPAZILLA</code>, <code>ADDRESS</code>
+                        <strong class="text-primary">Location:</strong> <code>DISTRICT</code>, <code>UPAZILLA</code>,
+                        <code>ADDRESS</code>
                     </span>
                 </div>
                 <div class="text-xs text-muted">
@@ -208,7 +213,8 @@
                 </div>
                 <div class="dropzone-title">Choose or Drag & Drop your Excel / CSV file here</div>
                 <div class="dropzone-subtitle">Supports Microsoft Excel (<code>.xlsx</code>, <code>.xls</code>) and
-                    <code>.csv</code> files.</div>
+                    <code>.csv</code> files.
+                </div>
                 <div class="policy-pill">
                     <iconify-icon icon="lucide:check-circle" style="font-size: 15px; color: #0284c7;"></iconify-icon>
                     Duplicate Policy: Existing teachers with the same phone will be automatically skipped
@@ -284,6 +290,7 @@
                             <th style="width: 45px;">#</th>
                             <th>Teacher Name</th>
                             <th>Phone</th>
+                            <th>Institution</th>
                             <th>Subject</th>
                             <th>Class</th>
                             <th>Upazila</th>
@@ -410,6 +417,7 @@
                                         <th style="width: 55px;">Row</th>
                                         <th>Teacher Name</th>
                                         <th>Phone</th>
+                                        <th>Institution</th>
                                         <th>Subject</th>
                                         <th>Class</th>
                                         <th>Upazila</th>
@@ -549,45 +557,97 @@
         let currentMapping = {};
 
         const FIELD_DEFINITIONS = [{
-                key: 'teacher_name', label: 'Teacher Name *', required: true, aliases: [
+                key: 'teacher_name',
+                label: 'Teacher Name *',
+                required: true,
+                aliases: [
                     'name', 'teacher_name', 'teacher', 'name_of_teacher', 'teachers_name',
                     'নাম', 'শিক্ষক', 'শিক্ষকের_নাম', 'শিক্ষক_নাম'
                 ]
             },
             {
-                key: 'phone', label: 'Phone Number *', required: true, aliases: [
+                key: 'phone',
+                label: 'Phone Number *',
+                required: true,
+                aliases: [
                     'phone', 'phone_number', 'mobile', 'cell', 'contact', 'mobile_no',
                     'ফোন', 'মোবাইল', 'মুঠোফোন', 'যোগাযোগ'
                 ]
             },
-            // { key: 'institution', label: 'Institution Name', required: false, aliases: [
-            //     'institute_name', 'institute', 'institution', 'institution_name', 'school',
-            //     'college', 'academy', 'madrasa', 'প্রতিষ্ঠানের_নাম', 'প্রতিষ্ঠান', 'স্কুল', 'কলেজ'
-            // ]},
-            { key: 'subject', label: 'Subject', required: false, aliases: [
-                'subject', 'subjects', 'subject_name', 'course', 'বিষয়', 'বিষয়', 'সাবজেক্ট'
-            ]},
-            { key: 'class_name', label: 'Class', required: false, aliases: [
-                'class', 'class_name', 'grade', 'শ্রেণী', 'শ্রেণি', 'ক্লাস'
-            ]},
-            { key: 'designation', label: 'Designation', required: false, aliases: [
-                'designation', 'post', 'title', 'role', 'পদবী', 'পদবি', 'পদ'
-            ]},
-            { key: 'department', label: 'Department', required: false, aliases: [
-                'department', 'dept', 'বিভাগ'
-            ]},
-            { key: 'district', label: 'District', required: false, aliases: [
-                'district', 'district_name', 'dist', 'zilla', 'zila', 'জেলা', 'জেলার_নাম'
-            ]},
-            { key: 'upazila', label: 'Upazila', required: false, aliases: [
-                'upazilla', 'upazila', 'thana', 'sub_district', 'upazila_name', 'উপজেলা', 'থানা'
-            ]},
-            { key: 'address', label: 'Address', required: false, aliases: [
-                'address', 'location', 'village', 'road', 'ঠিকানা', 'অবস্থান'
-            ]},
-            { key: 'status', label: 'Status', required: false, aliases: [
-                'status', 'state', 'condition', 'স্ট্যাটাস'
-            ]}
+            {
+                key: 'institution',
+                label: 'Institution Name',
+                required: false,
+                aliases: [
+                    'institute_name', 'institute', 'institution', 'institution_name', 'school',
+                    'college', 'academy', 'madrasa', 'coaching', 'batch', 'প্রতিষ্ঠানের_নাম', 'প্রতিষ্ঠান',
+                    'স্কুল', 'কলেজ', 'কোচিং', 'ব্যাচ'
+                ]
+            },
+            {
+                key: 'subject',
+                label: 'Subject',
+                required: false,
+                aliases: [
+                    'subject', 'subjects', 'subject_name', 'course', 'বিষয়', 'বিষয়', 'সাবজেক্ট'
+                ]
+            },
+            {
+                key: 'class_name',
+                label: 'Class',
+                required: false,
+                aliases: [
+                    'class', 'class_name', 'grade', 'শ্রেণী', 'শ্রেণি', 'ক্লাস'
+                ]
+            },
+            {
+                key: 'designation',
+                label: 'Designation',
+                required: false,
+                aliases: [
+                    'designation', 'post', 'title', 'role', 'পদবী', 'পদবি', 'পদ'
+                ]
+            },
+            {
+                key: 'department',
+                label: 'Department',
+                required: false,
+                aliases: [
+                    'department', 'dept', 'বিভাগ'
+                ]
+            },
+            {
+                key: 'district',
+                label: 'District',
+                required: false,
+                aliases: [
+                    'district', 'district_name', 'dist', 'zilla', 'zila', 'জেলা', 'জেলার_নাম'
+                ]
+            },
+            {
+                key: 'upazila',
+                label: 'Upazila',
+                required: false,
+                aliases: [
+                    'upazilla', 'upazila', 'thana', 'sub_district', 'upazila_name', 'উপজেলা', 'থানা'
+                ]
+            },
+            {
+                key: 'address',
+                label: 'Address',
+                required: false,
+                aliases: [
+                    'address', 'location', 'village', 'road', 'ঠিকানা', 'অবস্থান'
+                ]
+            },
+            {
+                key: 'status',
+                label: 'Status',
+                required: false,
+                aliases: [
+                    'status', 'state', 'condition', 'স্ট্যাটাস'
+                ]
+            }
         ];
         // Toggle column mapping card
         $container.on('click', '#teacherBtnToggleMapping', function() {
@@ -626,7 +686,7 @@
                     if (s === '') return;
                     for (const def of FIELD_DEFINITIONS) {
                         if (def.aliases.some(alias => s === alias || s.includes(alias) || alias.includes(
-                            s))) {
+                                s))) {
                             score++;
                             break;
                         }
@@ -757,6 +817,7 @@
             parsedRows = [];
             const nameIdx = currentMapping.teacher_name;
             const phoneIdx = currentMapping.phone;
+            const instIdx = currentMapping.institution;
             const subjectIdx = currentMapping.subject;
             const classIdx = currentMapping.class_name;
             const districtIdx = currentMapping.district;
@@ -780,19 +841,28 @@
                     continue;
                 }
 
-                const subjectVal = (subjectIdx !== -1 && subjectIdx !== undefined) ? String(row[subjectIdx] || '').trim() : '';
-                const classVal = (classIdx !== -1 && classIdx !== undefined) ? String(row[classIdx] || '').trim() : '';
-                const districtVal = (districtIdx !== -1 && districtIdx !== undefined) ? String(row[districtIdx] || '').trim() : '';
-                const upazilaVal = (upazilaIdx !== -1 && upazilaIdx !== undefined) ? String(row[upazilaIdx] || '').trim() : '';
-                const addressVal = (addressIdx !== -1 && addressIdx !== undefined) ? String(row[addressIdx] || '').trim() : '';
-                const designationVal = (designationIdx !== -1 && designationIdx !== undefined) ? String(row[designationIdx] || '').trim() : '';
+                const instVal = (instIdx !== -1 && instIdx !== undefined) ? String(row[instIdx] || '').trim() : '';
+                const subjectVal = (subjectIdx !== -1 && subjectIdx !== undefined) ? String(row[subjectIdx] || '')
+                    .trim() : '';
+                const classVal = (classIdx !== -1 && classIdx !== undefined) ? String(row[classIdx] || '').trim() :
+                    '';
+                const districtVal = (districtIdx !== -1 && districtIdx !== undefined) ? String(row[districtIdx] ||
+                    '').trim() : '';
+                const upazilaVal = (upazilaIdx !== -1 && upazilaIdx !== undefined) ? String(row[upazilaIdx] || '')
+                    .trim() : '';
+                const addressVal = (addressIdx !== -1 && addressIdx !== undefined) ? String(row[addressIdx] || '')
+                    .trim() : '';
+                const designationVal = (designationIdx !== -1 && designationIdx !== undefined) ? String(row[
+                    designationIdx] || '').trim() : '';
                 const deptVal = (deptIdx !== -1 && deptIdx !== undefined) ? String(row[deptIdx] || '').trim() : '';
-                const statusVal = (statusIdx !== -1 && statusIdx !== undefined) ? String(row[statusIdx] || '').trim() : '';
+                const statusVal = (statusIdx !== -1 && statusIdx !== undefined) ? String(row[statusIdx] || '')
+                .trim() : '';
 
                 parsedRows.push({
                     row_num: r + 1,
                     teacher_name: nameVal || (phoneVal ? 'Teacher ' + phoneVal.slice(-4) : ''),
                     phone: phoneVal,
+                    institution: instVal,
                     subject: subjectVal,
                     class_name: classVal,
                     district: districtVal,
@@ -822,6 +892,7 @@
                     <td>${idx + 1}</td>
                     <td class="fw-semibold text-dark">${escapeHtml(item.teacher_name || '-')}</td>
                     <td><span class="badge bg-light text-primary border">${escapeHtml(item.phone || '-')}</span></td>
+                    <td>${escapeHtml(item.institution || '-')}</td>
                     <td>${escapeHtml(item.subject || '-')}</td>
                     <td>${escapeHtml(item.class_name || '-')}</td>
                     <td>${escapeHtml(item.upazila || '-')}</td>
@@ -928,7 +999,7 @@
             $progressPercentText.text('100%');
             $progressStatusText.html(
                 '<span class="text-success fw-bold"><iconify-icon icon="lucide:check-circle"></iconify-icon> Import Completed!</span>'
-                );
+            );
 
             // Render Breakdown Tables
             renderReportBreakdown();
@@ -968,7 +1039,7 @@
             if (allSkippedItems.length === 0) {
                 $skippedTbody.html(
                     '<tr><td colspan="5" class="text-center text-muted py-12">No duplicate teachers were skipped.</td></tr>'
-                    );
+                );
             } else {
                 allSkippedItems.forEach(item => {
                     $skippedTbody.append(`
@@ -1005,8 +1076,8 @@
             const $insertedTbody = $container.find('#teacherTableInsertedBody').empty();
             if (allInsertedItems.length === 0) {
                 $insertedTbody.html(
-                    '<tr><td colspan="9" class="text-center text-muted py-12">No new teachers were inserted.</td></tr>'
-                    );
+                    '<tr><td colspan="10" class="text-center text-muted py-12">No new teachers were inserted.</td></tr>'
+                );
             } else {
                 allInsertedItems.slice(0, 100).forEach(item => {
                     $insertedTbody.append(`
@@ -1014,6 +1085,7 @@
                         <td class="text-secondary fw-semibold">#${item.row || '-'}</td>
                         <td class="fw-medium text-dark">${escapeHtml(item.name || '-')}</td>
                         <td><span class="badge bg-light text-success border">${escapeHtml(item.phone || '-')}</span></td>
+                        <td>${escapeHtml(item.institution || '-')}</td>
                         <td>${escapeHtml(item.subject || '-')}</td>
                         <td>${escapeHtml(item.class || '-')}</td>
                         <td>${escapeHtml(item.upazila || '-')}</td>
@@ -1026,7 +1098,7 @@
                 if (allInsertedItems.length > 100) {
                     $insertedTbody.append(`
                     <tr>
-                        <td colspan="9" class="text-center text-muted py-6">
+                        <td colspan="10" class="text-center text-muted py-6">
                             ... and ${allInsertedItems.length - 100} more inserted rows (download CSV log to view all).
                         </td>
                     </tr>
@@ -1046,44 +1118,15 @@
 
         // Download Log CSV button click
         $btnDownloadLog.on('click', function() {
-            let csv = '\uFEFFRow Number,Teacher Name,Phone,Subject,Class,Upazila,District,Address,Status,Details / Reason\n';
+            let csv =
+                '\uFEFFRow Number,Teacher Name,Phone,Institution,Subject,Class,Upazila,District,Address,Status,Details / Reason\n';
 
             allErrors.forEach(err => {
                 const row = err.row || '-';
                 const name = (err.name || '').replace(/"/g, '""');
                 const phone = (err.phone || '').replace(/"/g, '""');
                 const msg = (err.message || String(err)).replace(/"/g, '""');
-                csv += `"${row}","${name}","${phone}","","","","","","Error","${msg}"\n`;
-            });
-
-            allSkippedItems.forEach(item => {
-                const row = item.row || '-';
-                const name = (item.name || '').replace(/"/g, '""');
-                const phone = (item.phone || '').replace(/"/g, '""');
-                const subj = (item.subject || '').replace(/"/g, '""');
-                const cls = (item.class || '').replace(/"/g, '""');
-                const reason = (item.reason || 'Duplicate skipped').replace(/"/g, '""');
-                csv += `"${row}","${name}","${phone}","${subj}","${cls}","","","","Skipped","${reason}"\n`;
-            });
-
-            allInsertedItems.forEach(item => {
-                const row = item.row || '-';
-                const name = (item.name || '').replace(/"/g, '""');
-                const phone = (item.phone || '').replace(/"/g, '""');
-                const subj = (item.subject || '').replace(/"/g, '""');
-                const cls = (item.class || '').replace(/"/g, '""');
-                const upz = (item.upazila || '').replace(/"/g, '""');
-                const dist = (item.district || '').replace(/"/g, '""');
-                const addr = (item.address || '').replace(/"/g, '""');
-                csv += `"${row}","${name}","${phone}","${subj}","${cls}","${upz}","${dist}","${addr}","Inserted",""\n`;
-            });
-
-            allErrors.forEach(err => {
-                const row = err.row || '-';
-                const name = (err.name || '').replace(/"/g, '""');
-                const phone = (err.phone || '').replace(/"/g, '""');
-                const msg = (err.message || String(err)).replace(/"/g, '""');
-                csv += `"${row}","${name}","${phone}","","","Error","${msg}"\n`;
+                csv += `"${row}","${name}","${phone}","","","","","","","Error","${msg}"\n`;
             });
 
             allSkippedItems.forEach(item => {
@@ -1091,16 +1134,25 @@
                 const name = (item.name || '').replace(/"/g, '""');
                 const phone = (item.phone || '').replace(/"/g, '""');
                 const inst = (item.institution || '').replace(/"/g, '""');
-                const reason = (item.reason || 'Duplicate phone skipped').replace(/"/g, '""');
+                const subj = (item.subject || '').replace(/"/g, '""');
+                const cls = (item.class || '').replace(/"/g, '""');
+                const reason = (item.reason || 'Duplicate skipped').replace(/"/g, '""');
                 csv +=
-                    `"${row}","${name}","${phone}","${inst}","","Skipped (Duplicate)","${reason}"\n`;
+                    `"${row}","${name}","${phone}","${inst}","${subj}","${cls}","","","","Skipped","${reason}"\n`;
             });
 
             allInsertedItems.forEach(item => {
                 const row = item.row || '-';
                 const name = (item.name || '').replace(/"/g, '""');
                 const phone = (item.phone || '').replace(/"/g, '""');
-                csv += `"${row}","${name}","${phone}","","","Inserted","Successfully saved"\n`;
+                const inst = (item.institution || '').replace(/"/g, '""');
+                const subj = (item.subject || '').replace(/"/g, '""');
+                const cls = (item.class || '').replace(/"/g, '""');
+                const upz = (item.upazila || '').replace(/"/g, '""');
+                const dist = (item.district || '').replace(/"/g, '""');
+                const addr = (item.address || '').replace(/"/g, '""');
+                csv +=
+                    `"${row}","${name}","${phone}","${inst}","${subj}","${cls}","${upz}","${dist}","${addr}","Inserted",""\n`;
             });
 
             const blob = new Blob([csv], {
@@ -1110,7 +1162,7 @@
             const url = URL.createObjectURL(blob);
             link.setAttribute('href', url);
             link.setAttribute('download',
-            `teacher_import_log_${new Date().toISOString().slice(0, 10)}.csv`);
+                `teacher_import_log_${new Date().toISOString().slice(0, 10)}.csv`);
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);

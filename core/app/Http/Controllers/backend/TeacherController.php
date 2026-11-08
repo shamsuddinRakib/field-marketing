@@ -88,7 +88,7 @@ class TeacherController extends Controller
                 $teacherName = 'Teacher ' . substr($phone, -4);
             }
 
-            $instName = trim($row['institution_name'] ?? $row['institute'] ?? $row['institution'] ?? '');
+            $instName = trim($row['institution'] ?? $row['institute_name'] ?? $row['institution_name'] ?? $row['institute'] ?? '');
             $districtName = trim($row['district'] ?? '');
             $upazilaName = trim($row['upazila'] ?? $row['upazilla'] ?? '');
             $address = trim($row['address'] ?? '');
@@ -106,8 +106,63 @@ class TeacherController extends Controller
                 $divisionId = $upazila->upazila_district->district_division_id;
             }
 
-            // Institution is excluded during bulk teacher import as per requirement
+            // Resolve or create Institution
             $institutionId = null;
+            if ($instName !== '') {
+                $instQuery = Institution::where('institution_name', $instName);
+                if ($upazilaId) {
+                    $inst = (clone $instQuery)->where('upazila_id', $upazilaId)->first();
+                } else {
+                    $inst = null;
+                }
+
+                if (!$inst && $districtId) {
+                    $inst = (clone $instQuery)->where('district_id', $districtId)->first();
+                }
+
+                if (!$inst) {
+                    $inst = $instQuery->first();
+                }
+
+                if ($inst) {
+                    $updateData = [];
+                    if (!$inst->upazila_id && $upazilaId) {
+                        $updateData['upazila_id'] = $upazilaId;
+                    }
+                    if (!$inst->district_id && $districtId) {
+                        $updateData['district_id'] = $districtId;
+                    }
+                    if (!$inst->division_id && $divisionId) {
+                        $updateData['division_id'] = $divisionId;
+                    }
+                    if (!$inst->address && $address !== '') {
+                        $updateData['address'] = $address;
+                    }
+                    if (!empty($updateData)) {
+                        $inst->update($updateData);
+                    }
+                    $institutionId = $inst->id;
+                } else {
+                    $inst = Institution::create([
+                        'institution_name' => $instName,
+                        'upazila_id'       => $upazilaId,
+                        'district_id'      => $districtId,
+                        'division_id'      => $divisionId,
+                        'address'          => $address !== '' ? $address : null,
+                        'status'           => 1,
+                    ]);
+                    $institutionId = $inst->id;
+                }
+            } elseif ($defaultInst) {
+                $institutionId = $defaultInst->id;
+                if (!$districtId && $defaultInst->district_id) {
+                    $districtId = $defaultInst->district_id;
+                    $divisionId = $defaultInst->division_id;
+                }
+                if (!$upazilaId && $defaultInst->upazila_id) {
+                    $upazilaId = $defaultInst->upazila_id;
+                }
+            }
 
             // Resolve subjects: support multiple comma / plus / slash separated subjects
             $subjectRaw = trim($row['subject'] ?? '');
@@ -135,28 +190,53 @@ class TeacherController extends Controller
             // Duplicate Check Policy:
             // 1. If phone is present: duplicate if teacher with same phone exists.
             // 2. If phone is empty: duplicate if teacher with same teacher_name exists.
-            $dupQuery = Teacher::query();
-            $skipReason = '';
+            $existingTeacher = null;
             if ($phone !== '') {
-                $dupQuery->where('phone', $phone);
-                $skipReason = "Phone '{$phone}' already exists in database";
+                $existingTeacher = Teacher::where('phone', $phone)->first();
             } elseif ($institutionId) {
-                $dupQuery->where('teacher_name', $teacherName)->where('institution_id', $institutionId);
-                $skipReason = "Teacher '{$teacherName}' already exists for this institution";
+                $existingTeacher = Teacher::where('teacher_name', $teacherName)
+                    ->where('institution_id', $institutionId)
+                    ->first();
             } else {
-                $dupQuery->where('teacher_name', $teacherName);
-                $skipReason = "Teacher '{$teacherName}' already exists";
+                $existingTeacher = Teacher::where('teacher_name', $teacherName)->first();
             }
 
-            if ($dupQuery->exists()) {
+            if ($existingTeacher) {
+                // If existing teacher didn't have an institution_id, but this import provides one, update it!
+                if (!$existingTeacher->institution_id && $institutionId) {
+                    $existingTeacher->update([
+                        'institution_id' => $institutionId,
+                        'upazila_id'     => $existingTeacher->upazila_id ?: $upazilaId,
+                        'district_id'    => $existingTeacher->district_id ?: $districtId,
+                        'division_id'    => $existingTeacher->division_id ?: $divisionId,
+                        'address'        => $existingTeacher->address ?: ($address !== '' ? $address : null),
+                        'subject'        => $existingTeacher->subject ?: ($subject ?: null),
+                        'class_name'     => $existingTeacher->class_name ?: ($className ?: null),
+                    ]);
+                    $inserted++;
+                    $insertedItems[] = [
+                        'row'         => $rowNum,
+                        'name'        => $teacherName,
+                        'phone'       => $phone ?: '-',
+                        'institution' => $instName ?: ($existingTeacher->institution?->institution_name ?: '-'),
+                        'subject'     => $subject ?: '-',
+                        'class'       => $className ?: '-',
+                        'upazila'     => $upazila ? $upazila->upazila_name : ($upazilaName ?: '-'),
+                        'district'    => $district ? $district->district_name : ($districtName ?: '-'),
+                        'address'     => $address ?: '-',
+                    ];
+                    continue;
+                }
+
                 $skipped++;
                 $skippedItems[] = [
                     'row'         => $rowNum,
                     'name'        => $teacherName,
                     'phone'       => $phone ?: '-',
+                    'institution' => $instName ?: ($existingTeacher->institution?->institution_name ?: '-'),
                     'subject'     => $subject ?: '-',
                     'class'       => $className ?: '-',
-                    'reason'      => $skipReason,
+                    'reason'      => $phone !== '' ? "Phone '{$phone}' already exists in database" : "Teacher '{$teacherName}' already exists",
                 ];
                 continue;
             }
@@ -165,7 +245,7 @@ class TeacherController extends Controller
                 Teacher::create([
                     'teacher_name'   => $teacherName,
                     'phone'          => $phone !== '' ? $phone : null,
-                    'institution_id' => null,
+                    'institution_id' => $institutionId,
                     'designation'    => $designation ?: null,
                     'department'     => $department ?: null,
                     'subject'        => $subject ?: null,
@@ -181,6 +261,7 @@ class TeacherController extends Controller
                     'row'         => $rowNum,
                     'name'        => $teacherName,
                     'phone'       => $phone ?: '-',
+                    'institution' => $instName ?: '-',
                     'subject'     => $subject ?: '-',
                     'class'       => $className ?: '-',
                     'upazila'     => $upazila ? $upazila->upazila_name : ($upazilaName ?: '-'),
@@ -366,8 +447,15 @@ class TeacherController extends Controller
     public function institutionsSelect2(Request $request)
     {
         $term = trim($request->input('q', ''));
+        $upazilaId = $request->input('upazila_id');
         $institutions = Institution::query()
             ->with(['upazila', 'district', 'division'])
+            ->when($upazilaId, function ($q) use ($upazilaId) {
+                $q->where(function ($sub) use ($upazilaId) {
+                    $sub->where('upazila_id', $upazilaId)
+                        ->orWhereHas('teachers', fn($t) => $t->where('upazila_id', $upazilaId));
+                });
+            })
             ->when($term !== '', function ($q) use ($term) {
                 $q->where(function ($b) use ($term) {
                     $b->where('institution_name', 'like', "%{$term}%")

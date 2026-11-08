@@ -9,6 +9,8 @@ class ExpenseItem extends Model
     protected $fillable = [
         'expense_id',
         'expense_category_id',
+        'from_location',
+        'to_location',
         'description',
         'amount',
     ];

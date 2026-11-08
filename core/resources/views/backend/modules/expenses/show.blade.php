@@ -42,14 +42,31 @@
                     <span>{{ $expense->expense_date ? \Carbon\Carbon::parse($expense->expense_date)->format('d M Y') : '—' }}</span>
                 </div>
 
+                @php
+                    $routesList = $expense->items->map(function ($it) use ($expense) {
+                        $from = $it->from_location ?: $expense->from_location;
+                        $to = $it->to_location ?: $expense->to_location;
+                        return ($from || $to) ? trim("{$from} ➔ {$to}") : null;
+                    })->filter()->unique()->values();
+                @endphp
+
                 <div class="col-md-6">
-                    <small class="text-muted d-block">Route / Location</small>
-                    <div>
-                        <span class="text-muted small">From:</span> <strong>{{ $expense->from_location ?: '—' }}</strong>
-                    </div>
-                    <div>
-                        <span class="text-muted small">To:</span> <strong>{{ $expense->to_location ?: '—' }}</strong>
-                    </div>
+                    <small class="text-muted d-block">Route / Movement Summary</small>
+                    @if ($routesList->isNotEmpty())
+                        <div class="d-flex flex-column gap-1 mt-1">
+                            @foreach ($routesList as $r)
+                                <div class="text-xs fw-semibold text-dark d-flex align-items-center gap-1">
+                                    <iconify-icon icon="lucide:map-pin" class="text-primary"></iconify-icon>
+                                    {{ $r }}
+                                </div>
+                            @endforeach
+                        </div>
+                    @else
+                        <div>
+                            <span class="text-muted small">From:</span> <strong>{{ $expense->from_location ?: '—' }}</strong>
+                            <span class="text-muted small ms-2">To:</span> <strong>{{ $expense->to_location ?: '—' }}</strong>
+                        </div>
+                    @endif
                 </div>
 
                 <div class="col-md-6">
@@ -95,37 +112,43 @@
     </div>
 
     {{-- ITEMS --}}
-    <h6 class="mb-12 fw-semibold">Expense Items ({{ $expense->items->count() }})</h6>
-    <table class="table table-sm align-middle">
-        <thead class="table-light">
-            <tr>
-                <th style="width: 50px">#</th>
-                <th style="width: 30%">Category</th>
-                <th>Description</th>
-                <th class="text-end" style="width: 140px">Amount</th>
-            </tr>
-        </thead>
-        <tbody>
-            @forelse ($expense->items as $idx => $item)
+    <h6 class="mb-12 fw-semibold">Daily Expense Breakdown ({{ $expense->items->count() }})</h6>
+    <div class="table-responsive">
+        <table class="table table-sm align-middle">
+            <thead class="table-light">
                 <tr>
-                    <td>{{ $idx + 1 }}</td>
-                    <td>{{ optional($item->category)->name ?? '—' }}</td>
-                    <td>{{ $item->description ?? '—' }}</td>
-                    <td class="text-end">{{ number_format((float) $item->amount, 2) }}</td>
+                    <th style="width: 45px">#</th>
+                    <th style="width: 20%">From Location</th>
+                    <th style="width: 20%">To Location</th>
+                    <th>Category</th>
+                    <th>Description</th>
+                    <th class="text-end" style="width: 130px">Amount</th>
                 </tr>
-            @empty
+            </thead>
+            <tbody>
+                @forelse ($expense->items as $idx => $item)
+                    <tr>
+                        <td>{{ $idx + 1 }}</td>
+                        <td><strong>{{ $item->from_location ?: ($expense->from_location ?: '—') }}</strong></td>
+                        <td><strong>{{ $item->to_location ?: ($expense->to_location ?: '—') }}</strong></td>
+                        <td><span class="badge bg-light text-primary border">{{ optional($item->category)->name ?? '—' }}</span></td>
+                        <td>{{ $item->description ?? '—' }}</td>
+                        <td class="text-end fw-semibold">{{ number_format((float) $item->amount, 2) }}</td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="6" class="text-center text-muted">No items found</td>
+                    </tr>
+                @endforelse
+            </tbody>
+            <tfoot>
                 <tr>
-                    <td colspan="4" class="text-center text-muted">No items found</td>
+                    <th colspan="5" class="text-end">Total Amount</th>
+                    <th class="text-end">{{ number_format((float) $expense->total_amount, 2) }}</th>
                 </tr>
-            @endforelse
-        </tbody>
-        <tfoot>
-            <tr>
-                <th colspan="3" class="text-end">Total Amount</th>
-                <th class="text-end">{{ number_format((float) $expense->total_amount, 2) }}</th>
-            </tr>
-        </tfoot>
-    </table>
+            </tfoot>
+        </table>
+    </div>
 
     {{-- ACTION --}}
     <div class="d-flex justify-content-end gap-2 mt-16">

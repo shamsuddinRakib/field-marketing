@@ -38,4 +38,19 @@ class AssignSpecimen extends Model
     {
         return $this->belongsTo(Product::class);
     }
+
+    public function upazila()
+    {
+        return $this->belongsTo(Upazila::class, 'upazila_id');
+    }
+
+    public function district()
+    {
+        return $this->belongsTo(District::class, 'district_id', 'district_id');
+    }
+
+    public function division()
+    {
+        return $this->belongsTo(Division::class, 'division_id');
+    }
 }

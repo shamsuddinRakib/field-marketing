@@ -343,7 +343,9 @@ class InstitutionController extends Controller
     public function institutionsSelect2(Request $request)
     {
         $term = trim($request->input('q', ''));
+        $upazilaId = $request->input('upazila_id');
         $institutions = Institution::query()
+            ->when($upazilaId, fn($q) => $q->where('upazila_id', $upazilaId))
             ->when($term !== '', function ($q) use ($term) {
                 $q->where(function ($b) use ($term) {
                     $b->where('institution_name', 'like', "%{$term}%")
