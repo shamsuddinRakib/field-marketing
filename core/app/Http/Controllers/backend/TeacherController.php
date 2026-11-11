@@ -10,6 +10,9 @@ use App\Models\backend\Subject;
 use App\Models\backend\Teacher;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\DB;
 
 class TeacherController extends Controller
 {
@@ -78,7 +81,7 @@ class TeacherController extends Controller
                 $phone = $phoneDigits;
             }
 
-            // Skip rows that don't have both teacher_name and phone (e.g. area headings like "জামালপুর সদর" without phone)
+            // Skip rows that don't have both teacher_name and phone
             if ($teacherName === '' || $phone === '') {
                 continue;
             }
@@ -188,8 +191,6 @@ class TeacherController extends Controller
             $status = in_array(strtolower($statusRaw), ['1', 'active', 'true', 'সক্রিয়']) ? 1 : 0;
 
             // Duplicate Check Policy:
-            // 1. If phone is present: duplicate if teacher with same phone exists.
-            // 2. If phone is empty: duplicate if teacher with same teacher_name exists.
             $existingTeacher = null;
             if ($phone !== '') {
                 $existingTeacher = Teacher::where('phone', $phone)->first();
@@ -202,7 +203,7 @@ class TeacherController extends Controller
             }
 
             if ($existingTeacher) {
-                // If existing teacher didn't have an institution_id, but this import provides one, update it!
+
                 if (!$existingTeacher->institution_id && $institutionId) {
                     $existingTeacher->update([
                         'institution_id' => $institutionId,
@@ -300,9 +301,20 @@ class TeacherController extends Controller
         }
 
         $columns = [
-            'id', 'teacher_name', 'phone', 'institution_name', 'designation',
-            'department', 'subject', 'class_name', 'upazila', 'district',
-            'division', 'address', 'status', 'id'
+            'id',
+            'teacher_name',
+            'phone',
+            'institution_name',
+            'designation',
+            'department',
+            'subject',
+            'class_name',
+            'upazila',
+            'district',
+            'division',
+            'address',
+            'status',
+            'id'
         ];
         $draw = (int) $request->input('draw');
         $start = (int) $request->input('start', 0);
@@ -322,11 +334,11 @@ class TeacherController extends Controller
             ->select(
                 'teachers.*',
                 'i.institution_name as inst_name',
-                \Illuminate\Support\Facades\DB::raw("COALESCE(i.institution_name) as institution_name"),
-                \Illuminate\Support\Facades\DB::raw("COALESCE(tu.upazila_name, iu.upazila_name) as display_upazila"),
-                \Illuminate\Support\Facades\DB::raw("COALESCE(td.district_name, idist.district_name) as display_district"),
-                \Illuminate\Support\Facades\DB::raw("COALESCE(tdiv.name, tdiv.bn_name, idiv.name, idiv.bn_name) as display_division"),
-                \Illuminate\Support\Facades\DB::raw("COALESCE(teachers.address, i.address) as display_address")
+                DB::raw("COALESCE(i.institution_name) as institution_name"),
+                DB::raw("COALESCE(tu.upazila_name, iu.upazila_name) as display_upazila"),
+                DB::raw("COALESCE(td.district_name, idist.district_name) as display_district"),
+                DB::raw("COALESCE(tdiv.name, tdiv.bn_name, idiv.name, idiv.bn_name) as display_division"),
+                DB::raw("COALESCE(teachers.address, i.address) as display_address")
             );
 
         $total = (clone $query)->count('teachers.id');
@@ -373,10 +385,10 @@ class TeacherController extends Controller
                 ? '<span class="bg-success-focus text-success-600 border border-success-main px-12 py-4 radius-4 fw-medium text-sm">Active</span>'
                 : '<span class="bg-danger-focus text-danger-600 border border-danger-main px-12 py-4 radius-4 fw-medium text-sm">Inactive</span>';
 
-            $editUrl = \Illuminate\Support\Facades\Route::has('teacher.teachers.editModal')
+            $editUrl = Route::has('teacher.teachers.editModal')
                 ? route('teacher.teachers.editModal', $teacher->id)
                 : '#';
-            $deleteUrl = \Illuminate\Support\Facades\Route::has('teacher.teachers.destroy')
+            $deleteUrl = Route::has('teacher.teachers.destroy')
                 ? route('teacher.teachers.destroy', $teacher->id)
                 : '#';
 
@@ -386,7 +398,7 @@ class TeacherController extends Controller
                 . '</div>';
 
             $teacherName = $teacher->teacher_name;
-            $institutionName = \Illuminate\Support\Str::limit($teacher->institution_name ?: $teacher->inst_name ?: $teacher->inst_name2, 20, '...');
+            $institutionName = Str::limit($teacher->institution_name ?: $teacher->inst_name ?: $teacher->inst_name2, 20, '...');
 
             return [
                 (int) $teacher->id,

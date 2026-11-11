@@ -12,8 +12,14 @@ class Division extends Model
         'bn_name',
         'url'
     ];
+    // public function division_district()
+    // {
+    //     return $this->hasMany(District::class);
+    // }
+
     public function division_district()
     {
-        return $this->hasMany(District::class);
+        return $this->hasMany(
+            District::class, 'district_division_id', 'id');
     }
 }

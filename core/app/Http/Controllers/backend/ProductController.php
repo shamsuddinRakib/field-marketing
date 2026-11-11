@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Log;
 
 class ProductController extends Controller
 {
@@ -47,7 +48,7 @@ class ProductController extends Controller
                     'products.mrp',
                     'products.thumbnail_image',
                     'products.category_id',
-                    \DB::raw('COALESCE(SUM(sc.quantity),0) as stock')
+                    DB::raw('COALESCE(SUM(sc.quantity),0) as stock')
                 )
                 ->groupBy(
                     'products.id',
@@ -66,7 +67,7 @@ class ProductController extends Controller
             ], 200);
         } catch (\Throwable $e) {
 
-            \Log::error("PRODUCT LIST ERROR", [
+            Log::error("PRODUCT LIST ERROR", [
                 'error' => $e->getMessage(),
             ]);
 
@@ -102,7 +103,7 @@ class ProductController extends Controller
                 'products.mrp',
                 'products.thumbnail_image',
                 'products.category_id',
-                \DB::raw('COALESCE(SUM(sc.quantity),0) as stock')
+                DB::raw('COALESCE(SUM(sc.quantity),0) as stock')
             )
             ->groupBy(
                 'products.id',
@@ -145,7 +146,7 @@ class ProductController extends Controller
                 'products.mrp',
                 'products.thumbnail_image',
                 'products.category_id',
-                \DB::raw('COALESCE(SUM(sc.quantity),0) as stock')
+                DB::raw('COALESCE(SUM(sc.quantity),0) as stock')
             )
             ->groupBy(
                 'products.id',
@@ -181,7 +182,7 @@ class ProductController extends Controller
                 'products.price',
                 'products.cost_price',
                 'products.mrp',
-                \DB::raw('COALESCE(SUM(stock_currents.quantity),0) as stock')
+                DB::raw('COALESCE(SUM(stock_currents.quantity),0) as stock')
             );
 
         if ($product->has_variants == 1) {
@@ -327,7 +328,7 @@ class ProductController extends Controller
                 'name'                 => ['required', 'string', 'max:150', 'unique:products,name'],
                 'slug'                 => ['required', 'string', 'max:150', 'unique:products,slug'],
                 // 'sku'               => ['required', 'string', 'max:150', 'unique:products,sku'],
-                'sku'                  => ['nullable', 'string', 'max:150'],
+                // 'sku'                  => ['nullable', 'string', 'max:150'],
                 'product_code'         => ['nullable', 'string', 'max:50', 'unique:products,product_code'],
                 'product_publish_year' => ['nullable', 'max:20'],
                 'product_exam_year'    => ['nullable', 'max:20'],
@@ -338,10 +339,10 @@ class ProductController extends Controller
                 'subcategory_id'    => ['nullable', 'integer'],
                 // 'product_type_id'   => ['required', 'integer'],
                 'brand_id'          => ['required', 'integer'],
-                'color_id.*'        => 'nullable|integer',
+                // 'color_id.*'        => 'nullable|integer',
                 'unit_id'           => ['nullable', 'integer'],
-                'size_id.*'         => ['nullable', 'integer'],
-                'paper_id.*'        => ['nullable', 'integer'],
+                // 'size_id.*'         => ['nullable', 'integer'],
+                // 'paper_id.*'        => ['nullable', 'integer'],
                 'cost_price'        => ['required', 'numeric'],
                 'mrp'               => ['required', 'numeric'],
                 'discount_type'     => ['required', 'integer'],
@@ -349,13 +350,13 @@ class ProductController extends Controller
                 'price'             => ['required', 'numeric'],
                 'is_active'         => ['required', 'integer'],
                 'material'          => ['nullable', 'string', 'max:150'],
-                'weight'            => ['nullable', 'numeric'],
-                'fabric_weave'      => ['nullable', 'string', 'max:150'],
-                'fabric_type'       => ['nullable', 'string', 'max:150'],
-                'origin_country'    => ['nullable', 'string', 'max:150'],
-                'care_instructions' => ['nullable', 'string', 'max:250'],
-                'durability_rating' => ['nullable', 'string', 'max:150'],
-                'transparency_text' => ['nullable', 'string', 'max:150'],
+                // 'weight'            => ['nullable', 'numeric'],
+                // 'fabric_weave'      => ['nullable', 'string', 'max:150'],
+                // 'fabric_type'       => ['nullable', 'string', 'max:150'],
+                // 'origin_country'    => ['nullable', 'string', 'max:150'],
+                // 'care_instructions' => ['nullable', 'string', 'max:250'],
+                // 'durability_rating' => ['nullable', 'string', 'max:150'],
+                // 'transparency_text' => ['nullable', 'string', 'max:150'],
                 'description'       => ['nullable', 'string', 'max:350'],
                 'short_description' => ['nullable', 'string', 'max:250'],
                 'images[]'          => 'nullable|array',
@@ -381,10 +382,10 @@ class ProductController extends Controller
         if ($data['has_variant'] == 1) {
             $child_data = $req->validate([
                 'child_name'       => 'required',
-                'child_sku'        => 'required',
-                'child_color_id.*' => 'nullable|integer',
-                'child_size_id.*'  => 'nullable|integer',
-                'child_paper_id.*' => 'nullable|integer',
+                // 'child_sku'        => 'required',
+                // 'child_color_id.*' => 'nullable|integer',
+                // 'child_size_id.*'  => 'nullable|integer',
+                // 'child_paper_id.*' => 'nullable|integer',
                 'child_price.*'    => 'required|numeric',
             ]);
         }
@@ -422,7 +423,7 @@ class ProductController extends Controller
         $product = Product::create([
             'name'                 => ucwords($data['name']),
             'slug'                 => $data['slug'],
-            'sku'                  => $data['sku'] ?? null,
+            // 'sku'                  => $data['sku'] ?? null,
             'product_code'         => $productCode,
             'product_publish_year' => $req->product_publish_year ?? null,
             'product_exam_year'    => $req->product_exam_year ?? null,
@@ -433,8 +434,8 @@ class ProductController extends Controller
             'subcategory_id'    => $data['subcategory_id'] ?? null,
             // 'product_type_id'   => $data['product_type_id'],
             'brand_id'          => $data['brand_id'],
-            'size_id'           => null,
-            'color_id'          => null,
+            // 'size_id'           => null,
+            // 'color_id'          => null,
             // 'unit_id'           => $data['unit_id'],
             'cost_price'        => $data['cost_price'],
             'mrp'               => $data['mrp'],
@@ -516,7 +517,7 @@ class ProductController extends Controller
                             'parent_id'        => $product->id,
                             'name'             => ucwords($names[$i]),
                             'slug'             => Str::slug($child_data['child_name'][$i], '_'),
-                            'sku'              => $skus[$i],
+                            // 'sku'              => $skus[$i],
                             // 'barcode'          => $skus[$i],
                             // 'category_type_id' => $data['category_type_id'],
                             'category_id'      => $data['category_id'],
@@ -1332,7 +1333,7 @@ class ProductController extends Controller
                     $systemQty = $row ? (float) $row->quantity : 0.0;
                 } catch (\Throwable $e) {
                     // fallback to DB query if model missing
-                    $systemQty = (float) \DB::table('stock_currents')
+                    $systemQty = (float) DB::table('stock_currents')
                         ->where('product_id', $p->id)
                         ->where('warehouse_id', $warehouseId)
                         ->where('branch_id', $branchId ?? 0)

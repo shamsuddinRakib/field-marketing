@@ -19,6 +19,7 @@ use App\Http\Controllers\api\ProductController;
 use App\Http\Controllers\api\AssignSpecimenController;
 use App\Http\Controllers\api\CourseClassController;
 use App\Http\Controllers\api\DepartmentController;
+use App\Http\Controllers\api\DivisionController;
 use App\Http\Controllers\api\ProfileController;
 use App\Http\Controllers\api\TeacherController;
 use App\Http\Controllers\api\LibraryController;
@@ -42,8 +43,6 @@ Route::put('/profile', [ProfileController::class, 'update'])->middleware('auth:s
 
 Route::get('categories', [CategoryController::class, 'index']);
 
-// Route::get('products', [ProductController::class, 'index']);
-// Route::get('products/{slug}', [ProductController::class, 'show']);
 
 Route::get('/swagger-test', function () {
     return response()->json([
@@ -90,6 +89,10 @@ Route::prefix('mr')->name('api.mr.')->group(function () {
         //Expense
         Route::get('/expenses', [ExpenseController::class, 'index'])->name('expenses.index');
         Route::post('/expenses', [ExpenseController::class, 'store'])->name('expenses.store');
+        Route::get('/expenses/{id}', [ExpenseController::class, 'show'])->name('expenses.show');
+        Route::put('/expenses/{id}', [ExpenseController::class, 'update'])->name('expenses.update');
+        Route::delete('/expenses/{id}', [ExpenseController::class, 'destroy'])->name('expenses.destroy');
+        Route::post('/expenses/{id}/post', [ExpenseController::class, 'postExpense'])->name('expenses.post');
 
         //Book_request
         Route::get('/book-requests', [BookRequestController::class, 'index'])->name('book-requests.index');
@@ -162,5 +165,9 @@ Route::prefix('mr')->name('api.mr.')->group(function () {
         // Upazila
         Route::get('/upazilas', [UpazilaController::class, 'index'])->name('upazilas.index');
         Route::get('/upazilas/{id}', [UpazilaController::class, 'show'])->name('upazilas.show');
+
+        //Division
+        Route::get('/divisions', [DivisionController::class, 'index'])->name('divisions.index');
+        Route::get('/divisions/{id}', [DivisionController::class, 'show'])->name('divisions.show');
     });
 });

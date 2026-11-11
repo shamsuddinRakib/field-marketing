@@ -4,6 +4,54 @@
     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
 </div>
 
+<style>
+    /* Desktop & Tablet View */
+    @media (min-width: 992px) {
+        #AjaxModal .modal-dialog {
+            max-width: 960px;
+        }
+    }
+    @media (min-width: 1200px) {
+        #AjaxModal .modal-dialog {
+            max-width: 1050px;
+        }
+    }
+
+    /* Mobile & Tablet Responsive Fixes */
+    .table-responsive {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    #expenseItemsTable {
+        min-width: 680px;
+    }
+
+    @media (max-width: 575.98px) {
+        #AjaxModal .modal-dialog {
+            margin: 0.5rem;
+            max-width: calc(100% - 1rem);
+        }
+        #AjaxModal .modal-header {
+            padding: 12px 16px;
+        }
+        #AjaxModal .modal-body {
+            padding: 12px;
+        }
+        #AjaxModal .card-body {
+            padding: 12px;
+        }
+        .expense-action-buttons {
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .expense-action-buttons .btn {
+            flex: 1 1 auto;
+            text-align: center;
+        }
+    }
+</style>
+
 {{-- ================= MODAL BODY ================= --}}
 <div class="modal-body px-24 py-16">
 
@@ -179,7 +227,7 @@
         {{-- ================= ACTION ================= --}}
         <input type="hidden" name="status" id="expenseStatus" value="">
 
-        <div class="d-flex justify-content-end gap-2">
+        <div class="d-flex justify-content-end gap-2 expense-action-buttons">
             <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">
                 Cancel
             </button>
