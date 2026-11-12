@@ -72,8 +72,64 @@
     <script>
         var DATATABLE_URL = "{{ route('book-request.book-requests.list.ajax') }}";
 
+        function setDistForRow($row, availableQty) {
+            const $qty = $row.find('.js-quantity-input, input[type="number"]');
+            const $hint = $row.find('.js-dist-hint');
+            if (availableQty !== null && availableQty !== undefined && availableQty !== '') {
+                availableQty = parseInt(availableQty, 10);
+                $qty.attr('max', availableQty);
+                if ($hint.length) $hint.text('Available: ' + availableQty);
+                const cur = parseInt($qty.val(), 10);
+                if (!isNaN(cur) && cur > availableQty) {
+                    $qty.val(availableQty);
+                    const $err = $row.find('.invalid-feedback');
+                    if ($err.length) {
+                        $err.text('Quantity cannot exceed available quantity (' + availableQty + ').').show();
+                        setTimeout(() => { if (!$qty.is(':focus')) $err.hide(); }, 3000);
+                    }
+                }
+            } else {
+                $qty.removeAttr('max');
+                if ($hint.length) $hint.text('Available: —');
+            }
+        }
+
+        function initBookRequestProductSelect($select, $modal) {
+            if ($select.hasClass('select2-hidden-accessible')) $select.select2('destroy');
+            $select.select2({
+                dropdownParent: $modal,
+                width: '100%',
+                placeholder: 'Select product from Distribution List',
+                allowClear: true,
+                ajax: {
+                    url: "{{ route('product-distribution.products.select2') }}",
+                    dataType: 'json',
+                    delay: 200,
+                    data: params => ({
+                        q: params.term || '',
+                        marketing_representative_id: $modal.find('[name="marketing_representative_id"]').val(),
+                        exclude_request_group_id: $modal.find('[name="request_group_id"]').val(),
+                        exclude_request_id: $modal.find('[name="exclude_request_id"]').val()
+                    }),
+                    processResults: data => ({
+                        results: (data.results || []).filter(item => !$modal.find('.js-product-select').not($select)
+                            .toArray().some(other => String($(other).val()) === String(item.id)))
+                    })
+                }
+            }).off('select2:select.distCheck').on('select2:select.distCheck', function(e) {
+                const availableQty = e.params && e.params.data ? e.params.data.available_quantity : null;
+                setDistForRow($(this).closest('.book-request-product-row'), availableQty);
+            }).off('select2:clear.distCheck').on('select2:clear.distCheck', function() {
+                setDistForRow($(this).closest('.book-request-product-row'), null);
+            });
+        }
+
         window.BookRequestsIndex = {
             onLoad: function($modal) {
+                $modal.find('.modal-dialog').addClass('modal-dialog-scrollable');
+                $modal.off('hidden.bs.modal.bookRequestsScroll').on('hidden.bs.modal.bookRequestsScroll', function() {
+                    $(this).find('.modal-dialog').removeClass('modal-dialog-scrollable');
+                });
                 $modal.find('.js-representative-select').each(function() {
                     const $select = $(this);
                     if ($select.hasClass('select2-hidden-accessible')) $select.select2('destroy');
@@ -94,22 +150,16 @@
                     });
                 });
                 $modal.find('.js-product-select').each(function() {
-                    const $select = $(this);
-                    if ($select.hasClass('select2-hidden-accessible')) $select.select2('destroy');
-                    $select.select2({
-                        dropdownParent: $modal,
-                        width: '100%',
-                        placeholder: 'Select product',
-                        allowClear: true,
-                        ajax: {
-                            url: "{{ route('product.select2') }}",
-                            dataType: 'json',
-                            delay: 200,
-                            data: params => ({
-                                q: params.term || ''
-                            }),
-                            processResults: data => data
-                        }
+                    initBookRequestProductSelect($(this), $modal);
+                });
+                $modal.find('.book-request-product-items').each(function() {
+                    $(this).data('next-index', $(this).find('.book-request-product-row').length);
+                });
+                // Refresh distribution products when representative changes
+                $modal.find('.js-representative-select').on('change', function() {
+                    $modal.find('.js-product-select').val(null).trigger('change');
+                    $modal.find('.js-product-select').each(function() {
+                        initBookRequestProductSelect($(this), $modal);
                     });
                 });
             },
@@ -124,6 +174,71 @@
                 });
             }
         };
+
+        $(document).on('click', '.btn-add-product', function() {
+            const $modal = $(this).closest('.modal');
+            const $items = $(this).siblings('.book-request-product-items');
+            const $row = $($('#book-request-product-template').html().trim());
+            const index = Number($items.data('next-index') || 0);
+            $items.data('next-index', index + 1);
+            $row.find('select')
+                .attr('name', `product_items[${index}][product_id]`)
+                .siblings('.invalid-feedback').addClass(`product_items.${index}.product_id-error`);
+            $row.find('input')
+                .attr('name', `product_items[${index}][quantity]`)
+                .siblings('.invalid-feedback').addClass(`product_items.${index}.quantity-error`);
+            $items.append($row);
+            initBookRequestProductSelect($row.find('.js-product-select'), $modal);
+            $items.find('.btn-remove-product').prop('disabled', false);
+        });
+
+        $(document).on('click', '.btn-remove-product', function() {
+            const $items = $(this).closest('.book-request-product-items');
+            if ($items.find('.book-request-product-row').length <= 1) return;
+            $(this).closest('.book-request-product-row').remove();
+            if ($items.find('.book-request-product-row').length === 1) {
+                $items.find('.btn-remove-product').prop('disabled', true);
+            }
+        });
+
+        // Block quantity over Dist (must be equal or less)
+        $(document).on('input', '.book-request-product-row .js-quantity-input, .book-request-product-row input[type="number"]', function() {
+            const $row = $(this).closest('.book-request-product-row');
+            const max = parseInt($(this).attr('max'), 10);
+            if (isNaN(max)) return;
+            const val = parseInt($(this).val(), 10);
+            if (!isNaN(val) && val > max) {
+                $(this).val(max);
+                const $err = $row.find('.invalid-feedback');
+                if ($err.length) {
+                    $err.text('Quantity cannot exceed available quantity (' + max + ').').show();
+                }
+                if (window.Swal) {
+                    Swal.fire({ icon: 'warning', title: 'Exceeds Available Quantity', text: 'Quantity cannot exceed available (' + max + ').', timer: 1500, showConfirmButton: false });
+                }
+            }
+        });
+
+        // Final guard on submit: do not allow any row over Dist
+        $(document).on('submit', 'form[action*="book-requests"]', function(e) {
+            let blocked = false;
+            $(this).find('.book-request-product-row').each(function() {
+                const $qty = $(this).find('.js-quantity-input, input[type="number"]');
+                const max = parseInt($qty.attr('max'), 10);
+                const val = parseInt($qty.val(), 10);
+                if (!isNaN(max) && !isNaN(val) && val > max) {
+                    blocked = true;
+                    const $err = $(this).find('.invalid-feedback');
+                    if ($err.length) $err.text('Quantity cannot exceed available quantity (' + max + ').').show();
+                }
+            });
+            if (blocked) {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                if (window.Swal) Swal.fire({ icon: 'error', title: 'Blocked', text: 'One or more quantities exceed the available quantity.' });
+                return false;
+            }
+        });
 
         $(document).on('click', '.btn-book-request-delete', function(e) {
             e.preventDefault();

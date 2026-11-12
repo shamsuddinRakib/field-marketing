@@ -12,7 +12,7 @@
         @csrf
         @method('PUT')
 
-        @php $customerType = $spotSale->teacher_id ? 'teacher' : ($spotSale->library_id ? 'library' : ''); @endphp
+        @php $customerType = $spotSale->teacher_id ? 'teacher' : ($spotSale->library_id ? 'library' : ($spotSale->student_id ? 'student' : '')); @endphp
 
         {{-- ================= SALE INFO ================= --}}
         <div class="card mb-16">
@@ -38,29 +38,74 @@
                             <option value="">Select Type</option>
                             <option value="teacher" {{ $customerType === 'teacher' ? 'selected' : '' }}>Teacher</option>
                             <option value="library" {{ $customerType === 'library' ? 'selected' : '' }}>Library</option>
+                            <option value="student" {{ $customerType === 'student' ? 'selected' : '' }}>Student</option>
                         </select>
                     </div>
 
-                    <div class="col-md-6 mb-12" id="teacherWrap" style="display:{{ $customerType === 'teacher' ? 'block' : 'none' }}">
+                    <div class="col-md-6 mb-12" id="teacherWrap"
+                        style="display:{{ $customerType === 'teacher' ? 'block' : 'none' }}">
                         <label class="form-label text-sm mb-8">Select Teacher <span class="text-danger">*</span></label>
                         <select class="form-control form-control-sm js-s2-ajax" name="teacher_id" id="teacherSelect"
-                            data-url="{{ route('teacher.teachers.select2') }}"
-                            data-placeholder="Select Teacher">
+                            data-url="{{ route('teacher.teachers.select2') }}" data-placeholder="Select Teacher">
                             @if ($spotSale->teacher)
-                                <option value="{{ $spotSale->teacher->id }}" selected>{{ $spotSale->teacher->teacher_name }}</option>
+                                <option value="{{ $spotSale->teacher->id }}" selected>
+                                    {{ $spotSale->teacher->teacher_name }}</option>
                             @endif
                         </select>
                     </div>
 
-                    <div class="col-md-6 mb-12" id="libraryWrap" style="display:{{ $customerType === 'library' ? 'block' : 'none' }}">
+                    <div class="col-md-6 mb-12" id="libraryWrap"
+                        style="display:{{ $customerType === 'library' ? 'block' : 'none' }}">
                         <label class="form-label text-sm mb-8">Select Library <span class="text-danger">*</span></label>
                         <select class="form-control form-control-sm js-s2-ajax" name="library_id" id="librarySelect"
-                            data-url="{{ route('library.libraries.select2') }}"
-                            data-placeholder="Select Library">
+                            data-url="{{ route('library.libraries.select2') }}" data-placeholder="Select Library">
                             @if ($spotSale->library)
-                                <option value="{{ $spotSale->library->id }}" selected>{{ $spotSale->library->library_name ?: $spotSale->library->name }}</option>
+                                <option value="{{ $spotSale->library->id }}" selected>
+                                    {{ $spotSale->library->library_name ?: $spotSale->library->name }}</option>
                             @endif
                         </select>
+                    </div>
+
+                    {{-- STUDENT FIELDS --}}
+                    <div class="col-md-12" id="studentWrap"
+                        style="display:{{ $customerType === 'student' ? 'block' : 'none' }}">
+
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Student Name <span class="text-danger">*</span></label>
+                                <input type="text" name="student_name" id="studentName"
+                                    class="form-control form-control-sm"
+                                    value="{{ optional($spotSale->student)->student_name }}" maxlength="255">
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Class <span class="text-danger">*</span></label>
+                                <select name="course_class_id" id="courseClassSelect"
+                                    class="form-control form-control-sm">
+                                    <option value="">Select Class</option>
+                                    @foreach ($classes as $class)
+                                        <option value="{{ $class->id }}"
+                                            {{ optional($spotSale->student)->course_class_id == $class->id ? 'selected' : '' }}>
+                                            {{ $class->name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Institution <span class="text-danger">*</span></label>
+                                <select name="institution_id" id="institutionSelect"
+                                    class="form-control form-control-sm">
+                                    <option value="">Select Institution</option>
+                                    @foreach ($institutions as $institution)
+                                        <option value="{{ $institution->id }}"
+                                            {{ optional($spotSale->student)->institution_id == $institution->id ? 'selected' : '' }}>
+                                            {{ $institution->institution_name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="col-md-12">
@@ -74,48 +119,52 @@
         </div>
 
         {{-- ================= SALE ITEMS ================= --}}
-        <div class="table-responsive"><table class="table table-sm align-middle items-table-fixed" id="spotSaleItemsTable">
-            <thead class="table-light">
-                <tr>
-                    <th style="width:38%">Product</th>
-                    <th class="text-end" style="width:110px">Price</th>
-                    <th class="text-end" style="width:110px">Qty</th>
-                    <th class="text-end" style="width:120px">Total</th>
-                    <th style="width:40px"></th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach ($spotSale->items as $i => $item)
-                    <tr class="spot-sale-item-row">
-                        <td>
-                            <select name="items[{{ $i }}][product_id]"
-                                class="form-control form-control-sm js-s2-ajax spot-product"
-                                data-url="{{ route('product.select2') }}" required>
-                                @if ($item->product)
-                                    <option value="{{ $item->product->id }}" selected>{{ $item->product->name }}</option>
-                                @endif
-                            </select>
-                        </td>
-                        <td class="text-end">
-                            <span class="spot-price-text">{{ number_format((float) $item->price, 2) }}</span>
-                        </td>
-                        <td>
-                            <input type="number" step="1" min="1" name="items[{{ $i }}][quantity]"
-                                class="form-control form-control-sm text-end spot-qty"
-                                value="{{ $item->quantity }}" required>
-                        </td>
-                        <td class="text-end">
-                            <span class="spot-line-total-text">{{ number_format((float) $item->total, 2) }}</span>
-                        </td>
-                        <td class="text-center">
-                            <button type="button" class="btn btn-sm btn-outline-danger btnRemoveRow">
-                                ✕
-                            </button>
-                        </td>
+        <div class="table-responsive">
+            <table class="table table-sm align-middle items-table-fixed" id="spotSaleItemsTable">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width:38%">Product</th>
+                        <th class="text-end" style="width:110px">Price</th>
+                        <th class="text-end" style="width:110px">Qty</th>
+                        <th class="text-end" style="width:120px">Total</th>
+                        <th style="width:40px"></th>
                     </tr>
-                @endforeach
-            </tbody>
-        </table></div>
+                </thead>
+                <tbody>
+                    @foreach ($spotSale->items as $i => $item)
+                        <tr class="spot-sale-item-row">
+                            <td>
+                                <select name="items[{{ $i }}][product_id]"
+                                    class="form-control form-control-sm js-s2-ajax spot-product"
+                                    data-url="{{ route('product.select2') }}" required>
+                                    @if ($item->product)
+                                        <option value="{{ $item->product->id }}" selected>{{ $item->product->name }}
+                                        </option>
+                                    @endif
+                                </select>
+                            </td>
+                            <td class="text-end">
+                                <span class="spot-price-text">{{ number_format((float) $item->price, 2) }}</span>
+                            </td>
+                            <td>
+                                <input type="number" step="1" min="1"
+                                    name="items[{{ $i }}][quantity]"
+                                    class="form-control form-control-sm text-end spot-qty"
+                                    value="{{ $item->quantity }}" required>
+                            </td>
+                            <td class="text-end">
+                                <span class="spot-line-total-text">{{ number_format((float) $item->total, 2) }}</span>
+                            </td>
+                            <td class="text-center">
+                                <button type="button" class="btn btn-sm btn-outline-danger btnRemoveRow">
+                                    ✕
+                                </button>
+                            </td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
 
         <div class="d-flex justify-content-end mb-8">
             <button type="button" id="btnAddSpotSaleItem" class="btn btn-sm btn-outline-primary">
@@ -178,9 +227,18 @@
             const type = $('#customerType').val();
             $('#teacherWrap').toggle(type === 'teacher');
             $('#libraryWrap').toggle(type === 'library');
+            $('#studentWrap').toggle(type === 'student');
+
+            $('#teacherSelect').prop('required', type === 'teacher');
+            $('#librarySelect').prop('required', type === 'library');
+
+            $('#studentName').prop('required', type === 'student');
+            $('#courseClassSelect').prop('required', type === 'student');
+            $('#institutionSelect').prop('required', type === 'student');
         }
 
         $('#customerType').on('change', toggleCustomer);
+        toggleCustomer();
 
         /* ADD ROW */
         $('#btnAddSpotSaleItem').on('click', function() {

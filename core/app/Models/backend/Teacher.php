@@ -17,6 +17,10 @@ class Teacher extends Model
         'department',
         'subject',
         'class_name',
+        'upazila_id',
+        'district_id',
+        'division_id',
+        'address',
         'status',
     ];
 
@@ -27,5 +31,20 @@ class Teacher extends Model
     public function institution()
     {
         return $this->belongsTo(Institution::class, 'institution_id');
+    }
+
+    public function upazila()
+    {
+        return $this->belongsTo(Upazila::class, 'upazila_id');
+    }
+
+    public function district()
+    {
+        return $this->belongsTo(District::class, 'district_id', 'district_id');
+    }
+
+    public function division()
+    {
+        return $this->belongsTo(Division::class, 'division_id');
     }
 }

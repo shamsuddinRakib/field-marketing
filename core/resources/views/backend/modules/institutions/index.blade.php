@@ -30,6 +30,10 @@
           @include('backend.include.buttons')
         </ul>
         @if(auth()->user()->canDo('institution.institutions.store') || auth()->user()->isSuper())
+          <button type="button" class="btn btn-outline-success btn-sm px-12 py-8 radius-8 d-flex align-items-center gap-2 AjaxModal"
+              data-ajax-modal="{{ route('institution.institutions.importModal') }}" data-size="lg">
+            <iconify-icon icon="lucide:file-spreadsheet" class="text-xl"></iconify-icon>Import Excel
+          </button>
           <button type="button" class="btn btn-primary btn-sm px-12 py-8 radius-8 d-flex align-items-center gap-2 AjaxModal"
               data-ajax-modal="{{ Route::has('institution.institutions.createModal') ? route('institution.institutions.createModal') : '#' }}" data-size="lg"
               data-onload="InstitutionsIndex.onLoad" data-onsuccess="InstitutionsIndex.onSaved">
@@ -51,7 +55,6 @@
             <th>Institution Name</th>
             <th>Code</th>
             <th>Email</th>
-            <th>Phone</th>
             <th>Upazila</th>
             <th>District</th>
             <th>Division</th>

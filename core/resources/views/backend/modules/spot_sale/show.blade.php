@@ -8,12 +8,21 @@
 <div class="modal-body px-24 py-16">
 
     @php
-        $customerType = $spotSale->teacher_id ? 'teacher' : ($spotSale->library_id ? 'library' : '—');
-        $customerName = $spotSale->teacher_id
-            ? (optional($spotSale->teacher)->teacher_name ?? ('#' . $spotSale->teacher_id))
+        $customerType = $spotSale->teacher_id
+            ? 'teacher'
             : ($spotSale->library_id
-                ? (optional($spotSale->library)->library_name ?: optional($spotSale->library)->name ?? ('#' . $spotSale->library_id))
-                : '—');
+                ? 'library'
+                : ($spotSale->student_id
+                    ? 'student'
+                    : '—'));
+        $customerName = $spotSale->teacher_id
+            ? optional($spotSale->teacher)->teacher_name ?? '#' . $spotSale->teacher_id
+            : ($spotSale->library_id
+                ? (optional($spotSale->library)->library_name ?:
+                optional($spotSale->library)->name ?? '#' . $spotSale->library_id)
+                : ($spotSale->student_id
+                    ? optional($spotSale->student)->student_name ?? '#' . $spotSale->student_id
+                    : '—'));
     @endphp
 
     {{-- ================= SUMMARY ================= --}}
@@ -22,14 +31,16 @@
             <div class="row g-3">
                 <div class="col-md-6">
                     <small class="text-muted d-block">User</small>
-                    <strong>{{ optional($spotSale->user)->name ?? ('#' . $spotSale->user_id) }}</strong>
+                    <strong>{{ optional($spotSale->user)->name ?? '#' . $spotSale->user_id }}</strong>
                 </div>
                 <div class="col-md-6">
                     <small class="text-muted d-block">Status</small>
                     @if ($spotSale->status === 'approved')
-                        <span class="badge text-sm fw-semibold bg-dark-success-gradient px-20 py-9 radius-4 text-white">Approved</span>
+                        <span
+                            class="badge text-sm fw-semibold bg-dark-success-gradient px-20 py-9 radius-4 text-white">Approved</span>
                     @else
-                        <span class="badge text-sm fw-semibold bg-dark-warning-gradient px-20 py-9 radius-4 text-white">Pending</span>
+                        <span
+                            class="badge text-sm fw-semibold bg-dark-warning-gradient px-20 py-9 radius-4 text-white">Pending</span>
                     @endif
                 </div>
                 <div class="col-md-6">
@@ -68,7 +79,7 @@
             @forelse ($spotSale->items as $idx => $item)
                 <tr>
                     <td>{{ $idx + 1 }}</td>
-                    <td>{{ optional($item->product)->name ?? ('#' . $item->product_id) }}</td>
+                    <td>{{ optional($item->product)->name ?? '#' . $item->product_id }}</td>
                     <td class="text-end">{{ number_format((float) $item->price, 2) }}</td>
                     <td class="text-end">{{ number_format((int) $item->quantity) }}</td>
                     <td class="text-end">{{ number_format((float) $item->total, 2) }}</td>

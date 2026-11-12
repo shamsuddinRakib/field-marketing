@@ -232,6 +232,15 @@
 
                             <ul class="sidebar-submenu">
 
+                                @perm('mr-designation.index')
+                                    <li>
+                                        <a class="{{ Route::is('mr-designation.*') ? 'active' : '' }}"
+                                            href="{{ route('mr-designation.index') }}">
+                                            <iconify-icon icon="mdi:badge-account-outline" class="menu-icon"></iconify-icon>
+                                            <span>MR Designation</span>
+                                        </a>
+                                    </li>
+                                @endperm
                                 @perm('marketing-representative.marketing-representatives.index')
                                     <li>
                                         <a class="{{ Route::is('marketing-representative.marketing-representatives.index') ? 'active' : '' }}"
@@ -316,6 +325,28 @@
                                     href="{{ route('fund-distribution.index') }}">
                                     <iconify-icon icon="mdi:bank-transfer" class="menu-icon"></iconify-icon>
                                     <span>Fund Transfer</span>
+                                </a>
+                            </li>
+                        @endperm
+                    </ul>
+                </li>
+            @endpermgroup
+            
+            @permgroup(['courier-marketings.index', 'courier-marketings.index'])
+                <li class="sidebar-menu-group-title ">Courier Management</li>
+                <li class="dropdown {{ Route::is('courier-marketing.*') || Route::is('courier-marketing.*') ? 'active' : '' }}">
+                    <a href="javascript:void(0)">
+                        <iconify-icon icon="mdi:cash-multiple" class="menu-icon"></iconify-icon>
+                        <span>Courier Marketing</span>
+                    </a>
+
+                    <ul class="sidebar-submenu">
+                        @perm('courier-marketing.index')
+                            <li>
+                                <a class="{{ Route::is('courier-marketing.*') ? 'active' : '' }}"
+                                    href="{{ route('courier-marketings.index') }}">
+                                    <iconify-icon icon="mdi:cash-plus" class="menu-icon"></iconify-icon>
+                                    <span>Courirer Request</span>
                                 </a>
                             </li>
                         @endperm

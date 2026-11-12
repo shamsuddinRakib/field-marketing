@@ -4,6 +4,54 @@
     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
 </div>
 
+<style>
+    /* Desktop & Tablet View */
+    @media (min-width: 992px) {
+        #AjaxModal .modal-dialog {
+            max-width: 960px;
+        }
+    }
+    @media (min-width: 1200px) {
+        #AjaxModal .modal-dialog {
+            max-width: 1050px;
+        }
+    }
+
+    /* Mobile & Tablet Responsive Fixes */
+    .table-responsive {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    #expenseItemsTable {
+        min-width: 680px;
+    }
+
+    @media (max-width: 575.98px) {
+        #AjaxModal .modal-dialog {
+            margin: 0.5rem;
+            max-width: calc(100% - 1rem);
+        }
+        #AjaxModal .modal-header {
+            padding: 12px 16px;
+        }
+        #AjaxModal .modal-body {
+            padding: 12px;
+        }
+        #AjaxModal .card-body {
+            padding: 12px;
+        }
+        .expense-action-buttons {
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .expense-action-buttons .btn {
+            flex: 1 1 auto;
+            text-align: center;
+        }
+    }
+</style>
+
 {{-- ================= MODAL BODY ================= --}}
 <div class="modal-body px-24 py-16">
 
@@ -19,44 +67,28 @@
                 <h6 class="mb-12 fw-semibold">Expense Information</h6>
                 <div class="row g-3">
                     <div class="col-md-6 mb-20">
-                        <label class="form-label text-sm mb-8">Select <span class="text-danger">*</span></label>
+                        <label class="form-label text-sm mb-8">Select Representative <span class="text-danger">*</span></label>
                         <select class="form-control form-control-sm  js-s2-ajax" name="user_id" id="user"
                             data-url="{{ route('marketing-representative.marketing-representatives.select2') }}"
-                            data-placeholder="Select Marketing Reprenstative">
+                            data-placeholder="Select Marketing Representative">
 
                         </select>
                         <div class="invalid-feedback d-block user_id-error" style="display:none"></div>
                     </div>
-                    <!-- <div class="col-md-6 mb-20">
-
-                        <label class="form-label text-sm mb-8">Select Visit <span class="text-danger">*</span></label>
-                        <select class="form-control form-control-sm  js-s2-ajax" name="daily_visit_id" id="visit"
-                            data-url="{{ route('daily-visit.select2') }}" data-placeholder="Select Daily Visit">
-
-                        </select>
-                        <div class="invalid-feedback d-block user_id-error" style="display:none"></div>
-                    </div> -->
 
                     <div class="col-md-6">
                         <label class="form-label text-sm">Expense Name <span class="text-danger">*</span></label>
                         <input type="text" name="name" class="form-control form-control-sm radius-8"
-                            placeholder="e.g. Office Monthly Expense" required>
+                            value="Daily Field Expense" placeholder="e.g. Daily Field Expense" required>
                     </div>
                 </div>
 
                 <div class="row g-3">
-                    {{-- <div class="col-md-6">
-                        <label class="form-label text-sm">Expense Name <span class="text-danger">*</span></label>
-                        <input type="text" name="name" class="form-control form-control-sm radius-8"
-                            placeholder="e.g. Office Monthly Expense" required>
-                    </div> --}}
-
                     <div class="col-md-6">
                         <label class="form-label text-sm">Expense Date <span class="text-danger">*</span></label>
                         <input type="date" name="expense_date" class="form-control form-control-sm radius-8"
                             value="{{ now()->toDateString() }}" required>
                     </div>
-
                     <div class="col-md-6">
                         <label class="form-label text-sm">Attachment</label>
                         <input type="file" name="attachment" class="form-control form-control-sm radius-8 p-1"
@@ -74,37 +106,49 @@
         </div>
 
         {{-- ================= EXPENSE ITEMS ================= --}}
-        <table class="table table-sm align-middle" id="expenseItemsTable">
-            <thead class="table-light">
-                <tr>
-                    <th style="width:30%">Category</th>
-                    <th>Description</th>
-                    <th class="text-end" style="width:140px">Amount</th>
-                    <th style="width:40px"></th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr class="expense-item-row">
-                    <td>
-                        <select name="items[0][expense_category_id]" class="form-control form-control-sm js-s2-ajax"
-                            data-url="{{ route('expenseCategories.select2') }}" required></select>
-                    </td>
-                    <td>
-                        <input type="text" name="items[0][description]" class="form-control form-control-sm"
-                            placeholder="Optional">
-                    </td>
-                    <td>
-                        <input type="number" step="0.01" min="0" name="items[0][amount]"
-                            class="form-control form-control-sm text-end expense-amount" required>
-                    </td>
-                    <td class="text-center">
-                        <button type="button" class="btn btn-sm btn-outline-danger btnRemoveRow">
-                            ✕
-                        </button>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
+        <div class="table-responsive">
+            <table class="table table-sm align-middle" id="expenseItemsTable">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width:20%">From Location</th>
+                        <th style="width:20%">To Location</th>
+                        <th style="width:22%">Category <span class="text-danger">*</span></th>
+                        <th>Description</th>
+                        <th class="text-end" style="width:130px">Amount <span class="text-danger">*</span></th>
+                        <th style="width:40px"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="expense-item-row">
+                        <td>
+                            <input type="text" name="items[0][from_location]" class="form-control form-control-sm"
+                                placeholder="e.g. Dhanmondi">
+                        </td>
+                        <td>
+                            <input type="text" name="items[0][to_location]" class="form-control form-control-sm"
+                                placeholder="e.g. Paltan">
+                        </td>
+                        <td>
+                            <select name="items[0][expense_category_id]" class="form-control form-control-sm js-s2-ajax"
+                                data-url="{{ route('expenseCategories.select2') }}" required></select>
+                        </td>
+                        <td>
+                            <input type="text" name="items[0][description]" class="form-control form-control-sm"
+                                placeholder="Optional note">
+                        </td>
+                        <td>
+                            <input type="number" step="0.01" min="0" name="items[0][amount]"
+                                class="form-control form-control-sm text-end expense-amount" required>
+                        </td>
+                        <td class="text-center">
+                            <button type="button" class="btn btn-sm btn-outline-danger btnRemoveRow">
+                                ✕
+                            </button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
         <div class="d-flex justify-content-end mb-8">
             <button type="button" id="btnAddExpenseItem" class="btn btn-sm btn-outline-primary">
                 + Add Item
@@ -141,7 +185,7 @@
 
         {{-- ================= ACTION ================= --}}
         <input type="hidden" name="status" id="expenseStatus" value="">
-        <div class="d-flex justify-content-end gap-2">
+        <div class="d-flex justify-content-end gap-2 expense-action-buttons">
             <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">
                 Cancel
             </button>
@@ -159,11 +203,11 @@
     </form>
 </div>
 
-{{-- ================= JS HOOKS (NO LOGIC YET) ================= --}}
+{{-- JS --}}
 <script>
     window.EXPENSE_INVOICE_URL = "{{ route('expenses.invoice', ':id') }}";
     window.ExpenseIndex = {
-        onSaved: function (res) {
+        onSaved: function(res) {
 
             // 🔹 Table reload
             if ($.fn.DataTable) {
@@ -180,18 +224,18 @@
 
 
 
-    (function () {
+    (function() {
 
         const $table = $('#expenseItemsTable tbody');
         let rowIndex = 1;
 
         /* ================= ADD ROW ================= */
-        $('#btnAddExpenseItem').on('click', function () {
+        $('#btnAddExpenseItem').on('click', function() {
 
             const $firstRow = $table.find('tr:first');
 
             // 1️⃣ destroy select2 before cloning
-            $firstRow.find('.select2-hidden-accessible').each(function () {
+            $firstRow.find('.select2-hidden-accessible').each(function() {
                 $(this).select2('destroy');
             });
 
@@ -199,7 +243,7 @@
             const $row = $firstRow.clone();
 
             // 3️⃣ fix name & clear values
-            $row.find('input, select').each(function () {
+            $row.find('input, select').each(function() {
                 const name = $(this).attr('name');
                 if (!name) return;
 
@@ -218,7 +262,7 @@
         });
 
         /* ================= REMOVE ROW ================= */
-        $table.on('click', '.btnRemoveRow', function () {
+        $table.on('click', '.btnRemoveRow', function() {
             if ($table.find('tr').length === 1) return;
             $(this).closest('tr').remove();
             calculateTotal();
@@ -229,7 +273,7 @@
 
         function calculateTotal() {
             let total = 0;
-            $('.expense-amount').each(function () {
+            $('.expense-amount').each(function() {
                 total += parseFloat($(this).val() || 0);
             });
 
@@ -238,13 +282,13 @@
         }
 
         // Form submit handlers
-        $('#btnSaveDraft').on('click', function () {
+        $('#btnSaveDraft').on('click', function() {
 
             $('#expenseStatus').val('draft');
             $('#expenseCreateForm').submit();
         });
 
-        $('#btnPostExpense').on('click', function () {
+        $('#btnPostExpense').on('click', function() {
             // Check if branch is selected
 
             $('#expenseStatus').val('posted');

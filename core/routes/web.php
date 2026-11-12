@@ -21,6 +21,7 @@ use App\Http\Controllers\backend\CouponController;
 use App\Http\Controllers\backend\CustomerController;
 use App\Http\Controllers\backend\CustomerLedgerController;
 use App\Http\Controllers\backend\CostPerResultController;
+use App\Http\Controllers\backend\CourierMarketingController;
 use App\Http\Controllers\backend\DailyPaymentSummaryController;
 use App\Http\Controllers\backend\DailyVisitController;
 use App\Http\Controllers\backend\DepartmentController;
@@ -65,6 +66,7 @@ use App\Http\Controllers\backend\MarketingRepresentativeController;
 use App\Http\Controllers\backend\InstitutionController;
 use App\Http\Controllers\backend\LibraryController;
 use App\Http\Controllers\backend\MrLocationController;
+use App\Http\Controllers\backend\MrDesignationController;
 use App\Http\Controllers\backend\ProductDistributionController;
 use App\Http\Controllers\backend\SubjectController;
 use App\Http\Controllers\backend\TeacherController;
@@ -81,8 +83,9 @@ use Illuminate\Support\Facades\Route;
    see the commented skeleton at the bottom of this file, and fill the
    $aiChatRoutes array at the top of the chat view.
    ========================================================================== */
+
 Route::middleware(['web', 'auth', 'firewall'])->group(function () {
-    Route::get('ai-chat', fn () => view('backend.modules.ai_chat.index'))->name('ai.chat');
+    Route::get('ai-chat', fn() => view('backend.modules.ai_chat.index'))->name('ai.chat');
 });
 
 Route::middleware(['web', 'auth', 'perm', 'branchscope'])->group(function () {
@@ -231,11 +234,24 @@ Route::middleware(['web', 'auth', 'perm', 'branchscope'])->group(function () {
         Route::get('department/select2', [DepartmentController::class, 'select2'])->name('department.select2');
     });
 
+    // MR Designation Management
+    Route::prefix('mr-designation')->group(function () {
+        Route::get('mr-designation', [MrDesignationController::class, 'index'])->name('mr-designation.index');
+        Route::get('create-modal', [MrDesignationController::class, 'createModal'])->name('mr-designation.createModal');
+        Route::post('list', [MrDesignationController::class, 'listAjax'])->name('mr-designation.list.ajax');
+        Route::post('mr-designation', [MrDesignationController::class, 'store'])->name('mr-designation.store');
+        Route::get('edit-modal/{mrDesignation}', [MrDesignationController::class, 'editModal'])->whereNumber('mrDesignation')->name('mr-designation.editModal');
+        Route::put('{mrDesignation}', [MrDesignationController::class, 'update'])->name('mr-designation.update');
+        Route::delete('delete/{mrDesignation}', [MrDesignationController::class, 'destroy'])->name('mr-designation.destroy');
+        Route::get('mr-designation/select2', [MrDesignationController::class, 'select2'])->name('mr-designation.select2');
+    });
+
     // Marketing Representative Management (backend)
     Route::prefix('marketing-representative')->name('marketing-representative.')->group(function () {
         Route::get('marketing-representatives', [MarketingRepresentativeController::class, 'index'])->name('marketing-representatives.index');
         Route::post('marketing-representatives/list', [MarketingRepresentativeController::class, 'listAjax'])->name('marketing-representatives.list.ajax');
         Route::get('marketing-representatives/create-modal', [MarketingRepresentativeController::class, 'createModal'])->name('marketing-representatives.createModal');
+        Route::get('marketing-representatives/districts-select2', [MarketingRepresentativeController::class, 'districtsSelect2'])->name('marketing-representatives.districts.select2');
         Route::get('marketing-representatives/upazilas-select2', [MarketingRepresentativeController::class, 'upazilasSelect2'])->name('marketing-representatives.upazilas.select2');
         Route::get('marketing-representatives/select2', [MarketingRepresentativeController::class, 'select2'])->name('marketing-representatives.select2');
         Route::post('marketing-representatives', [MarketingRepresentativeController::class, 'store'])->name('marketing-representatives.store');
@@ -255,6 +271,8 @@ Route::middleware(['web', 'auth', 'perm', 'branchscope'])->group(function () {
         Route::get('institutions', [InstitutionController::class, 'index'])->name('institutions.index');
         Route::post('institutions/list', [InstitutionController::class, 'listAjax'])->name('institutions.list.ajax');
         Route::get('institutions/create-modal', [InstitutionController::class, 'createModal'])->name('institutions.createModal');
+        Route::get('institutions/import-modal', [InstitutionController::class, 'importModal'])->name('institutions.importModal');
+        Route::post('institutions/import-chunk', [InstitutionController::class, 'importChunk'])->name('institutions.importChunk');
         Route::get('institutions/upazilas-select2', [InstitutionController::class, 'upazilasSelect2'])->name('institutions.upazilas.select2');
         Route::get('institutions/select2', [InstitutionController::class, 'institutionsSelect2'])->name('institutions.select2');
         Route::post('institutions', [InstitutionController::class, 'store'])->name('institutions.store');
@@ -267,6 +285,8 @@ Route::middleware(['web', 'auth', 'perm', 'branchscope'])->group(function () {
         Route::get('teachers', [TeacherController::class, 'index'])->name('teachers.index');
         Route::post('teachers/list', [TeacherController::class, 'listAjax'])->name('teachers.list.ajax');
         Route::get('teachers/create-modal', [TeacherController::class, 'createModal'])->name('teachers.createModal');
+        Route::get('teachers/import-modal', [TeacherController::class, 'importModal'])->name('teachers.importModal');
+        Route::post('teachers/import-chunk', [TeacherController::class, 'importChunk'])->name('teachers.importChunk');
         Route::get('teachers/institutions-select2', [TeacherController::class, 'institutionsSelect2'])->name('teachers.institutions.select2');
         Route::post('teachers', [TeacherController::class, 'store'])->name('teachers.store');
         Route::get('teachers/{teacher}/edit-modal', [TeacherController::class, 'editModal'])->whereNumber('teacher')->name('teachers.editModal');
@@ -305,6 +325,8 @@ Route::middleware(['web', 'auth', 'perm', 'branchscope'])->group(function () {
         Route::post('/list-ajax', [ProductDistributionController::class, 'listAjax'])->name('listAjax');
         Route::get('/create', [ProductDistributionController::class, 'createModal'])->name('create');
         Route::post('/store', [ProductDistributionController::class, 'store'])->name('store');
+        Route::get('/products-select2', [ProductDistributionController::class, 'productsSelect2'])->name('products.select2');
+        Route::get('/distributions-select2', [ProductDistributionController::class, 'distributionsSelect2'])->name('distributions.select2');
         Route::get('/edit/{productDistribution}', [ProductDistributionController::class, 'editModal'])->whereNumber('productDistribution')->name('edit');
         Route::put('/update/{productDistribution}', [ProductDistributionController::class, 'update'])->name('update');
         Route::get('/{productDistribution}', [ProductDistributionController::class, 'show'])->whereNumber('productDistribution')->name('show');
@@ -312,6 +334,7 @@ Route::middleware(['web', 'auth', 'perm', 'branchscope'])->group(function () {
         Route::get('/status-modal/{productDistribution}', [ProductDistributionController::class, 'statusModal'])->name('statusModal');
         Route::post('/status-modal/{productDistribution}', [ProductDistributionController::class, 'updateStatus'])->name('updateStatus');
     });
+
 
     //fund distribution
     Route::prefix('fund-distributions')->name('fund-distribution.')->group(function () {
@@ -337,6 +360,9 @@ Route::middleware(['web', 'auth', 'perm', 'branchscope'])->group(function () {
         Route::get('/status-modal/{dailyVisit}', [DailyVisitController::class, 'statusModal'])->name('statusModal');
         Route::get('/select2', [DailyVisitController::class, 'select2'])->name('select2');
         Route::post('/status-modal/{dailyVisit}', [DailyVisitController::class, 'updateStatus'])->name('updateStatus');
+        Route::get('/report', [DailyVisitController::class, 'reportIndex'])->name('report.index');
+        Route::post('/report/list', [DailyVisitController::class, 'reportListAjax'])->name('report.list');
+        Route::get('/report/details/{user}', [DailyVisitController::class, 'reportDetailsModal'])->whereNumber('user')->name('report.details.show');
     });
 
     // assign specimen
@@ -345,6 +371,8 @@ Route::middleware(['web', 'auth', 'perm', 'branchscope'])->group(function () {
         Route::post('/list-ajax', [AssignSpecimenController::class, 'listAjax'])->name('listAjax');
         Route::get('/create', [AssignSpecimenController::class, 'createModal'])->name('create');
         Route::post('/store', [AssignSpecimenController::class, 'store'])->name('store');
+        Route::get('/teachers-by-phone-select2', [AssignSpecimenController::class, 'teachersByPhoneSelect2'])->name('teachersByPhone.select2');
+        Route::get('/institutions-select2', [AssignSpecimenController::class, 'institutionsSelect2'])->name('institutions.select2');
         Route::get('/status-modal/{assignSpecimen}', [AssignSpecimenController::class, 'statusModal'])->name('statusModal');
         Route::get('/edit/{assignSpecimen}', [AssignSpecimenController::class, 'editModal'])->whereNumber('assignSpecimen')->name('edit');
         Route::put('/update/{assignSpecimen}', [AssignSpecimenController::class, 'update'])->name('update');
@@ -397,6 +425,8 @@ Route::middleware(['web', 'auth', 'perm', 'branchscope'])->group(function () {
         Route::get('institutions', [InstitutionController::class, 'index'])->name('institutions.index');
         Route::post('institutions/list', [InstitutionController::class, 'listAjax'])->name('institutions.list.ajax');
         Route::get('institutions/create-modal', [InstitutionController::class, 'createModal'])->name('institutions.createModal');
+        Route::get('institutions/import-modal', [InstitutionController::class, 'importModal'])->name('institutions.importModal');
+        Route::post('institutions/import-chunk', [InstitutionController::class, 'importChunk'])->name('institutions.importChunk');
         Route::get('institutions/upazilas-select2', [InstitutionController::class, 'upazilasSelect2'])->name('institutions.upazilas.select2');
         Route::get('institutions/select2', [InstitutionController::class, 'institutionsSelect2'])->name('institutions.select2');
         Route::post('institutions', [InstitutionController::class, 'store'])->name('institutions.store');
@@ -583,6 +613,36 @@ Route::middleware(['web', 'auth', 'perm', 'branchscope'])->group(function () {
 
     Route::get('/cost-per-result', [CostPerResultController::class, 'index'])->name('cost-per-result.index');
     Route::post('/cost-per-result', [CostPerResultController::class, 'costPerResult'])->name('cost-per-result.submit');
+
+    // Courier Marketing Management
+    // Route::prefix('courier-marketing')->name('courier-marketings.')->group(function () {
+    //     Route::get('courier-marketing', [CourierMarketingController::class, 'index'])->name('index');
+    //     Route::post('courier-marketing/list', [CourierMarketingController::class, 'listAjax'])->name('list.ajax');
+    //     Route::get('courier-marketing/create-modal', [CourierMarketingController::class, 'createModal'])->name('createModal');
+    //     Route::get('courier-marketing/representatives-select2', [CourierMarketingController::class, 'representativesSelect2'])->name('representatives.select2');
+    //     Route::post('courier-marketing', [CourierMarketingController::class, 'store'])->name('store');
+    //     Route::get('courier-marketing/{courierMarketing}', [CourierMarketingController::class, 'show'])->whereNumber('courierMarketing')->name('show');
+    //     Route::get('courier-marketing/{courierMarketing}/edit-modal', [CourierMarketingController::class, 'editModal'])->whereNumber('courierMarketing')->name('editModal');
+    //     Route::put('courier-marketing/{courierMarketing}', [CourierMarketingController::class, 'update'])->whereNumber('courierMarketing')->name('update');
+    //     Route::delete('courier-marketing/{courierMarketing}', [CourierMarketingController::class, 'destroy'])->whereNumber('courierMarketing')->name('destroy');
+    // });
+
+    Route::prefix('courier-marketing')->name('courier-marketings.')->group(function () {
+        Route::get('/', [CourierMarketingController::class, 'index'])->name('index');
+        Route::post('list', [CourierMarketingController::class, 'listAjax'])->name('list.ajax');
+        Route::get('create-modal', [CourierMarketingController::class, 'createModal'])->name('createModal');
+        Route::get('upazilas-select2', [CourierMarketingController::class, 'upazilasSelect2'])->name('upazilas.select2');
+        Route::get('institutions-select2', [CourierMarketingController::class, 'institutionsSelect2'])->name('institutions.select2');
+        Route::get('teachers-by-phone-select2', [CourierMarketingController::class, 'teachersByPhoneSelect2'])->name('teachersByPhone.select2');
+        Route::post('/', [CourierMarketingController::class, 'store'])->name('store');
+        Route::get('{courierMarketing}', [CourierMarketingController::class, 'show'])->whereNumber('courierMarketing')->name('show');
+        Route::get('{courierMarketing}/edit-modal', [CourierMarketingController::class, 'editModal'])->whereNumber('courierMarketing')->name('editModal');
+        Route::get('{courierMarketing}/status-modal', [CourierMarketingController::class, 'statusModal'])->whereNumber('courierMarketing')->name('statusModal');
+        Route::put('{courierMarketing}', [CourierMarketingController::class, 'update'])->whereNumber('courierMarketing')->name('update');
+        Route::match(['post', 'patch'], '{courierMarketing}/status', [CourierMarketingController::class, 'updateStatus'])->whereNumber('courierMarketing')->name('updateStatus');
+        Route::post('{courierMarketing}/confirm-receiving', [CourierMarketingController::class, 'confirmReceiving'])->whereNumber('courierMarketing')->name('confirmReceiving');
+        Route::delete('{courierMarketing}', [CourierMarketingController::class, 'destroy'])->whereNumber('courierMarketing')->name('destroy');
+    });
 });
 
 /* ==========================================================================
@@ -600,11 +660,9 @@ Route::middleware(['web', 'auth', 'perm', 'branchscope'])->group(function () {
       ========================================================================== */
 
 
-   Route::prefix('ai')->name('ai.')->group(function () {
-       Route::post('chat/send',          [ChatAssistantController::class, 'ask'])->name('chat.send');            // POST { message, conversation_id? }
+Route::prefix('ai')->name('ai.')->group(function () {
+    Route::post('chat/send',          [ChatAssistantController::class, 'ask'])->name('chat.send');            // POST { message, conversation_id? }
     //    Route::get('chat/history',        [AiChatController::class, 'history'])->name('chat.history');      // GET  ?conversation_id=...
     //    Route::get('chat/conversations',  [AiChatController::class, 'conversations'])->name('chat.conversations'); // GET
     //    Route::post('chat/clear',         [AiChatController::class, 'clear'])->name('chat.clear');          // POST { conversation_id? }
-   });
-
-
+});

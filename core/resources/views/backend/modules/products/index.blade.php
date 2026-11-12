@@ -59,8 +59,10 @@
                             </div>
                         </th>
                         <th>Product Name</th>
-                        <th>Category</th>
-                        <th>Brand</th>
+                        {{-- <th>Category</th> --}}
+                        {{-- <th>Brand</th> --}}
+                        <th>Edition</th>
+                        <th>Year</th>
                         <th>Price</th>
                         <th>Image</th>
                         <th>Status</th>

@@ -37,7 +37,7 @@
                     <button type="button"
                         class="btn btn-primary btn-sm px-12 py-8 radius-8 d-flex align-items-center gap-2 AjaxModal"
                         data-ajax-modal="{{ route('marketing-representative.marketing-representatives.createModal') }}"
-                        data-size="lg" data-onload="MarketingRepresentativesIndex.onLoad"
+                        data-size="xl" data-onload="MarketingRepresentativesIndex.onLoad"
                         data-onsuccess="MarketingRepresentativesIndex.onSaved">
                         <iconify-icon icon="ic:baseline-plus" class="text-xl"></iconify-icon>Add representative
                     </button>
@@ -58,7 +58,7 @@
                         <th>Mr. Details</th>
                         {{-- <th>Mobile</th> --}}
                         {{-- <th>Email</th> --}}
-                        <th>Organization</th>
+                        <th>Designation</th>
                         <th>Current Status</th>
                         <th>Branch</th>
                         <th>Upazila</th>
@@ -76,58 +76,169 @@
     <script>
         var DATATABLE_URL = "{{ route('marketing-representative.marketing-representatives.list.ajax') }}";
 
+        window.initMarketingRepresentativeTerritory = function($modal) {
+            if (!$modal || !$modal.length) $modal = $('#AjaxModal');
+
+            // 1. Branch Select2
+            $modal.find('.js-branch-select').each(function() {
+                const $select = $(this);
+                if ($select.data('select2')) $select.select2('destroy');
+                $select.select2({
+                    dropdownParent: $modal,
+                    width: '100%',
+                    placeholder: 'Select branch',
+                    allowClear: true,
+                    ajax: {
+                        url: "{{ route('org.branches.select2') }}",
+                        dataType: 'json',
+                        delay: 200,
+                        data: params => ({ q: params.term || '' }),
+                        processResults: data => data
+                    }
+                });
+            });
+
+            // 2. Designation Select2
+            $modal.find('.js-designation-select').each(function() {
+                const $select = $(this);
+                if ($select.data('select2')) $select.select2('destroy');
+                $select.select2({
+                    dropdownParent: $modal,
+                    width: '100%',
+                    placeholder: 'Select designation',
+                    allowClear: true,
+                    ajax: {
+                        url: "{{ route('mr-designation.select2') }}",
+                        dataType: 'json',
+                        delay: 200,
+                        data: params => ({ q: params.term || '' }),
+                        processResults: data => data
+                    }
+                });
+            });
+
+            // 3. District & Upazila Cascading Select2
+            $modal.find('form').each(function() {
+                const $form = $(this);
+                const $districtSelect = $form.find('.js-district-select');
+                const $upazilaSelect = $form.find('.js-upazila-select');
+                const $divisionNameInput = $form.find('input[name="division_name"]');
+                const $divisionIdInput = $form.find('input[name="division_id"]');
+
+                if (!$districtSelect.length || !$upazilaSelect.length) return;
+
+                if ($districtSelect.data('select2')) $districtSelect.select2('destroy');
+                if ($upazilaSelect.data('select2')) $upazilaSelect.select2('destroy');
+
+                // District Select2 (Multiple)
+                $districtSelect.select2({
+                    dropdownParent: $modal,
+                    width: '100%',
+                    placeholder: 'Select District(s)',
+                    allowClear: true,
+                    multiple: true,
+                    ajax: {
+                        url: "{{ route('marketing-representative.marketing-representatives.districts.select2') }}",
+                        dataType: 'json',
+                        delay: 200,
+                        data: params => ({ q: params.term || '' }),
+                        processResults: data => data
+                    }
+                });
+
+                // Upazila Select2 (Multiple)
+                $upazilaSelect.select2({
+                    dropdownParent: $modal,
+                    width: '100%',
+                    placeholder: 'Select Upazila(s)',
+                    allowClear: true,
+                    multiple: true,
+                    ajax: {
+                        url: "{{ route('marketing-representative.marketing-representatives.upazilas.select2') }}",
+                        dataType: 'json',
+                        delay: 200,
+                        data: function(params) {
+                            const districtIds = $districtSelect.val() || [];
+                            return {
+                                q: params.term || '',
+                                district_ids: districtIds
+                            };
+                        },
+                        processResults: data => data
+                    }
+                });
+
+                // Tag selected upazila option with its district_id
+                $upazilaSelect.off('select2:select.territory').on('select2:select.territory', function(e) {
+                    const data = e.params?.data;
+                    if (data && data.district_id) {
+                        $upazilaSelect.find('option[value="' + data.id + '"]').attr('data-district-id', data.district_id);
+                    }
+                });
+
+                function syncTerritoryState() {
+                    const selectedDistData = $districtSelect.select2('data') || [];
+                    const selectedDistIds = ($districtSelect.val() || []).map(String);
+                    const hasDistricts = selectedDistIds.length > 0;
+
+                    // Calculate Divisions
+                    const divisionNames = [];
+                    let firstDivisionId = '';
+                    selectedDistData.forEach(function(item) {
+                        const divName = item.division_name || $(item.element).data('division-name');
+                        const divId = item.division_id || $(item.element).data('division-id');
+                        if (divName && !divisionNames.includes(divName)) {
+                            divisionNames.push(divName);
+                        }
+                        if (divId && !firstDivisionId) {
+                            firstDivisionId = divId;
+                        }
+                    });
+
+                    $divisionNameInput.val(divisionNames.join(', '));
+                    $divisionIdInput.val(firstDivisionId);
+
+                    const $uContainer = $upazilaSelect.next('.select2-container');
+                    if (!hasDistricts) {
+                        // No districts selected -> lock Upazila & clear selections
+                        $upazilaSelect.val(null).trigger('change.select2');
+                        $upazilaSelect.prop('disabled', true);
+                        $uContainer.addClass('select2-container--disabled');
+                        $uContainer.find('.select2-selection').attr('aria-disabled', 'true').attr('tabindex', '-1');
+                        $uContainer.find('.select2-search__field').prop('disabled', true).attr('placeholder', 'Select District first');
+                    } else {
+                        // Districts selected -> unlock Upazila
+                        $upazilaSelect.prop('disabled', false);
+                        $uContainer.removeClass('select2-container--disabled');
+                        $uContainer.find('.select2-selection').attr('aria-disabled', 'false').attr('tabindex', '0');
+                        $uContainer.find('.select2-search__field').prop('disabled', false).attr('placeholder', 'Select Upazila(s)');
+
+                        // Clean up any upazila not in selected districts
+                        let removedAny = false;
+                        $upazilaSelect.find('option:selected').each(function() {
+                            const optDist = String($(this).data('district-id') || $(this).attr('data-district-id') || '');
+                            if (optDist && !selectedDistIds.includes(optDist)) {
+                                $(this).prop('selected', false);
+                                removedAny = true;
+                            }
+                        });
+                        if (removedAny) {
+                            $upazilaSelect.trigger('change.select2');
+                        }
+                    }
+                }
+
+                $districtSelect.off('select2:select.territory select2:unselect.territory select2:clear.territory change.territory')
+                    .on('select2:select.territory select2:unselect.territory select2:clear.territory change.territory', syncTerritoryState);
+
+                // Initial sync
+                syncTerritoryState();
+            });
+        };
+
         window.MarketingRepresentativesIndex = {
             onLoad: function($modal) {
-                $modal.find('.js-branch-select').each(function() {
-                    const $select = $(this);
-                    if ($select.hasClass('select2-hidden-accessible')) $select.select2('destroy');
-                    $select.select2({
-                        dropdownParent: $modal,
-                        width: '100%',
-                        placeholder: 'Select branch',
-                        allowClear: true,
-                        ajax: {
-                            url: "{{ route('org.branches.select2') }}",
-                            dataType: 'json',
-                            delay: 200,
-                            data: params => ({
-                                q: params.term || ''
-                            }),
-                            processResults: data => data
-                        }
-                    });
-                });
-                $modal.find('.js-upazila-select').each(function() {
-                    const $select = $(this);
-                    if ($select.hasClass('select2-hidden-accessible')) $select.select2('destroy');
-                    $select.select2({
-                        dropdownParent: $modal,
-                        width: '100%',
-                        placeholder: 'Select upazila',
-                        allowClear: true,
-                        ajax: {
-                            url: "{{ route('marketing-representative.marketing-representatives.upazilas.select2') }}",
-                            dataType: 'json',
-                            delay: 200,
-                            data: params => ({
-                                q: params.term || ''
-                            }),
-                            processResults: data => data
-                        }
-                    }).off('select2:select').on('select2:select', function(e) {
-                        const item = e.params.data;
-                        const $form = $select.closest('form');
-                        $form.find('[name="district_id"]').val(item.district_id || '');
-                        $form.find('[name="division_id"]').val(item.division_id || '');
-                        $form.find('[name="district_name"]').val(item.district_name || '');
-                        $form.find('[name="division_name"]').val(item.division_name || '');
-                    }).off('select2:clear').on('select2:clear', function() {
-                        const $form = $select.closest('form');
-                        $form.find(
-                            '[name="district_id"], [name="division_id"], [name="district_name"], [name="division_name"]'
-                            ).val('');
-                    });
-                });
+                window.initMarketingRepresentativeTerritory($modal);
             },
             onSaved: function(res) {
                 $('.AjaxDataTable').DataTable().ajax.reload(null, false);
@@ -140,6 +251,10 @@
                 });
             }
         };
+
+        window.ModalHooks = window.ModalHooks || {};
+        window.ModalHooks['marketing-representative-create'] = { onLoad: window.MarketingRepresentativesIndex.onLoad };
+        window.ModalHooks['marketing-representative-edit'] = { onLoad: window.MarketingRepresentativesIndex.onLoad };
 
         $(document).on('click', '.btn-representative-delete', function(e) {
             e.preventDefault();

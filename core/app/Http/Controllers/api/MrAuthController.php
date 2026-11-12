@@ -40,7 +40,11 @@ class MrAuthController extends Controller
         }
 
         // MR profile check
-        $mr = $user->marketingRepresentative;
+        // $mr = $user->marketingRepresentative;
+
+        $mr = $user->marketingRepresentative()
+            ->with(['branch', 'upazila', 'district', 'division'])
+            ->first();
 
         if (!$mr) {
             return response()->json([
@@ -87,10 +91,27 @@ class MrAuthController extends Controller
                 'id' => $mr->id,
                 'employee_id' => $mr->employee_id,
                 'organization' => $mr->organization,
-                'branch_id' => $mr->branch_id,
-                'upazila_id' => $mr->upazila_id,
-                'district_id' => $mr->district_id,
-                'division_id' => $mr->division_id,
+
+                'branch' => $mr->branch ? [
+                    'id' => $mr->branch->id,
+                    'name' => $mr->branch->name,
+                ] : null,
+
+                'upazila' => $mr->upazila ? [
+                    'id' => $mr->upazila_id,
+                    'name' => $mr->upazila?->upazila_name,
+                ] : null,
+
+                'district' => $mr->district ? [
+                    'id' => $mr->district_id,
+                    'name' => $mr->district?->district_name,
+                ] : null,
+
+                'division' => $mr->division ? [
+                    'id' => $mr->division_id,
+                    'name' => $mr->division?->name,
+                ] : null,
+
                 //'territory' => $mr->territory,
                 'status' => (bool) $mr->status,
             ],
@@ -109,7 +130,10 @@ class MrAuthController extends Controller
         }
 
         $representative = MarketingRepresentative::with([
-            'branch'
+            'branch',
+            'upazila',
+            'district',
+            'division',
         ])->where('user_id', $user->id)->first();
 
         if (!$representative) {
@@ -129,7 +153,27 @@ class MrAuthController extends Controller
                 'phone' => $user->phone,
                 'employee_id' => $representative->employee_id,
                 'organization' => $representative->organization,
-                'branch_id' => $representative->branch_id,
+
+                'branch' => $representative->branch ? [
+                    'id' => $representative->branch->id,
+                    'name' => $representative->branch->name,
+                ] : null,
+
+                'upazila' => $representative->upazila ? [
+                    'id' => $representative->upazila_id,
+                    'name' => $representative->upazila?->upazila_name,
+                ] : null,
+
+                'district' => $representative->district ? [
+                    'id' => $representative->district_id,
+                    'name' => $representative->district?->district_name,
+                ] : null,
+
+                'division' => $representative->division ? [
+                    'id' => $representative->division_id,
+                    'name' => $representative->division?->name,
+                ] : null,
+
                 'address' => $representative->address,
                 //'territory' => $representative->territory,
                 'status' => $representative->status,
@@ -217,7 +261,10 @@ class MrAuthController extends Controller
     {
         $user = $request->user();
 
-        $mr = $user->marketingRepresentative;
+        // $mr = $user->marketingRepresentative;
+        $mr = $user->marketingRepresentative()
+            ->with(['branch', 'upazila', 'district', 'division'])
+            ->first();
 
         return response()->json([
             'success' => true,
@@ -234,10 +281,27 @@ class MrAuthController extends Controller
                 'id' => $mr->id,
                 'employee_id' => $mr->employee_id,
                 'organization' => $mr->organization,
-                'branch_id' => $mr->branch_id,
-                'upazila_id' => $mr->upazila_id,
-                'district_id' => $mr->district_id,
-                'division_id' => $mr->division_id,
+
+                'branch' => $mr->branch ? [
+                    'id' => $mr->branch->id,
+                    'name' => $mr->branch->name,
+                ] : null,
+
+                'upazila' => $mr->upazila ? [
+                    'id' => $mr->upazila_id,
+                    'name' => $mr->upazila?->upazila_name,
+                ] : null,
+
+                'district' => $mr->district ? [
+                    'id' => $mr->district_id,
+                    'name' => $mr->district?->district_name,
+                ] : null,
+
+                'division' => $mr->division ? [
+                    'id' => $mr->division_id,
+                    'name' => $mr->division?->name,
+                ] : null,
+
                 //'territory' => $mr->territory,
                 'status' => (bool) $mr->status,
             ],

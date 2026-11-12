@@ -17,6 +17,10 @@ use App\Http\Controllers\api\WebsiteSettingController;
 use App\Http\Controllers\api\OrderController;
 use App\Http\Controllers\api\ProductController;
 use App\Http\Controllers\api\AssignSpecimenController;
+use App\Http\Controllers\api\CourierMarketingController;
+use App\Http\Controllers\api\CourseClassController;
+use App\Http\Controllers\api\DepartmentController;
+use App\Http\Controllers\api\DivisionController;
 use App\Http\Controllers\api\ProfileController;
 use App\Http\Controllers\api\TeacherController;
 use App\Http\Controllers\api\LibraryController;
@@ -24,6 +28,8 @@ use App\Http\Controllers\api\InstitutionController;
 use App\Http\Controllers\api\MrAuthController;
 use App\Http\Controllers\api\MrLocationController;
 use App\Http\Controllers\api\SpotSaleController;
+use App\Http\Controllers\api\SubjectController;
+use App\Http\Controllers\api\UpazilaController;
 use Illuminate\Http\Request;
 
 
@@ -38,8 +44,6 @@ Route::put('/profile', [ProfileController::class, 'update'])->middleware('auth:s
 
 Route::get('categories', [CategoryController::class, 'index']);
 
-// Route::get('products', [ProductController::class, 'index']);
-// Route::get('products/{slug}', [ProductController::class, 'show']);
 
 Route::get('/swagger-test', function () {
     return response()->json([
@@ -86,6 +90,10 @@ Route::prefix('mr')->name('api.mr.')->group(function () {
         //Expense
         Route::get('/expenses', [ExpenseController::class, 'index'])->name('expenses.index');
         Route::post('/expenses', [ExpenseController::class, 'store'])->name('expenses.store');
+        Route::get('/expenses/{id}', [ExpenseController::class, 'show'])->name('expenses.show');
+        Route::put('/expenses/{id}', [ExpenseController::class, 'update'])->name('expenses.update');
+        Route::delete('/expenses/{id}', [ExpenseController::class, 'destroy'])->name('expenses.destroy');
+        Route::post('/expenses/{id}/post', [ExpenseController::class, 'postExpense'])->name('expenses.post');
 
         //Book_request
         Route::get('/book-requests', [BookRequestController::class, 'index'])->name('book-requests.index');
@@ -109,9 +117,22 @@ Route::prefix('mr')->name('api.mr.')->group(function () {
         Route::put('/assign-specimens/{id}', [AssignSpecimenController::class, 'update'])->name('assign-specimens.update');
         Route::delete('/assign-specimens/{id}', [AssignSpecimenController::class, 'destroy'])->name('assign-specimens.destroy');
 
+        //Courier Marketing
+        Route::get('/courier-marketings', [CourierMarketingController::class, 'index'])->name('courier-marketings.index');
+        Route::get('/courier-marketings/statuses', [CourierMarketingController::class, 'statuses'])->name('courier-marketings.statuses');
+        Route::post('/courier-marketings', [CourierMarketingController::class, 'store'])->name('courier-marketings.store');
+        Route::get('/courier-marketings/{id}', [CourierMarketingController::class, 'show'])->whereNumber('id')->name('courier-marketings.show');
+        Route::put('/courier-marketings/{id}', [CourierMarketingController::class, 'update'])->whereNumber('id')->name('courier-marketings.update');
+        Route::post('/courier-marketings/{id}/status', [CourierMarketingController::class, 'updateStatus'])->whereNumber('id')->name('courier-marketings.status');
+        Route::delete('/courier-marketings/{id}', [CourierMarketingController::class, 'destroy'])->whereNumber('id')->name('courier-marketings.destroy');
+
         //Dropdowns for delivery entry
         Route::get('/teachers', [TeacherController::class, 'index'])->name('teachers.index');
+        Route::post('/teachers', [TeacherController::class, 'store'])->name('teachers.store');
+
         Route::get('/libraries', [LibraryController::class, 'index'])->name('libraries.index');
+        Route::post('/libraries', [LibraryController::class, 'store'])->name('libraries.store');
+
         Route::get('/institutions', [InstitutionController::class, 'index'])->name('institutions.index');
         Route::get('/delivery-products', [ProductController::class, 'dropdown'])->name('delivery-products.index');
 
@@ -138,5 +159,25 @@ Route::prefix('mr')->name('api.mr.')->group(function () {
         Route::get('/locations', [MrLocationController::class, 'index'])->name('mr.locations.index');
         Route::post('/locations', [MrLocationController::class, 'store'])->name('mr.locations.store');
         Route::get('/locations/{id}', [MrLocationController::class, 'show'])->name('mr.locations.show');
+
+        //student courseClass
+        Route::get('/course-classes', [CourseClassController::class, 'index'])->name('course-classes.index');
+        Route::get('/course-classes/{id}', [CourseClassController::class, 'show'])->name('course-classes.show');
+
+        //Department
+        Route::get('/departments', [DepartmentController::class, 'index'])->name('departments.index');
+        Route::get('/departments/{id}', [DepartmentController::class, 'show'])->name('departments.show');
+
+        // Subject
+        Route::get('/subjects', [SubjectController::class, 'index'])->name('subjects.index');
+        Route::get('/subjects/{id}', [SubjectController::class, 'show'])->name('subjects.show');
+
+        // Upazila
+        Route::get('/upazilas', [UpazilaController::class, 'index'])->name('upazilas.index');
+        Route::get('/upazilas/{id}', [UpazilaController::class, 'show'])->name('upazilas.show');
+
+        //Division
+        Route::get('/divisions', [DivisionController::class, 'index'])->name('divisions.index');
+        Route::get('/divisions/{id}', [DivisionController::class, 'show'])->name('divisions.show');
     });
 });

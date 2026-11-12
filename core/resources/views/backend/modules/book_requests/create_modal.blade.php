@@ -12,15 +12,25 @@
                     required></select>
                 <div class="invalid-feedback d-block marketing_representative_id-error" style="display:none"></div>
             </div>
-            <div class="col-md-6 mb-16">
-                <label class="form-label text-sm mb-6">Product <span class="text-danger">*</span></label>
-                <select name="product_id" class="form-control radius-8 js-product-select" required></select>
-                <div class="invalid-feedback d-block product_id-error" style="display:none"></div>
-            </div>
-            <div class="col-md-6 mb-16">
-                <label class="form-label text-sm mb-6">Quantity <span class="text-danger">*</span></label>
-                <input type="number" name="quantity" class="form-control radius-8" value="1" min="1" required>
-                <div class="invalid-feedback d-block quantity-error" style="display:none"></div>
+            <div class="col-12 mb-16">
+                <label class="form-label text-sm mb-6">Products <span class="text-danger">*</span></label>
+                <div class="row g-2 book-request-product-items">
+                    <div class="col-12 row g-2 align-items-start book-request-product-row">
+                        <div class="col-md-8">
+                            <select name="product_items[0][product_id]" class="form-control radius-8 js-product-select" required></select>
+                            <div class="invalid-feedback d-block product_items.0.product_id-error" style="display:none"></div>
+                        </div>
+                        <div class="col-md-3">
+                            <input type="number" name="product_items[0][quantity]" class="form-control radius-8 js-quantity-input" value="1" min="1" required>
+                            <small class="text-muted js-dist-hint d-block mt-4" style="font-size:11px;">Available: —</small>
+                            <div class="invalid-feedback d-block product_items.0.quantity-error" style="display:none"></div>
+                        </div>
+                        <div class="col-md-1">
+                            <button type="button" class="btn btn-outline-danger radius-8 w-100 btn-remove-product" aria-label="Remove product" disabled>&times;</button>
+                        </div>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-primary mt-8 btn-add-product">Add product</button>
             </div>
             <div class="col-md-6 mb-16">
                 <label class="form-label text-sm mb-6">Date <span class="text-danger">*</span></label>
@@ -50,3 +60,19 @@
         </div>
     </form>
 </div>
+<template id="book-request-product-template">
+    <div class="col-12 row g-2 align-items-start book-request-product-row">
+        <div class="col-md-8">
+            <select class="form-control radius-8 js-product-select" required></select>
+            <div class="invalid-feedback d-block" style="display:none"></div>
+        </div>
+        <div class="col-md-3">
+            <input type="number" class="form-control radius-8 js-quantity-input" value="1" min="1" required>
+            <small class="text-muted js-dist-hint d-block mt-4" style="font-size:11px;">Available: —</small>
+            <div class="invalid-feedback d-block" style="display:none"></div>
+        </div>
+        <div class="col-md-1">
+            <button type="button" class="btn btn-outline-danger radius-8 w-100 btn-remove-product" aria-label="Remove product">&times;</button>
+        </div>
+    </div>
+</template>

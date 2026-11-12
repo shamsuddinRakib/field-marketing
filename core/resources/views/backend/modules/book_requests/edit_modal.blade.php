@@ -7,6 +7,8 @@
         data-ajax="true">
         @csrf
         @method('PUT')
+        <input type="hidden" name="request_group_id" value="{{ $bookRequest->request_group_id }}">
+        <input type="hidden" name="exclude_request_id" value="{{ $bookRequest->id }}">
         <div class="row">
             <div class="col-md-6 mb-16">
                 <label class="form-label text-sm mb-6">Representative <span class="text-danger">*</span></label>
@@ -24,21 +26,34 @@
                 </select>
                 <div class="invalid-feedback d-block marketing_representative_id-error" style="display:none"></div>
             </div>
-            <div class="col-md-6 mb-16">
-                <label class="form-label text-sm mb-6">Product <span class="text-danger">*</span></label>
-                <select name="product_id" class="form-control radius-8 js-product-select" required>
-                    @if ($bookRequest->product_id)
-                        <option value="{{ $bookRequest->product_id }}" selected>
-                            {{ $bookRequest->product?->name ?? '#' . $bookRequest->product_id }}</option>
-                    @endif
-                </select>
-                <div class="invalid-feedback d-block product_id-error" style="display:none"></div>
-            </div>
-            <div class="col-md-6 mb-16">
-                <label class="form-label text-sm mb-6">Quantity <span class="text-danger">*</span></label>
-                <input type="number" name="quantity" class="form-control radius-8"
-                    value="{{ old('quantity', $bookRequest->quantity) }}" min="1" required>
-                <div class="invalid-feedback d-block quantity-error" style="display:none"></div>
+            <div class="col-12 mb-16">
+                <label class="form-label text-sm mb-6">Products <span class="text-danger">*</span></label>
+                <div class="row g-2 book-request-product-items">
+                    @foreach ($bookRequests as $index => $requestItem)
+                        <div class="col-12 row g-2 align-items-start book-request-product-row">
+                            <div class="col-md-8">
+                                <select name="product_items[{{ $index }}][product_id]" class="form-control radius-8 js-product-select" required>
+                                    @if ($requestItem->product_id)
+                                        <option value="{{ $requestItem->product_id }}" selected>
+                                            {{ $requestItem->product?->name ?? '#' . $requestItem->product_id }}</option>
+                                    @endif
+                                </select>
+                                <div class="invalid-feedback d-block product_items.{{ $index }}.product_id-error" style="display:none"></div>
+                            </div>
+                            <div class="col-md-3">
+                                @php $distQty = $distQuantities[$requestItem->product_id] ?? 0; @endphp
+                                <input type="number" name="product_items[{{ $index }}][quantity]" class="form-control radius-8 js-quantity-input"
+                                    value="{{ $requestItem->quantity }}" min="1" @if($distQty > 0) max="{{ $distQty }}" @endif required>
+                                <small class="text-muted js-dist-hint d-block mt-4" style="font-size:11px;">Available: {{ $distQty }}</small>
+                                <div class="invalid-feedback d-block product_items.{{ $index }}.quantity-error" style="display:none"></div>
+                            </div>
+                            <div class="col-md-1">
+                                <button type="button" class="btn btn-outline-danger radius-8 w-100 btn-remove-product" aria-label="Remove product" @disabled($loop->first && $loop->last)>&times;</button>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-primary mt-8 btn-add-product">Add product</button>
             </div>
             <div class="col-md-6 mb-16">
                 <label class="form-label text-sm mb-6">Date <span class="text-danger">*</span></label>
@@ -67,3 +82,19 @@
         </div>
     </form>
 </div>
+<template id="book-request-product-template">
+    <div class="col-12 row g-2 align-items-start book-request-product-row">
+        <div class="col-md-8">
+            <select class="form-control radius-8 js-product-select" required></select>
+            <div class="invalid-feedback d-block" style="display:none"></div>
+        </div>
+        <div class="col-md-3">
+            <input type="number" class="form-control radius-8 js-quantity-input" value="1" min="1" required>
+            <small class="text-muted js-dist-hint d-block mt-4" style="font-size:11px;">Available: —</small>
+            <div class="invalid-feedback d-block" style="display:none"></div>
+        </div>
+        <div class="col-md-1">
+            <button type="button" class="btn btn-outline-danger radius-8 w-100 btn-remove-product" aria-label="Remove product">&times;</button>
+        </div>
+    </div>
+</template>

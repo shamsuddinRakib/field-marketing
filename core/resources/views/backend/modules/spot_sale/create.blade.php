@@ -32,23 +32,61 @@
                             <option value="">Select Type</option>
                             <option value="teacher">Teacher</option>
                             <option value="library">Library</option>
+                            <option value="student">Student</option>
                         </select>
                     </div>
 
                     <div class="col-md-6 mb-12" id="teacherWrap" style="display:none">
                         <label class="form-label text-sm mb-8">Select Teacher <span class="text-danger">*</span></label>
                         <select class="form-control form-control-sm js-s2-ajax" name="teacher_id" id="teacherSelect"
-                            data-url="{{ route('teacher.teachers.select2') }}"
-                            data-placeholder="Select Teacher">
+                            data-url="{{ route('teacher.teachers.select2') }}" data-placeholder="Select Teacher">
                         </select>
                     </div>
 
                     <div class="col-md-6 mb-12" id="libraryWrap" style="display:none">
                         <label class="form-label text-sm mb-8">Select Library <span class="text-danger">*</span></label>
                         <select class="form-control form-control-sm js-s2-ajax" name="library_id" id="librarySelect"
-                            data-url="{{ route('library.libraries.select2') }}"
-                            data-placeholder="Select Library">
+                            data-url="{{ route('library.libraries.select2') }}" data-placeholder="Select Library">
                         </select>
+                    </div>
+
+                    {{-- STUDENT FIELDS --}}
+                    <div class="col-md-12" id="studentWrap" style="display:none;">
+                        <div class="row g-3">
+
+                            <div class="col-md-4">
+                                <label class="form-label">Student Name <span class="text-danger">*</span></label>
+                                <input type="text" name="student_name" id="studentName"
+                                    class="form-control form-control-sm" maxlength="255">
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Class <span class="text-danger">*</span></label>
+                                <select name="course_class_id" id="courseClassSelect"
+                                    class="form-control form-control-sm">
+                                    <option value="">Select Class</option>
+                                    @foreach ($classes as $class)
+                                        <option value="{{ $class->id }}">
+                                            {{ $class->name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Institution <span class="text-danger">*</span></label>
+                                <select name="institution_id" id="institutionSelect"
+                                    class="form-control form-control-sm">
+                                    <option value="">Select Institution</option>
+                                    @foreach ($institutions as $institution)
+                                        <option value="{{ $institution->id }}">
+                                            {{ $institution->institution_name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                        </div>
                     </div>
 
                     <div class="col-md-12">
@@ -62,40 +100,44 @@
         </div>
 
         {{-- ================= SALE ITEMS ================= --}}
-        <div class="table-responsive"><table class="table table-sm align-middle items-table-fixed" id="spotSaleItemsTable">
-            <thead class="table-light">
-                <tr>
-                    <th style="width:38%">Product</th>
-                    <th class="text-end" style="width:110px">Price</th>
-                    <th class="text-end" style="width:110px">Qty</th>
-                    <th class="text-end" style="width:120px">Total</th>
-                    <th style="width:40px"></th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr class="spot-sale-item-row">
-                    <td>
-                        <select name="items[0][product_id]" class="form-control form-control-sm js-s2-ajax spot-product"
-                            data-url="{{ route('product.select2') }}" required></select>
-                    </td>
-                    <td class="text-end">
-                        <span class="spot-price-text">0.00</span>
-                    </td>
-                    <td>
-                        <input type="number" step="1" min="1" value="1" name="items[0][quantity]"
-                            class="form-control form-control-sm text-end spot-qty" required>
-                    </td>
-                    <td class="text-end">
-                        <span class="spot-line-total-text">0.00</span>
-                    </td>
-                    <td class="text-center">
-                        <button type="button" class="btn btn-sm btn-outline-danger btnRemoveRow">
-                            ✕
-                        </button>
-                    </td>
-                </tr>
-            </tbody>
-        </table></div>
+        <div class="table-responsive">
+            <table class="table table-sm align-middle items-table-fixed" id="spotSaleItemsTable">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width:38%">Product</th>
+                        <th class="text-end" style="width:110px">Price</th>
+                        <th class="text-end" style="width:110px">Qty</th>
+                        <th class="text-end" style="width:120px">Total</th>
+                        <th style="width:40px"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="spot-sale-item-row">
+                        <td>
+                            <select name="items[0][product_id]"
+                                class="form-control form-control-sm js-s2-ajax spot-product"
+                                data-url="{{ route('product.select2') }}" required></select>
+                        </td>
+                        <td class="text-end">
+                            <span class="spot-price-text">0.00</span>
+                        </td>
+                        <td>
+                            <input type="number" step="1" min="1" value="1"
+                                name="items[0][quantity]" class="form-control form-control-sm text-end spot-qty"
+                                required>
+                        </td>
+                        <td class="text-end">
+                            <span class="spot-line-total-text">0.00</span>
+                        </td>
+                        <td class="text-center">
+                            <button type="button" class="btn btn-sm btn-outline-danger btnRemoveRow">
+                                ✕
+                            </button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
         <div class="d-flex justify-content-end mb-8">
             <button type="button" id="btnAddSpotSaleItem" class="btn btn-sm btn-outline-primary">
                 + Add Item
@@ -144,114 +186,134 @@
     };
 
     (function() {
-        const PRODUCT_PRICE_URL = "{{ route('spot-sales.productPrice', ':id') }}";
-        const $table = $('#spotSaleItemsTable tbody');
-        let rowIndex = 1;
+            const PRODUCT_PRICE_URL = "{{ route('spot-sales.productPrice', ':id') }}";
+            const $table = $('#spotSaleItemsTable tbody');
+            let rowIndex = 1;
 
-        function toggleCustomer() {
-            const type = $('#customerType').val();
-            $('#teacherWrap').toggle(type === 'teacher');
-            $('#libraryWrap').toggle(type === 'library');
-            if (type !== 'teacher') $('#teacherSelect').val(null).trigger('change');
-            if (type !== 'library') $('#librarySelect').val(null).trigger('change');
-        }
+            function toggleCustomer() {
+                const type = $('#customerType').val();
+                $('#teacherWrap').toggle(type === 'teacher');
+                $('#libraryWrap').toggle(type === 'library');
+                $('#studentWrap').toggle(type === 'student');
 
-        $('#customerType').on('change', toggleCustomer);
+                $('#teacherSelect').prop('required', type === 'teacher');
+                $('#librarySelect').prop('required', type === 'library');
 
-        /* ================= ADD ROW ================= */
-        $('#btnAddSpotSaleItem').on('click', function() {
-            const $firstRow = $table.find('tr:first');
+                $('#studentName').prop('required', type === 'student');
+                $('#courseClassSelect').prop('required', type === 'student');
+                $('#institutionSelect').prop('required', type === 'student');
 
-            $firstRow.find('.select2-hidden-accessible').each(function() {
-                $(this).select2('destroy');
-            });
-
-            const $row = $firstRow.clone();
-
-            $row.find('input, select').each(function() {
-                const name = $(this).attr('name');
-                if (!name) return;
-                const newName = name.replace(/\[\d+]/, `[${rowIndex}]`);
-                $(this).attr('name', newName);
-                if ($(this).hasClass('spot-qty')) {
-                    $(this).val(1);
-                } else {
-                    $(this).val('');
+                if (type !== 'teacher') $('#teacherSelect').val(null).trigger('change');
+                if (type !== 'library') $('#librarySelect').val(null).trigger('change');
+                if (type !== 'student') {
+                    $('#studentName').val('');
+                    $('#courseClassSelect').val('');
+                    $('#institutionSelect').val('');
                 }
-            });
-            $row.find('.spot-price-text').text('0.00');
-            $row.find('.spot-line-total-text').text('0.00');
-
-            $table.append($row);
-
-            if (window.S2 && typeof window.S2.auto === 'function') {
-                window.S2.auto();
             }
 
-            rowIndex++;
-        });
+                $('#customerType').on('change', toggleCustomer);
 
-        /* ================= REMOVE ROW ================= */
-        $table.on('click', '.btnRemoveRow', function() {
-            if ($table.find('tr').length === 1) return;
-            $(this).closest('tr').remove();
-            calculateTotal();
-        });
+                /* ================= ADD ROW ================= */
+                $('#btnAddSpotSaleItem').on('click', function() {
+                    const $firstRow = $table.find('tr:first');
 
-        /* ================= PRODUCT PRICE ================= */
-        $table.on('change', '.spot-product', function() {
-            const $row = $(this).closest('tr');
-            const productId = $(this).val();
-            if (!productId) {
-                $row.find('.spot-price-text').text('0.00');
-                calcRow($row);
-                return;
-            }
-            $.get(PRODUCT_PRICE_URL.replace(':id', productId), function(res) {
-                $row.find('.spot-price-text').text(parseFloat(res.price || 0).toFixed(2));
-                calcRow($row);
-            });
-        });
+                    $firstRow.find('.select2-hidden-accessible').each(function() {
+                        $(this).select2('destroy');
+                    });
 
-        $table.on('input', '.spot-qty', function() {
-            calcRow($(this).closest('tr'));
-        });
+                    const $row = $firstRow.clone();
 
-        function calcRow($row) {
-            const price = parseFloat($row.find('.spot-price-text').text() || 0);
-            const qty = parseFloat($row.find('.spot-qty').val() || 0);
-            $row.find('.spot-line-total-text').text((price * qty).toFixed(2));
-            calculateTotal();
-        }
+                    $row.find('input, select').each(function() {
+                        const name = $(this).attr('name');
+                        if (!name) return;
+                        const newName = name.replace(/\[\d+]/, `[${rowIndex}]`);
+                        $(this).attr('name', newName);
+                        if ($(this).hasClass('spot-qty')) {
+                            $(this).val(1);
+                        } else {
+                            $(this).val('');
+                        }
+                    });
+                    $row.find('.spot-price-text').text('0.00');
+                    $row.find('.spot-line-total-text').text('0.00');
 
-        function calculateTotal() {
-            let total = 0;
-            $('.spot-line-total-text').each(function() {
-                total += parseFloat($(this).text() || 0);
-            });
-            $('#spotSaleTotalText').text(total.toFixed(2));
-        }
+                    $table.append($row);
 
-        $('#btnSavePending').on('click', function() {
-            if (!$('#customerType').val()) {
-                Swal && Swal.fire({ icon: 'warning', title: 'Select customer type' });
-                return;
-            }
-            $('#spotSaleStatus').val('pending');
-            $('#spotSaleCreateForm').submit();
-        });
+                    if (window.S2 && typeof window.S2.auto === 'function') {
+                        window.S2.auto();
+                    }
 
-        $('#btnApproveSale').on('click', function() {
-            if (!$('#customerType').val()) {
-                Swal && Swal.fire({ icon: 'warning', title: 'Select customer type' });
-                return;
-            }
-            $('#spotSaleStatus').val('approved');
-            $('#spotSaleCreateForm').submit();
-        });
+                    rowIndex++;
+                });
 
-        if (window.S2 && typeof window.S2.auto === 'function') {
-            window.S2.auto();
-        }
-    })();
+                /* ================= REMOVE ROW ================= */
+                $table.on('click', '.btnRemoveRow', function() {
+                    if ($table.find('tr').length === 1) return;
+                    $(this).closest('tr').remove();
+                    calculateTotal();
+                });
+
+                /* ================= PRODUCT PRICE ================= */
+                $table.on('change', '.spot-product', function() {
+                    const $row = $(this).closest('tr');
+                    const productId = $(this).val();
+                    if (!productId) {
+                        $row.find('.spot-price-text').text('0.00');
+                        calcRow($row);
+                        return;
+                    }
+                    $.get(PRODUCT_PRICE_URL.replace(':id', productId), function(res) {
+                        $row.find('.spot-price-text').text(parseFloat(res.price || 0).toFixed(2));
+                        calcRow($row);
+                    });
+                });
+
+                $table.on('input', '.spot-qty', function() {
+                    calcRow($(this).closest('tr'));
+                });
+
+                function calcRow($row) {
+                    const price = parseFloat($row.find('.spot-price-text').text() || 0);
+                    const qty = parseFloat($row.find('.spot-qty').val() || 0);
+                    $row.find('.spot-line-total-text').text((price * qty).toFixed(2));
+                    calculateTotal();
+                }
+
+                function calculateTotal() {
+                    let total = 0;
+                    $('.spot-line-total-text').each(function() {
+                        total += parseFloat($(this).text() || 0);
+                    });
+                    $('#spotSaleTotalText').text(total.toFixed(2));
+                }
+
+                $('#btnSavePending').on('click', function() {
+                    if (!$('#customerType').val()) {
+                        Swal && Swal.fire({
+                            icon: 'warning',
+                            title: 'Select customer type'
+                        });
+                        return;
+                    }
+                    $('#spotSaleStatus').val('pending');
+                    $('#spotSaleCreateForm').submit();
+                });
+
+                $('#btnApproveSale').on('click', function() {
+                    if (!$('#customerType').val()) {
+                        Swal && Swal.fire({
+                            icon: 'warning',
+                            title: 'Select customer type'
+                        });
+                        return;
+                    }
+                    $('#spotSaleStatus').val('approved');
+                    $('#spotSaleCreateForm').submit();
+                });
+
+                if (window.S2 && typeof window.S2.auto === 'function') {
+                    window.S2.auto();
+                }
+            })();
 </script>

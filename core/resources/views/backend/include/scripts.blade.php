@@ -564,6 +564,36 @@
             $m.find('.modal-content').empty();
             $m.removeData('modal-key onload-fn onsuccess-fn');
         });
+
+        // =========================================================================
+        // Global Nested Modal & Scroll-Lock Synchronization Fix
+        // Prevents modal freezing when secondary modals or SweetAlert close
+        // =========================================================================
+        $(document).on('hidden.bs.modal', '.modal', function() {
+            // If any modal is still open, keep body locked and remaining modal scrollable
+            if ($('.modal.show:visible').length > 0) {
+                $('body').addClass('modal-open').css('overflow', 'hidden');
+                $('.modal.show:visible').css('overflow-y', 'auto');
+            }
+        });
+
+        $(document).on('shown.bs.modal', '.modal', function() {
+            $(this).css('overflow-y', 'auto');
+        });
+
+        // Fail-safe MutationObserver: Guarantees body.modal-open is preserved
+        // even if SweetAlert2 or 3rd-party libraries strip body classes
+        if (typeof MutationObserver !== 'undefined' && document.body) {
+            const _modalScrollObserver = new MutationObserver(function() {
+                if (document.querySelectorAll('.modal.show').length > 0) {
+                    if (!document.body.classList.contains('modal-open')) {
+                        document.body.classList.add('modal-open');
+                        document.body.style.overflow = 'hidden';
+                    }
+                }
+            });
+            _modalScrollObserver.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+        }
     })();
 
 
@@ -798,6 +828,8 @@
                     $el.append(new Option(text, id, true, true)).trigger('change');
                 }
             }
+
+            return $el;
         }
 
         // ajax shortcut: শুধু url দিলেই চলবে

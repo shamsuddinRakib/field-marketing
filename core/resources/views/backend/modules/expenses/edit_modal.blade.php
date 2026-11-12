@@ -4,10 +4,59 @@
     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
 </div>
 
+<style>
+    /* Desktop & Tablet View */
+    @media (min-width: 992px) {
+        #AjaxModal .modal-dialog {
+            max-width: 960px;
+        }
+    }
+    @media (min-width: 1200px) {
+        #AjaxModal .modal-dialog {
+            max-width: 1050px;
+        }
+    }
+
+    /* Mobile & Tablet Responsive Fixes */
+    .table-responsive {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    #expenseItemsTable {
+        min-width: 680px;
+    }
+
+    @media (max-width: 575.98px) {
+        #AjaxModal .modal-dialog {
+            margin: 0.5rem;
+            max-width: calc(100% - 1rem);
+        }
+        #AjaxModal .modal-header {
+            padding: 12px 16px;
+        }
+        #AjaxModal .modal-body {
+            padding: 12px;
+        }
+        #AjaxModal .card-body {
+            padding: 12px;
+        }
+        .expense-action-buttons {
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .expense-action-buttons .btn {
+            flex: 1 1 auto;
+            text-align: center;
+        }
+    }
+</style>
+
 {{-- ================= MODAL BODY ================= --}}
 <div class="modal-body px-24 py-16">
 
-    <form id="expenseEditForm" action="{{ route('expenses.update', $expense->id) }}" method="POST" enctype="multipart/form-data" data-ajax="true" data-branch-id="{{ current_branch_id() }}">
+    <form id="expenseEditForm" action="{{ route('expenses.update', $expense->id) }}" method="POST"
+        enctype="multipart/form-data" data-ajax="true" data-branch-id="{{ current_branch_id() }}">
 
         @csrf
         @method('PUT')
@@ -20,9 +69,11 @@
 
                 <div class="row g-3">
                     <div class="col-md-6 mb-20">
-                        <label class="form-label text-sm mb-8">Select Representative <span class="text-danger">*</span></label>
+                        <label class="form-label text-sm mb-8">Select Representative <span
+                                class="text-danger">*</span></label>
                         <select class="form-control form-control-sm js-s2-ajax" name="user_id" id="user"
-                            data-url="{{ route('marketing-representative.marketing-representatives.select2') }}" data-placeholder="Select Marketing Representative">
+                            data-url="{{ route('marketing-representative.marketing-representatives.select2') }}"
+                            data-placeholder="Select Marketing Representative">
                             @if ($expense->user && $expense->user)
                                 <option value="{{ $expense->user->id }}" selected>{{ $expense->user->name }}</option>
                             @endif
@@ -40,7 +91,7 @@
                     <div class="col-md-6">
                         <label class="form-label text-sm">Expense Date <span class="text-danger">*</span></label>
                         <input type="date" name="expense_date" class="form-control form-control-sm radius-8"
-                            value="{{ ($expense->expense_date) }}" required>
+                            value="{{ $expense->expense_date }}" required>
                     </div>
 
                     <div class="col-md-6">
@@ -49,7 +100,8 @@
                             accept=".jpg,.jpeg,.png,.pdf,.doc,.docx">
                         @if ($expense->attachment)
                             <small class="d-block mt-8 text-muted">
-                                Current file: <a href="{{ asset($expense->attachment) }}" target="_blank" class="text-primary">Open</a>
+                                Current file: <a href="{{ asset($expense->attachment) }}" target="_blank"
+                                    class="text-primary">Open</a>
                             </small>
                         @endif
                     </div>
@@ -65,53 +117,70 @@
         </div>
 
         {{-- ================= EXPENSE ITEMS ================= --}}
-        <table class="table table-sm align-middle" id="expenseItemsTable">
-            <thead class="table-light">
-                <tr>
-                    <th style="width:30%">Category</th>
-                    <th>Description</th>
-                    <th class="text-end" style="width:140px">Amount</th>
-                    <th style="width:40px"></th>
-                </tr>
-            </thead>
-            <tbody>
-
-                @foreach ($expense->items as $i => $item)
-                    <tr class="expense-item-row">
-                        <td>
-                            <select name="items[{{ $i }}][expense_category_id]"
-                                class="form-control form-control-sm js-s2-ajax"
-                                data-url="{{ route('expenseCategories.select2') }}" required>
-                                @if ($item->category)
-                                    <option value="{{ $item->category->id }}" selected>
-                                        {{ $item->category->name }}
-                                    </option>
-                                @endif
-                            </select>
-                        </td>
-
-                        <td>
-                            <input type="text" name="items[{{ $i }}][description]"
-                                class="form-control form-control-sm" value="{{ $item->description }}">
-                        </td>
-
-                        <td>
-                            <input type="number" step="0.01" min="0"
-                                name="items[{{ $i }}][amount]"
-                                class="form-control form-control-sm text-end expense-amount"
-                                value="{{ $item->amount }}" required>
-                        </td>
-
-                        <td class="text-center">
-                            <button type="button" class="btn btn-sm btn-outline-danger btnRemoveRow">
-                                ✕
-                            </button>
-                        </td>
+        <div class="table-responsive">
+            <table class="table table-sm align-middle" id="expenseItemsTable">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width:20%">From Location</th>
+                        <th style="width:20%">To Location</th>
+                        <th style="width:22%">Category <span class="text-danger">*</span></th>
+                        <th>Description</th>
+                        <th class="text-end" style="width:130px">Amount <span class="text-danger">*</span></th>
+                        <th style="width:40px"></th>
                     </tr>
-                @endforeach
+                </thead>
+                <tbody>
 
-            </tbody>
-        </table>
+                    @foreach ($expense->items as $i => $item)
+                        <tr class="expense-item-row">
+                            <td>
+                                <input type="text" name="items[{{ $i }}][from_location]"
+                                    class="form-control form-control-sm"
+                                    value="{{ $item->from_location ?: ($expense->from_location ?? '') }}"
+                                    placeholder="e.g. Dhanmondi">
+                            </td>
+                            <td>
+                                <input type="text" name="items[{{ $i }}][to_location]"
+                                    class="form-control form-control-sm"
+                                    value="{{ $item->to_location ?: ($expense->to_location ?? '') }}"
+                                    placeholder="e.g. Paltan">
+                            </td>
+                            <td>
+                                <select name="items[{{ $i }}][expense_category_id]"
+                                    class="form-control form-control-sm js-s2-ajax"
+                                    data-url="{{ route('expenseCategories.select2') }}" required>
+                                    @if ($item->category)
+                                        <option value="{{ $item->category->id }}" selected>
+                                            {{ $item->category->name }}
+                                        </option>
+                                    @endif
+                                </select>
+                            </td>
+
+                            <td>
+                                <input type="text" name="items[{{ $i }}][description]"
+                                    class="form-control form-control-sm" value="{{ $item->description }}"
+                                    placeholder="Optional note">
+                            </td>
+
+                            <td>
+                                <input type="number" step="0.01" min="0"
+                                    name="items[{{ $i }}][amount]"
+                                    class="form-control form-control-sm text-end expense-amount"
+                                    value="{{ $item->amount }}" required>
+                            </td>
+
+                            <td class="text-center">
+                                <button type="button" class="btn btn-sm btn-outline-danger btnRemoveRow">
+                                    ✕
+                                </button>
+                            </td>
+                        </tr>
+                    @endforeach
+
+                </tbody>
+            </table>
+        </div>
 
         <div class="d-flex justify-content-end mb-8">
             <button type="button" id="btnAddExpenseItem" class="btn btn-sm btn-outline-primary">
@@ -128,7 +197,8 @@
                         {{ number_format($expense->total_amount, 2) }}
                     </span>
                 </h5>
-                <input type="hidden" name="total_amount" id="expenseTotalInput" value="{{ $expense->total_amount }}">
+                <input type="hidden" name="total_amount" id="expenseTotalInput"
+                    value="{{ $expense->total_amount }}">
             </div>
         </div>
 
@@ -157,12 +227,16 @@
         {{-- ================= ACTION ================= --}}
         <input type="hidden" name="status" id="expenseStatus" value="">
 
-        <div class="d-flex justify-content-end gap-2">
+        <div class="d-flex justify-content-end gap-2 expense-action-buttons">
             <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">
                 Cancel
             </button>
 
             @if ($expense->status === 'draft')
+                <button type="button" class="btn btn-sm btn-outline-danger" id="btnCancelExpense">
+                    Cancel Expense
+                </button>
+
                 <button type="button" class="btn btn-sm btn-outline-warning" id="btnSaveDraft">
                     Update Draft
                 </button>
@@ -170,6 +244,8 @@
                 <button type="button" class="btn btn-sm btn-success" id="btnPostExpense">
                     Post Expense
                 </button>
+            @elseif ($expense->status === 'cancelled')
+                <span class="badge bg-danger px-12 py-8">Cancelled</span>
             @else
                 <span class="badge bg-success px-12 py-8">Posted</span>
             @endif
@@ -191,13 +267,13 @@
 
             const expenseId = res?.data?.id || res?.id;
 
-           
+
             // 🔹 Close modal
             $('.modal').modal('hide');
         }
     };
 
-  
+
 
     (function() {
 
@@ -244,8 +320,13 @@
         }
 
         /* STATUS BUTTONS */
+        $('#btnCancelExpense').on('click', function() {
+            $('#expenseStatus').val('cancelled');
+            $('#expenseEditForm').submit();
+        });
+
         $('#btnSaveDraft').on('click', function() {
-           
+
             $('#expenseStatus').val('draft');
             $('#expenseEditForm').submit();
         });

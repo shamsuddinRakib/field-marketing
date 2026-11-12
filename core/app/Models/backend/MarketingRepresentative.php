@@ -16,7 +16,8 @@ class MarketingRepresentative extends Model
         // 'password',
         // 'mobile',
         // 'email',
-        'organization',
+        //'organization',
+        'mr_designation_id',
         'branch_id',
         'upazila_id',
         'district_id',
@@ -53,5 +54,30 @@ class MarketingRepresentative extends Model
     public function division()
     {
         return $this->belongsTo(Division::class);
+    }
+
+    public function mrDesignation()
+    {
+        return $this->belongsTo(MrDesignation::class, 'mr_designation_id');
+    }
+
+    public function designation()
+    {
+        return $this->belongsTo(MrDesignation::class, 'mr_designation_id');
+    }
+
+    public function territories()
+    {
+        return $this->hasMany(MarketingRepresentativeTerritory::class, 'marketing_representative_id');
+    }
+
+    public function upazilas()
+    {
+        return $this->belongsToMany(Upazila::class, 'marketing_representative_territories', 'marketing_representative_id', 'upazila_id');
+    }
+
+    public function districts()
+    {
+        return $this->belongsToMany(District::class, 'marketing_representative_territories', 'marketing_representative_id', 'district_id', 'id', 'district_id')->distinct();
     }
 }

@@ -14,20 +14,19 @@ class ExpenseResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        // return parent::toArray($request);
         return [
-            'id' => $this->id,
-            // 'daily_visit_id' => $this->daily_visit_id,
-            // 'branch_id' => $this->branch_id,
-            // 'invoice_no' => $this->invoice_no,
-            // 'expense_no' => $this->expense_no,
-            'name' => $this->name,
-            'expense_date' => $this->expense_date,
-            'posted_at' => $this->posted_at,
-            'description' => $this->description,
-            'total_amount' => $this->total_amount,
-            'status' => $this->status,
-            'attachment' => $this->attachment,
+            'id'            => $this->id,
+            'name'          => $this->name,
+            'expense_date'  => $this->expense_date,
+            'posted_at'     => $this->posted_at,
+            'from_location' => $this->from_location,
+            'to_location'   => $this->to_location,
+            'reference'     => $this->reference,
+            'description'   => $this->description,
+            'total_amount'  => (float) $this->total_amount,
+            'status'        => $this->status,
+            'attachment'    => $this->attachment ? asset($this->attachment) : null,
+            'attachment_path' => $this->attachment,
 
             'branch' => $this->whenLoaded('branch', function () {
                 if (!$this->branch) {
@@ -35,7 +34,7 @@ class ExpenseResource extends JsonResource
                 }
 
                 return [
-                    'id' => $this->branch->id,
+                    'id'   => $this->branch->id,
                     'name' => $this->branch->name,
                 ];
             }),
@@ -43,13 +42,15 @@ class ExpenseResource extends JsonResource
             'items' => $this->whenLoaded('items', function () {
                 return $this->items->map(function ($item) {
                     return [
-                        'id' => $item->id,
+                        'id'                  => $item->id,
                         'expense_category_id' => $item->expense_category_id,
-                        'description' => $item->description,
-                        'amount' => $item->amount,
+                        'from_location'       => $item->from_location,
+                        'to_location'         => $item->to_location,
+                        'description'         => $item->description,
+                        'amount'              => (float) $item->amount,
 
                         'category' => $item->category ? [
-                            'id' => $item->category->id,
+                            'id'   => $item->category->id,
                             'name' => $item->category->name,
                         ] : null,
                     ];
