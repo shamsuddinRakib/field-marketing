@@ -73,12 +73,10 @@
                     </span>
                 </div>
 
-                @if (!empty($courierMarketing->note))
+                @if (trim((string) $courierMarketing->note) !== '')
                     <div class="col-12 mt-2 pt-2 border-top">
                         <small class="text-muted d-block mb-1">Call Center & Activity Notes:</small>
-                        <div class="p-10 bg-light rounded text-xs text-dark" style="white-space: pre-line;">
-                            {{ $courierMarketing->note }}
-                        </div>
+                        <div class="p-10 bg-light rounded text-xs text-dark" style="white-space: pre-line;">{{ trim((string) $courierMarketing->note) }}</div>
                     </div>
                 @endif
             </div>
@@ -92,7 +90,7 @@
                 <tr>
                     <th style="width: 45px;">#</th>
                     <th>Product Name</th>
-                    <th>SKU</th>
+                    <th>Product Code</th>
                     <th class="text-end">Dispatched Qty</th>
                 </tr>
             </thead>
@@ -101,7 +99,7 @@
                     <tr>
                         <td>{{ $index + 1 }}</td>
                         <td class="fw-medium">{{ $item->product?->name ?? ('#' . $item->product_id) }}</td>
-                        <td>{{ $item->product?->sku ?? '—' }}</td>
+                        <td>{{ $item->product?->product_code ?: '—' }}</td>
                         <td class="text-end fw-semibold text-primary">{{ number_format((int) $item->quantity) }}</td>
                     </tr>
                 @empty

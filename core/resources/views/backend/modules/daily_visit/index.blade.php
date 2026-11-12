@@ -33,6 +33,13 @@
                     @include('backend.include.buttons')
                 </ul>
 
+                @perm('daily-visit.report.index')
+                    <a href="{{ route('daily-visit.report.index') }}"
+                        class="d-flex align-items-center gap-1 btn btn-outline-primary btn-sm px-12 py-8 radius-8">
+                        <iconify-icon icon="solar:chart-square-outline" class="text-xl"></iconify-icon>Visit Report
+                    </a>
+                @endperm
+
                 @perm('daily-visit.store')
                     <button class="d-flex btn btn-primary btn-sm px-12 py-8 radius-8 AjaxModal"
                         data-ajax-modal="{{ route('daily-visit.create') }}" data-size="lg"

@@ -27,6 +27,8 @@
                     <small class="text-muted d-block">Status</small>
                     @if ($expense->status === 'posted')
                         <span class="badge text-sm fw-semibold bg-dark-success-gradient px-20 py-9 radius-4 text-white">Posted</span>
+                    @elseif ($expense->status === 'cancelled')
+                        <span class="badge text-sm fw-semibold bg-danger-600 px-20 py-9 radius-4 text-white">Cancelled</span>
                     @else
                         <span class="badge text-sm fw-semibold bg-dark-warning-gradient px-20 py-9 radius-4 text-white">Draft</span>
                     @endif

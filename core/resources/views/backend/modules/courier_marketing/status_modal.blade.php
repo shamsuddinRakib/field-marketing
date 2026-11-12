@@ -79,12 +79,10 @@
                 <div class="invalid-feedback d-block note-error" style="display:none"></div>
             </div>
 
-            @if (!empty($courierMarketing->note))
+            @if (trim((string) $courierMarketing->note) !== '')
                 <div class="col-12 mb-16">
                     <label class="form-label text-xs text-muted mb-4">Previous Call & Activity Notes:</label>
-                    <div class="p-10 bg-light rounded text-xs text-secondary" style="white-space: pre-line; max-height: 120px; overflow-y: auto;">
-                        {{ $courierMarketing->note }}
-                    </div>
+                    <div class="p-10 bg-light rounded text-xs text-secondary" style="white-space: pre-line; max-height: 120px; overflow-y: auto;">{{ trim((string) $courierMarketing->note) }}</div>
                 </div>
             @endif
         </div>

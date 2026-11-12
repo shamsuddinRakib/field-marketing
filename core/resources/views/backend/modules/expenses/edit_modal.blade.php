@@ -233,6 +233,10 @@
             </button>
 
             @if ($expense->status === 'draft')
+                <button type="button" class="btn btn-sm btn-outline-danger" id="btnCancelExpense">
+                    Cancel Expense
+                </button>
+
                 <button type="button" class="btn btn-sm btn-outline-warning" id="btnSaveDraft">
                     Update Draft
                 </button>
@@ -240,6 +244,8 @@
                 <button type="button" class="btn btn-sm btn-success" id="btnPostExpense">
                     Post Expense
                 </button>
+            @elseif ($expense->status === 'cancelled')
+                <span class="badge bg-danger px-12 py-8">Cancelled</span>
             @else
                 <span class="badge bg-success px-12 py-8">Posted</span>
             @endif
@@ -314,6 +320,11 @@
         }
 
         /* STATUS BUTTONS */
+        $('#btnCancelExpense').on('click', function() {
+            $('#expenseStatus').val('cancelled');
+            $('#expenseEditForm').submit();
+        });
+
         $('#btnSaveDraft').on('click', function() {
 
             $('#expenseStatus').val('draft');

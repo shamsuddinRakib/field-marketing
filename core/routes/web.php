@@ -360,6 +360,9 @@ Route::middleware(['web', 'auth', 'perm', 'branchscope'])->group(function () {
         Route::get('/status-modal/{dailyVisit}', [DailyVisitController::class, 'statusModal'])->name('statusModal');
         Route::get('/select2', [DailyVisitController::class, 'select2'])->name('select2');
         Route::post('/status-modal/{dailyVisit}', [DailyVisitController::class, 'updateStatus'])->name('updateStatus');
+        Route::get('/report', [DailyVisitController::class, 'reportIndex'])->name('report.index');
+        Route::post('/report/list', [DailyVisitController::class, 'reportListAjax'])->name('report.list');
+        Route::get('/report/details/{user}', [DailyVisitController::class, 'reportDetailsModal'])->whereNumber('user')->name('report.details.show');
     });
 
     // assign specimen
@@ -628,6 +631,9 @@ Route::middleware(['web', 'auth', 'perm', 'branchscope'])->group(function () {
         Route::get('/', [CourierMarketingController::class, 'index'])->name('index');
         Route::post('list', [CourierMarketingController::class, 'listAjax'])->name('list.ajax');
         Route::get('create-modal', [CourierMarketingController::class, 'createModal'])->name('createModal');
+        Route::get('upazilas-select2', [CourierMarketingController::class, 'upazilasSelect2'])->name('upazilas.select2');
+        Route::get('institutions-select2', [CourierMarketingController::class, 'institutionsSelect2'])->name('institutions.select2');
+        Route::get('teachers-by-phone-select2', [CourierMarketingController::class, 'teachersByPhoneSelect2'])->name('teachersByPhone.select2');
         Route::post('/', [CourierMarketingController::class, 'store'])->name('store');
         Route::get('{courierMarketing}', [CourierMarketingController::class, 'show'])->whereNumber('courierMarketing')->name('show');
         Route::get('{courierMarketing}/edit-modal', [CourierMarketingController::class, 'editModal'])->whereNumber('courierMarketing')->name('editModal');

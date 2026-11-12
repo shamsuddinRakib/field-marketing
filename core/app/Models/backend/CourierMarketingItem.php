@@ -9,9 +9,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class CourierMarketingItem extends Model
 {
+    use SoftDeletes;
+
     protected $fillable = [
         'courier_marketing_id',
-        'book_request_item_id',
         'product_id',
         'quantity',
         'received_quantity',
@@ -24,18 +25,7 @@ class CourierMarketingItem extends Model
 
     public function courierMarketing(): BelongsTo
     {
-        return $this->belongsTo(
-            CourierMarketing::class,
-            'courier_marketing_id'
-        );
-    }
-
-    public function bookRequestItem(): BelongsTo
-    {
-        return $this->belongsTo(
-            BookRequestItem::class,
-            'book_request_item_id'
-        );
+        return $this->belongsTo(CourierMarketing::class, 'courier_marketing_id' );
     }
 
     public function product(): BelongsTo

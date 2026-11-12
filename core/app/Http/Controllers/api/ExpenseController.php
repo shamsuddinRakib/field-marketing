@@ -244,10 +244,10 @@ class ExpenseController extends Controller
             ], 404);
         }
 
-        if ($expense->status === 'posted') {
+        if (in_array($expense->status, ['posted', 'cancelled'], true)) {
             return response()->json([
                 'success' => false,
-                'message' => 'Posted expense cannot be modified.',
+                'message' => ucfirst($expense->status) . ' expense cannot be modified.',
             ], 422);
         }
 
@@ -258,7 +258,7 @@ class ExpenseController extends Controller
             'to_location'                 => ['nullable', 'string', 'max:255'],
             'reference'                   => ['nullable', 'string', 'max:255'],
             'description'                 => ['nullable', 'string'],
-            'status'                      => ['required', 'in:draft,posted'],
+            'status'                      => ['required', 'in:draft,posted,cancelled'],
             'attachment'                  => ['nullable', 'file', 'mimes:jpg,jpeg,png,gif,webp,pdf,doc,docx,xls,xlsx,csv,txt', 'max:10240'],
             'items'                       => ['required', 'array', 'min:1'],
             'items.*.expense_category_id' => ['required', 'integer', 'exists:expense_categories,id'],
@@ -385,10 +385,10 @@ class ExpenseController extends Controller
             ], 404);
         }
 
-        if ($expense->status === 'posted') {
+        if (in_array($expense->status, ['posted', 'cancelled'], true)) {
             return response()->json([
                 'success' => false,
-                'message' => 'Expense is already posted.',
+                'message' => ucfirst($expense->status) . ' expense cannot be posted.',
             ], 422);
         }
 

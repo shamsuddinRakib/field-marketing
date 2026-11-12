@@ -5,9 +5,11 @@ namespace App\Http\Controllers\backend;
 use App\Http\Controllers\Controller;
 use App\Models\backend\CourierMarketing;
 use App\Models\backend\CourierMarketingItem;
+use App\Models\backend\Institution;
 use App\Models\backend\MarketingRepresentative;
 use App\Models\backend\Product;
 use App\Models\backend\Teacher;
+use App\Models\backend\Upazila;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -31,74 +33,83 @@ class CourierMarketingController extends Controller
      */
     public function store(Request $request)
     {
+        if (!$request->has('product_items') && $request->has('items')) {
+            $request->merge(['product_items' => $request->input('items')]);
+        }
+
         $data = $request->validate([
-            'marketing_representative_id' => [
-                'required',
-                'integer',
-                Rule::exists('marketing_representatives', 'id'),
-            ],
-            'teacher_id' => [
-                'required',
-                'integer',
-                Rule::exists('teachers', 'id'),
-            ],
-            'courier_company' => [
-                'nullable',
-                'string',
-                'max:150',
-            ],
-            'dispatch_date' => [
-                'required',
-                'date',
-            ],
-            'delivery_date' => [
-                'nullable',
-                'date',
-            ],
-            'note' => [
-                'nullable',
-                'string',
-                'max:1000',
-            ],
-            'product_items' => [
-                'required',
-                'array',
-                'min:1',
-            ],
-            'product_items.*.product_id' => [
-                'required',
-                'integer',
-                Rule::exists('products', 'id'),
-            ],
-            'product_items.*.quantity' => [
-                'required',
-                'integer',
-                'min:1',
-            ],
+            'marketing_representative_id' => ['required', 'integer', Rule::exists('marketing_representatives', 'id') ],
+            'teacher_id' => ['required', 'integer', Rule::exists('teachers', 'id')],
+            'institution_id' => ['nullable', 'integer',  Rule::exists('institutions', 'id') ],
+            'upazila_id' => ['nullable','integer',Rule::exists('upazilas', 'id')],
+            'district_id' => ['nullable','integer'],
+            'division_id' => ['nullable','integer'],
+            'courier_company' => ['nullable', 'string', 'max:150' ],
+            'dispatch_date' => ['required', 'date' ],
+            'delivery_date' => [ 'nullable', 'date'],
+            'note' => ['nullable','string','max:1000'],
+            'product_items' => ['required','array','min:1'],
+            'product_items.*.product_id' => ['required', 'integer', Rule::exists('products', 'id')],
+            'product_items.*.quantity' => ['required', 'integer', 'min:1'],
         ]);
 
         $teacher = Teacher::query()->findOrFail($data['teacher_id']);
+        $institutionId = $data['institution_id'] ?? $teacher->institution_id;
 
-        $courierMarketing = DB::transaction(function () use ($data, $teacher) {
-            $cm = CourierMarketing::create([
+        $mergedItems = [];
+        foreach ($data['product_items'] as $item) {
+            $pid = (int) $item['product_id'];
+            $mergedItems[$pid] = ($mergedItems[$pid] ?? 0) + (int) $item['quantity'];
+        }
+
+        $totalQty = max(1, (int) array_sum($mergedItems));
+        $dispatchDate = Carbon::parse($data['dispatch_date'])->toDateString();
+        $deliveryDate = !empty($data['delivery_date'])
+            ? Carbon::parse($data['delivery_date'])->toDateString()
+            : null;
+
+        $courierMarketing = DB::transaction(function () use ($data, $teacher, $institutionId, $mergedItems, $totalQty, $dispatchDate, $deliveryDate) {
+            $payload = [
                 'marketing_representative_id' => $data['marketing_representative_id'],
                 'teacher_id'                  => $teacher->id,
-                'institution_id'              => $teacher->institution_id,
+                'institution_id'              => $institutionId,
                 'courier_company'             => $data['courier_company'] ?? null,
-                'tracking_number'             => null, // Tracking omitted per requirement
-                'dispatch_date'               => $data['dispatch_date'],
-                'delivery_date'               => $data['delivery_date'] ?? null,
+                'dispatch_date'               => $dispatchDate,
+                'delivery_date'               => $deliveryDate,
                 'status'                      => 'dispatched',
-                'created_by'                  => auth()->id(),
                 'note'                        => $data['note'] ?? null,
-            ]);
+            ];
 
-            foreach ($data['product_items'] as $item) {
+            if (Schema::hasColumn('courier_marketings', 'tracking_number')) {
+                $payload['tracking_number'] = null; // Tracking omitted per requirement
+            }
+
+            if (Schema::hasColumn('courier_marketings', 'request_date')) {
+                $payload['request_date'] = $dispatchDate;
+            }
+            if (Schema::hasColumn('courier_marketings', 'quantity')) {
+                $payload['quantity'] = $totalQty;
+            }
+            if (Schema::hasColumn('courier_marketings', 'created_by')) {
+                $payload['created_by'] = auth()->id();
+            }
+            if (Schema::hasColumn('courier_marketings', 'upazila_id') && !empty($data['upazila_id'])) {
+                $payload['upazila_id'] = $data['upazila_id'];
+            }
+            if (Schema::hasColumn('courier_marketings', 'district_id') && !empty($data['district_id'])) {
+                $payload['district_id'] = $data['district_id'];
+            }
+            if (Schema::hasColumn('courier_marketings', 'division_id') && !empty($data['division_id'])) {
+                $payload['division_id'] = $data['division_id'];
+            }
+
+            $cm = CourierMarketing::create($payload);
+
+            foreach ($mergedItems as $productId => $qty) {
                 CourierMarketingItem::create([
                     'courier_marketing_id' => $cm->id,
-                    'product_id'           => (int) $item['product_id'],
-                    'quantity'             => (int) $item['quantity'],
-                    'book_request_item_id' => null,
+                    'product_id'           => (int) $productId,
+                    'quantity'             => (int) $qty,
                 ]);
             }
 
@@ -151,29 +162,11 @@ class CourierMarketingController extends Controller
     public function update(Request $request, CourierMarketing $courierMarketing)
     {
         $data = $request->validate([
-            'marketing_representative_id' => [
-                'nullable',
-                'integer',
-                Rule::exists('marketing_representatives', 'id'),
-            ],
-            'courier_company' => [
-                'nullable',
-                'string',
-                'max:150',
-            ],
-            'dispatch_date' => [
-                'required',
-                'date',
-            ],
-            'delivery_date' => [
-                'nullable',
-                'date',
-            ],
-            'note' => [
-                'nullable',
-                'string',
-                'max:1000',
-            ],
+            'marketing_representative_id' => ['nullable', 'integer', Rule::exists('marketing_representatives', 'id')],
+            'courier_company' => ['nullable','string','max:150'],
+            'dispatch_date' => ['required','date'],
+            'delivery_date' => ['nullable','date'],
+            'note' => ['nullable','string', 'max:1000'],
         ]);
 
         $courierMarketing->update($data);
@@ -205,27 +198,9 @@ class CourierMarketingController extends Controller
     public function updateStatus(Request $request, CourierMarketing $courierMarketing)
     {
         $data = $request->validate([
-            'status' => [
-                'required',
-                Rule::in([
-                    'dispatched',
-                    'in_transit',
-                    'delivered',
-                    'received',
-                    'partially_received',
-                    'failed',
-                    'returned',
-                ]),
-            ],
-            'delivery_date' => [
-                'nullable',
-                'date',
-            ],
-            'note' => [
-                'nullable',
-                'string',
-                'max:1000',
-            ],
+            'status' => ['required', Rule::in(['dispatched', 'in_transit', 'delivered','received','partially_received', 'failed', 'returned'])],
+            'delivery_date' => ['nullable','date' ],
+            'note' => [ 'nullable', 'string', 'max:1000'],
         ]);
 
         $updateData = [
@@ -237,8 +212,12 @@ class CourierMarketingController extends Controller
         }
 
         if (in_array($data['status'], ['received', 'partially_received', 'delivered'])) {
-            $updateData['received_by'] = auth()->id();
-            $updateData['received_at'] = now();
+            if ($this->canStoreUserIdInReceivedBy()) {
+                $updateData['received_by'] = auth()->id();
+            }
+            if (Schema::hasColumn('courier_marketings', 'received_at')) {
+                $updateData['received_at'] = now();
+            }
         }
 
         if (!empty($data['note'])) {
@@ -297,6 +276,7 @@ class CourierMarketingController extends Controller
 
         $itemSummary = DB::table('courier_marketing_items as cmi')
             ->join('products as p', 'p.id', '=', 'cmi.product_id')
+            ->whereNull('cmi.deleted_at')
             ->select('cmi.courier_marketing_id')
             ->selectRaw("
                 GROUP_CONCAT(
@@ -415,5 +395,214 @@ class CourierMarketingController extends Controller
             'ok'  => true,
             'msg' => 'Courier entry deleted successfully.',
         ]);
+    }
+
+    /**
+     * Select2: Upazilas (filtered by Marketing Representative's assigned territories)
+     */
+    public function upazilasSelect2(Request $request)
+    {
+        $term = trim($request->input('q', ''));
+        $repId = $request->input('marketing_representative_id');
+
+        $query = Upazila::query()->with('upazila_district.district_division');
+
+        if ($repId) {
+            $rep = MarketingRepresentative::with('territories')->find($repId);
+            if ($rep) {
+                $upazilaIds = $rep->territories->pluck('upazila_id')->filter()->unique()->toArray();
+                if (empty($upazilaIds) && $rep->upazila_id) {
+                    $upazilaIds = [$rep->upazila_id];
+                }
+                if (!empty($upazilaIds)) {
+                    $query->whereIn('id', $upazilaIds);
+                }
+            }
+        }
+
+        if ($term !== '') {
+            $query->where(function ($q) use ($term) {
+                $q->where('upazila_name', 'like', "%{$term}%")
+                  ->orWhere('upazila_bn_name', 'like', "%{$term}%");
+            });
+        }
+
+        $upazilas = $query->orderBy('upazila_name')->limit(50)->get();
+
+        return response()->json([
+            'results' => $upazilas->map(function ($u) {
+                $dist = $u->upazila_district;
+                $div = $dist?->district_division;
+                return [
+                    'id'            => $u->id,
+                    'text'          => $u->upazila_name . ($dist ? " ({$dist->district_name})" : ''),
+                    'upazila_id'    => $u->id,
+                    'upazila_name'  => $u->upazila_name,
+                    'district_id'   => $dist?->district_id,
+                    'district_name' => $dist?->district_name ?? '',
+                    'division_id'   => $div?->id,
+                    'division_name' => $div?->name ?? ($div?->bn_name ?? ''),
+                ];
+            })->values(),
+        ]);
+    }
+
+    /**
+     * Select2: Institutions (filtered by Upazila)
+     */
+    public function institutionsSelect2(Request $request)
+    {
+        $term = trim($request->input('q', ''));
+        $upazilaId = $request->input('upazila_id');
+
+        if (!$upazilaId) {
+            return response()->json(['results' => []]);
+        }
+
+        $institutions = Institution::query()
+            ->with(['upazila', 'district', 'division'])
+            ->where(function ($q) use ($upazilaId) {
+                $q->where('upazila_id', $upazilaId)
+                  ->orWhereHas('teachers', fn($t) => $t->where('upazila_id', $upazilaId));
+            })
+            ->when($term !== '', function ($q) use ($term) {
+                $q->where(function ($b) use ($term) {
+                    $b->where('institution_name', 'like', "%{$term}%")
+                      ->orWhere('code', 'like', "%{$term}%");
+                });
+            })
+            ->orderBy('institution_name')
+            ->limit(50)
+            ->get();
+
+        return response()->json([
+            'results' => $institutions->map(function ($inst) {
+                $name = $inst->institution_name ?: $inst->name;
+                return [
+                    'id'               => $inst->id,
+                    'text'             => $name . ($inst->code ? " ({$inst->code})" : ''),
+                    'institution_name' => $name,
+                    'address'          => $inst->address ?? '',
+                    'upazila_id'       => $inst->upazila_id,
+                    'upazila_name'     => $inst->upazila?->upazila_name ?? '',
+                    'district_id'      => $inst->district_id,
+                    'district_name'    => $inst->district?->district_name ?? '',
+                    'division_id'      => $inst->division_id,
+                    'division_name'    => $inst->division?->name ?? '',
+                ];
+            })->values(),
+        ]);
+    }
+
+    /**
+     * Select2: Teachers searchable by Phone or Name (filtered by Upazila and/or Institution)
+     */
+    public function teachersByPhoneSelect2(Request $request)
+    {
+        $term = trim($request->input('q', ''));
+        $upazilaId = $request->input('upazila_id');
+        $institutionId = $request->input('institution_id');
+
+        $query = Teacher::query()
+            ->with(['institution.upazila', 'institution.district', 'institution.division', 'upazila', 'district', 'division'])
+            ->when($institutionId, function ($q) use ($institutionId) {
+                $q->where('institution_id', $institutionId);
+            })
+            ->when(!$institutionId && $upazilaId, function ($q) use ($upazilaId) {
+                $q->where(function ($sub) use ($upazilaId) {
+                    $sub->where('upazila_id', $upazilaId)
+                        ->orWhereHas('institution', fn($inst) => $inst->where('upazila_id', $upazilaId));
+                });
+            })
+            ->when($term !== '', function ($q) use ($term) {
+                $q->where(function ($b) use ($term) {
+                    $b->where('phone', 'like', "%{$term}%")
+                      ->orWhere('teacher_name', 'like', "%{$term}%");
+                });
+            })
+            ->orderByRaw("CASE WHEN phone IS NOT NULL AND phone != '' THEN 0 ELSE 1 END")
+            ->orderBy('phone')
+            ->limit(30);
+
+        $teachers = $query->get();
+
+        return response()->json([
+            'results' => $teachers->map(function ($teacher) {
+                $inst = $teacher->institution;
+                $instName = $inst?->institution_name ?? '';
+                $upazila = $teacher->upazila ?? ($inst?->upazila);
+                $district = $teacher->district ?? ($inst?->district);
+                $division = $teacher->division ?? ($inst?->division);
+
+                $phone = $teacher->phone ?: 'No Phone';
+                $text = $phone;
+                if ($teacher->teacher_name) {
+                    $text .= ' — ' . $teacher->teacher_name;
+                }
+                if ($instName) {
+                    $text .= ' (' . $instName . ')';
+                }
+
+                $locParts = array_filter([$upazila?->upazila_name, $district?->district_name]);
+                $locStr = !empty($locParts) ? implode(', ', $locParts) : '';
+                $addr = $teacher->address ?: ($inst?->address ?? '');
+                $fullLoc = $locStr ? ($locStr . ($addr ? ' — ' . $addr : '')) : $addr;
+
+                return [
+                    'id'               => $teacher->id,
+                    'text'             => $text,
+                    'teacher_name'     => $teacher->teacher_name ?? '',
+                    'phone'            => $teacher->phone ?? '',
+                    'institution_id'   => $teacher->institution_id,
+                    'institution_name' => $instName,
+                    'upazila_id'       => $upazila?->id,
+                    'upazila_name'     => $upazila?->upazila_name ?? '',
+                    'district_id'      => $district?->district_id,
+                    'district_name'    => $district?->district_name ?? '',
+                    'division_id'      => $division?->id,
+                    'division_name'    => $division?->name ?? ($division?->bn_name ?? ''),
+                    'address'          => $fullLoc,
+                ];
+            })->values(),
+        ]);
+    }
+
+    /**
+     * Quick confirm receiving route handler
+     */
+    public function confirmReceiving(Request $request, CourierMarketing $courierMarketing)
+    {
+        $updateData = [
+            'status'        => 'received',
+            'delivery_date' => $request->input('delivery_date', now()->toDateString()),
+        ];
+
+        if ($this->canStoreUserIdInReceivedBy()) {
+            $updateData['received_by'] = auth()->id();
+        }
+        if (Schema::hasColumn('courier_marketings', 'received_at')) {
+            $updateData['received_at'] = now();
+        }
+
+        $courierMarketing->update($updateData);
+
+        return response()->json([
+            'ok'  => true,
+            'msg' => 'Parcel confirmed as received.',
+        ]);
+    }
+
+    /**
+     * Guard writes to `received_by` when DB column is misconfigured as timestamp/datetime
+     */
+    private function canStoreUserIdInReceivedBy(): bool
+    {
+        if (!Schema::hasColumn('courier_marketings', 'received_by')) {
+            return false;
+        }
+
+        $type = strtolower((string) Schema::getColumnType('courier_marketings', 'received_by'));
+
+        return in_array($type, ['int', 'integer', 'bigint', 'smallint', 'tinyint', 'mediumint'], true);
     }
 }

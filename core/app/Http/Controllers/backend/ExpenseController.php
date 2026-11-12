@@ -107,12 +107,14 @@ class ExpenseController extends Controller
 
             $dateFormatted = $b->expense_date ? \Carbon\Carbon::parse($b->expense_date)->format('d M Y') : '';
 
-            $statusBadge = $b->status === 'posted'
-                ? '<span class="badge text-sm fw-semibold bg-dark-success-gradient px-20 py-9 radius-4 text-white">Posted</span>'
-                : '<button class="badge text-sm fw-semibold bg-dark-warning-gradient px-20 py-9 radius-4 text-white btn-toggle-status"
+            $statusBadge = match ($b->status) {
+                'posted' => '<span class="badge text-sm fw-semibold bg-dark-success-gradient px-20 py-9 radius-4 text-white">Posted</span>',
+                'cancelled' => '<span class="badge text-sm fw-semibold bg-danger-600 px-20 py-9 radius-4 text-white">Cancelled</span>',
+                default => '<button class="badge text-sm fw-semibold bg-dark-warning-gradient px-20 py-9 radius-4 text-white btn-toggle-status"
                      data-url="' . route('expenses.toggleStatus', $b->id) . '"
                      data-id="' . $b->id . '"
-                     style="border: none; cursor: pointer;">Draft</button>';
+                     style="border: none; cursor: pointer;">Draft</button>',
+            };
 
             $attachmentCell = $b->attachment
                 ? '<a href="' . asset($b->attachment) . '" target="_blank" class="d-inline-flex align-items-center gap-1 text-primary text-decoration-none">
@@ -135,8 +137,8 @@ class ExpenseController extends Controller
                 <iconify-icon icon="mdi:eye"></iconify-icon>
             </a>';
 
-            // ✏️ Edit + 🗑 Delete only for draft
-            if ($b->status !== 'posted') {
+            // ✏️ Edit only for draft; 🗑 Delete for non-posted (draft / cancelled)
+            if ($b->status === 'draft') {
                 $actions .= '
             <a href="#"
                class="w-32-px h-32-px rounded-circle d-inline-flex align-items-center justify-content-center
@@ -147,8 +149,11 @@ class ExpenseController extends Controller
                data-onsuccess="ExpenseIndex.onSaved"
                title="Edit Expense">
                 <iconify-icon icon="lucide:edit"></iconify-icon>
-            </a>
+            </a>';
+            }
 
+            if ($b->status !== 'posted') {
+                $actions .= '
             <a href="#"
                class="w-32-px h-32-px rounded-circle d-inline-flex align-items-center justify-content-center
                       bg-danger-focus text-danger-main btn-expense-delete"
@@ -340,9 +345,9 @@ class ExpenseController extends Controller
 
     public function editModal(Expense $expense)
     {
-        // 🔒 Posted expense edit block (UI safety)
-        if ($expense->status === 'posted') {
-            abort(403, 'Posted expense cannot be edited');
+        // 🔒 Posted / cancelled expense edit block (UI safety)
+        if (in_array($expense->status, ['posted', 'cancelled'], true)) {
+            abort(403, ucfirst($expense->status) . ' expense cannot be edited');
         }
 
         // eager load relations needed for edit modal
@@ -358,11 +363,11 @@ class ExpenseController extends Controller
 
     public function update(Request $req, Expense $expense)
     {
-        // 🔒 Posted expense cannot be modified
-        if ($expense->status === 'posted') {
+        // 🔒 Posted / cancelled expense cannot be modified
+        if (in_array($expense->status, ['posted', 'cancelled'], true)) {
             return response()->json([
                 'ok' => false,
-                'msg' => 'Posted expense cannot be modified',
+                'msg' => ucfirst($expense->status) . ' expense cannot be modified',
             ], 422);
         }
 
@@ -382,7 +387,7 @@ class ExpenseController extends Controller
             'items.*.expense_category_id' => 'required|integer|exists:expense_categories,id',
             'items.*.description' => 'nullable|string|max:255',
             'items.*.amount' => 'required|numeric|min:0.01',
-            'status' => 'required|in:draft,posted',
+            'status' => 'required|in:draft,posted,cancelled',
             'attachment' => 'nullable|file|max:10240',
         ]);
 
@@ -400,7 +405,7 @@ class ExpenseController extends Controller
                 'user_id' => $data['user_id'],
                 'name' => $data['name'],
                 'invoice_no' => $data['invoice_no'] ?? null,
-                'posted_at' => $data['posted_at'] ?? null,
+                'posted_at' => $data['status'] === 'posted' ? now() : null,
                 'expense_date' => $data['expense_date'],
                 'from_location' => $firstFrom,
                 'to_location' => $firstTo,
@@ -523,12 +528,17 @@ class ExpenseController extends Controller
     }
 
     /**
-     * Toggle expense status from draft to posted
+     * Update expense status from draft to posted or cancelled
      */
-    public function toggleStatus(Expense $expense)
+    public function toggleStatus(Request $req, Expense $expense)
     {
+        $validated = $req->validate([
+            'status' => 'nullable|in:posted,cancelled',
+        ]);
+
+        $targetStatus = $validated['status'] ?? 'posted';
+
         try {
-            // Check if already posted
             if ($expense->status === 'posted') {
                 return response()->json([
                     'ok' => false,
@@ -536,12 +546,33 @@ class ExpenseController extends Controller
                 ], 422);
             }
 
-
-            $userId = auth()->id();
+            if ($expense->status === 'cancelled') {
+                return response()->json([
+                    'ok' => false,
+                    'msg' => 'Cancelled expense cannot be changed',
+                ], 422);
+            }
 
             DB::beginTransaction();
 
-            // Update status
+            if ($targetStatus === 'cancelled') {
+                $expense->update([
+                    'status' => 'cancelled',
+                    'posted_at' => null,
+                ]);
+
+                DB::commit();
+
+                return response()->json([
+                    'ok' => true,
+                    'msg' => 'Expense cancelled successfully',
+                    'data' => [
+                        'id' => $expense->id,
+                        'status' => $expense->status,
+                    ],
+                ]);
+            }
+
             $expense->update([
                 'status' => 'posted',
                 'posted_at' => now(),

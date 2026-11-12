@@ -19,8 +19,14 @@ class Expense extends Model
         'total_amount',
         'from_location',
         'to_location',
-        'status',          // draft | posted
+        'status',          // draft | posted | cancelled
         'created_by',
+    ];
+
+    public const STATUSES = [
+        'draft'     => 'Draft',
+        'posted'    => 'Posted',
+        'cancelled' => 'Cancelled',
     ];
 
     /* ================= Relations ================= */

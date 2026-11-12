@@ -17,6 +17,7 @@ use App\Http\Controllers\api\WebsiteSettingController;
 use App\Http\Controllers\api\OrderController;
 use App\Http\Controllers\api\ProductController;
 use App\Http\Controllers\api\AssignSpecimenController;
+use App\Http\Controllers\api\CourierMarketingController;
 use App\Http\Controllers\api\CourseClassController;
 use App\Http\Controllers\api\DepartmentController;
 use App\Http\Controllers\api\DivisionController;
@@ -115,6 +116,15 @@ Route::prefix('mr')->name('api.mr.')->group(function () {
         Route::get('/assign-specimens/{id}', [AssignSpecimenController::class, 'show'])->name('assign-specimens.show');
         Route::put('/assign-specimens/{id}', [AssignSpecimenController::class, 'update'])->name('assign-specimens.update');
         Route::delete('/assign-specimens/{id}', [AssignSpecimenController::class, 'destroy'])->name('assign-specimens.destroy');
+
+        //Courier Marketing
+        Route::get('/courier-marketings', [CourierMarketingController::class, 'index'])->name('courier-marketings.index');
+        Route::get('/courier-marketings/statuses', [CourierMarketingController::class, 'statuses'])->name('courier-marketings.statuses');
+        Route::post('/courier-marketings', [CourierMarketingController::class, 'store'])->name('courier-marketings.store');
+        Route::get('/courier-marketings/{id}', [CourierMarketingController::class, 'show'])->whereNumber('id')->name('courier-marketings.show');
+        Route::put('/courier-marketings/{id}', [CourierMarketingController::class, 'update'])->whereNumber('id')->name('courier-marketings.update');
+        Route::post('/courier-marketings/{id}/status', [CourierMarketingController::class, 'updateStatus'])->whereNumber('id')->name('courier-marketings.status');
+        Route::delete('/courier-marketings/{id}', [CourierMarketingController::class, 'destroy'])->whereNumber('id')->name('courier-marketings.destroy');
 
         //Dropdowns for delivery entry
         Route::get('/teachers', [TeacherController::class, 'index'])->name('teachers.index');

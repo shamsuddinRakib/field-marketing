@@ -3,11 +3,14 @@
 namespace App\Models\backend;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class CourierMarketing extends Model
 {
+    use SoftDeletes;
+
     public const STATUSES = [
         'pending' => 'Pending',
         'dispatched' => 'Dispatched',
@@ -23,7 +26,8 @@ class CourierMarketing extends Model
         'marketing_representative_id',
         'teacher_id',
         'institution_id',
-        'book_request_group_id',
+        'quantity',
+        'request_date',
         'courier_company',
         'tracking_number',
         'dispatch_date',
@@ -36,6 +40,7 @@ class CourierMarketing extends Model
     ];
 
     protected $casts = [
+        'request_date' => 'date',
         'dispatch_date' => 'date',
         'delivery_date' => 'date',
         'received_at' => 'datetime',
