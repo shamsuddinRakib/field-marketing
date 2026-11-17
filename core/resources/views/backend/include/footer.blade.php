@@ -99,7 +99,7 @@
 
 {{-- Global Form submit Modal  --}}
 <div class="modal fade" id="AjaxModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1">
-    <div class="modal-dialog  modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
 
 
@@ -109,7 +109,7 @@
 
 {{-- Global Ajax View Modal --}}
 <div class="modal fade" id="AjaxViewModal" tabindex="-1">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
             {{-- AJAX content will be loaded here --}}
         </div>
@@ -118,7 +118,7 @@
 
 {{-- Secondary Nested Modal (For Quick Add while inside another modal, e.g. Add Institution) --}}
 <div class="modal fade" id="secondaryAjaxModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" style="z-index: 1060;">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content radius-16 border-0 shadow-lg">
             {{-- Secondary AJAX content will be loaded here --}}
         </div>
@@ -136,33 +136,43 @@
     -webkit-overflow-scrolling: touch;
 }
 
-/* Fix Bootstrap modal-dialog-centered vertical clipping bug on dynamic content */
-.modal-dialog-centered {
-    display: flex;
-    align-items: center;
-    min-height: calc(100% - (var(--bs-modal-margin, 1.75rem) * 2));
+/* Ensure scrollable modals fit comfortably within viewport and scroll smoothly */
+.modal-dialog-scrollable {
+    max-height: calc(100vh - 2.5rem) !important;
 }
 
-.modal-dialog-centered::before {
-    display: block;
-    height: calc(100vh - (var(--bs-modal-margin, 1.75rem) * 2));
-    height: -webkit-min-content;
-    height: -moz-min-content;
-    height: min-content;
-    content: "";
+.modal-dialog-scrollable .modal-content {
+    max-height: calc(100vh - 2.5rem) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
 }
 
-.modal-dialog-centered .modal-content {
-    margin: auto;
+.modal-dialog-scrollable .modal-header {
+    flex-shrink: 0 !important;
 }
 
-/* Guard against vertical clipping on smaller laptop screens or tall dynamic modals */
-@media (max-height: 860px) {
-    .modal-dialog-centered {
-        align-items: flex-start !important;
-        margin-top: 1.5rem !important;
-        margin-bottom: 1.5rem !important;
-    }
+.modal-dialog-scrollable .modal-footer {
+    flex-shrink: 0 !important;
+}
+
+.modal-dialog-scrollable .modal-body {
+    overflow-y: auto !important;
+    flex: 1 1 auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    overscroll-behavior: contain !important;
+}
+
+/* Smooth clean custom scrollbar for modal body */
+.modal-dialog-scrollable .modal-body::-webkit-scrollbar {
+    width: 6px;
+}
+.modal-dialog-scrollable .modal-body::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+}
+.modal-dialog-scrollable .modal-body::-webkit-scrollbar-track {
+    background: transparent;
 }
 
 /* Maintain body scroll lock when modal is open */

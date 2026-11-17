@@ -10,6 +10,147 @@
             max-width: 860px;
         }
     }
+
+    /* Specimen Items Table Clean Pixel Alignment */
+    #specimenItemsTable {
+        width: 100% !important;
+        table-layout: fixed !important;
+        border-collapse: collapse !important;
+    }
+    #specimenItemsTable thead th {
+        vertical-align: middle !important;
+        padding: 8px 6px !important;
+        font-size: 13px !important;
+        font-weight: 600 !important;
+    }
+    #specimenItemsTable tbody tr {
+        vertical-align: middle !important;
+    }
+    #specimenItemsTable tbody td {
+        vertical-align: middle !important;
+        padding: 6px 6px !important;
+        line-height: 1 !important;
+    }
+    #specimenItemsTable .col-qty {
+        width: 120px !important;
+    }
+    #specimenItemsTable .col-action {
+        width: 54px !important;
+    }
+    @media (max-width: 575.98px) {
+        #specimenItemsTable .col-qty {
+            width: 88px !important;
+        }
+        #specimenItemsTable .col-action {
+            width: 48px !important;
+        }
+    }
+    #specimenItemsTable select.specimen-product,
+    #specimenItemsTable .specimen-qty {
+        display: block !important;
+        width: 100% !important;
+        height: 38px !important;
+        min-height: 38px !important;
+        max-height: 38px !important;
+        line-height: 36px !important;
+        padding: 0 10px !important;
+        margin: 0 !important;
+        border: 1px solid #d1d5db !important;
+        border-radius: 6px !important;
+        font-size: 0.875rem !important;
+        box-sizing: border-box !important;
+        background-color: #fff !important;
+        vertical-align: middle !important;
+    }
+    #specimenItemsTable .select2-container {
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        display: block !important;
+        height: auto !important;
+        line-height: 1 !important;
+        vertical-align: middle !important;
+    }
+    #specimenItemsTable .select2-container .selection {
+        display: block !important;
+        width: 100% !important;
+        height: auto !important;
+        line-height: 1 !important;
+    }
+    #specimenItemsTable .select2-container .dropdown-wrapper {
+        display: none !important;
+    }
+    #specimenItemsTable .select2-container--default .select2-selection--single {
+        height: 38px !important;
+        min-height: 38px !important;
+        max-height: 38px !important;
+        border: 1px solid #d1d5db !important;
+        border-radius: 6px !important;
+        background-color: #fff !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        box-sizing: border-box !important;
+        position: relative !important;
+    }
+    #specimenItemsTable .select2-container--default .select2-selection--single .select2-selection__rendered {
+        display: block !important;
+        width: 100% !important;
+        height: 36px !important;
+        line-height: 36px !important;
+        padding-left: 10px !important;
+        padding-right: 30px !important;
+        margin: 0 !important;
+        font-size: 0.875rem !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+    }
+    #specimenItemsTable .select2-selection__placeholder {
+        display: inline !important;
+    }
+    #specimenItemsTable .select2-container--open .select2-selection--single,
+    #specimenItemsTable .specimen-qty:focus {
+        border-color: var(--primary-600, #487fff) !important;
+        outline: 0 !important;
+    }
+    #specimenItemsTable .select2-container--default .select2-selection--single .select2-selection__clear {
+        height: 36px !important;
+        line-height: 36px !important;
+        margin: 0 4px 0 0 !important;
+        padding: 0 4px !important;
+        float: right !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        font-size: 16px !important;
+    }
+    #specimenItemsTable .select2-container--default .select2-selection--single .select2-selection__arrow {
+        position: absolute !important;
+        height: 36px !important;
+        top: 0 !important;
+        right: 6px !important;
+        width: 20px !important;
+    }
+    #specimenItemsTable .btnRemoveRow {
+        width: 38px !important;
+        min-width: 38px !important;
+        max-width: 38px !important;
+        height: 38px !important;
+        min-height: 38px !important;
+        max-height: 38px !important;
+        padding: 0 !important;
+        margin: 0 auto !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        font-size: 14px !important;
+        font-weight: 600 !important;
+        line-height: 1 !important;
+        border-radius: 6px !important;
+        box-sizing: border-box !important;
+        vertical-align: middle !important;
+    }
 </style>
 
 {{-- ================= MODAL BODY ================= --}}
@@ -54,7 +195,7 @@
                 <div class="row g-3">
                     <div class="col-md-6 mb-12">
                         <label class="form-label text-sm mb-8">Marketing Representative <span class="text-danger">*</span></label>
-                        <select class="form-control form-control-sm js-s2-ajax" name="user_id"
+                        <select class="form-control form-control-sm js-s2-ajax" name="user_id" id="specimenRepSelect"
                             data-url="{{ route('marketing-representative.marketing-representatives.select2') }}"
                             data-placeholder="Select Marketing Representative" required>
                             @if ($assignSpecimen->user)
@@ -180,9 +321,9 @@
         <div class="table-responsive"><table class="table table-sm align-middle items-table-fixed" id="specimenItemsTable">
             <thead class="table-light">
                 <tr>
-                    <th style="width:75%">Product</th>
-                    <th class="text-end" style="width:140px">Qty</th>
-                    <th style="width:40px"></th>
+                    <th>Product</th>
+                    <th class="text-end col-qty" style="width:120px">Qty</th>
+                    <th class="text-center col-action" style="width:54px"></th>
                 </tr>
             </thead>
             <tbody>
@@ -287,18 +428,23 @@
             }
         }
 
-        // 1. Upazila Select2
+        // 1. Upazila Select2 (filtered by selected marketing representative)
         $('#specimenUpazilaSelect').select2({
             dropdownParent: $modal,
             width: '100%',
             placeholder: 'Search / Select Upazila',
             allowClear: true,
             ajax: {
-                url: "{{ route('institution.institutions.upazilas.select2') }}",
+                url: "{{ route('assign-specimen.upazilas.select2') }}",
                 dataType: 'json',
                 delay: 200,
                 cache: false,
-                data: params => ({ q: params.term || '' }),
+                data: function(params) {
+                    return {
+                        q: params.term || '',
+                        user_id: $('#specimenRepSelect').val() || ''
+                    };
+                },
                 processResults: data => data
             }
         }).on('select2:select', function(e) {
@@ -325,6 +471,21 @@
             $('#specimenTeacherPhoneSelect').empty().val(null).trigger('change');
             $('#specimenTeacherName').val('');
             $('#specimenInstitutionName').val('');
+        });
+
+        // When representative changes, reset Upazila and downstream fields
+        $('#specimenRepSelect').off('change.repCascade').on('change.repCascade', function() {
+            $('#specimenUpazilaSelect').empty().val(null).trigger('change');
+            $('#specimenHiddenUpazilaId').val('');
+            $('#specimenHiddenDistrictId').val('');
+            $('#specimenHiddenDivisionId').val('');
+            $('#specimenDistrictDisplay').val('');
+            $('#specimenDivisionDisplay').val('');
+            $('#specimenInstitutionSelect').empty().val(null).trigger('change');
+            $('#specimenTeacherPhoneSelect').empty().val(null).trigger('change');
+            $('#specimenTeacherName').val('');
+            $('#specimenInstitutionName').val('');
+            $('#specimenAddress').val('');
         });
 
         // 2. Institution Select2 (strictly filtered by selected upazila)

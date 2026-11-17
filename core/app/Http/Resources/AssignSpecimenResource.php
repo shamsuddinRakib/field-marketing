@@ -16,22 +16,31 @@ class AssignSpecimenResource extends JsonResource
     {
         $recipientType = $this->recipientType();
 
+        $totalQuantity = $this->relationLoaded('items')
+            ? (int) $this->items->sum('quantity')
+            : ($this->quantity !== null ? (int) $this->quantity : 0);
+
         return [
             'id'               => $this->id,
+            'user_id'          => $this->user_id ? (int) $this->user_id : null,
             'customer_type'    => $recipientType,
             'recipient_type'   => $recipientType,
+            'teacher_id'       => $this->teacher_id ? (int) $this->teacher_id : null,
+            'library_id'       => $this->library_id ? (int) $this->library_id : null,
+            'institution_id'   => isset($this->institution_id) && $this->institution_id ? (int) $this->institution_id : null,
             'assign_inst_type' => $this->assign_inst_type,
+            'total_quantity'   => $totalQuantity,
             'address'          => $this->address,
-            'upazila_id'       => $this->upazila_id,
-            'district_id'      => $this->district_id,
-            'division_id'      => $this->division_id,
+            'upazila_id'       => $this->upazila_id ? (int) $this->upazila_id : null,
+            'district_id'      => $this->district_id ? (int) $this->district_id : null,
+            'division_id'      => $this->division_id ? (int) $this->division_id : null,
             'note'             => $this->note,
             'status'           => $this->status,
-            'created_at'       => $this->created_at,
-            'updated_at'       => $this->updated_at,
+            'created_at'       => $this->created_at?->toIso8601String(),
+            'updated_at'       => $this->updated_at?->toIso8601String(),
 
             'upazila' => $this->whenLoaded('upazila', function () {
-                $upazila = $this->upazila ?? ($this->teacher?->upazila ?? $this->teacher?->institution?->upazila ?? $this->library?->upazila ?? $this->institution?->upazila);
+                $upazila = $this->upazila ?? ($this->teacher?->upazila ?? $this->teacher?->institution?->upazila ?? $this->library?->upazila ?? ($this->institution?->upazila ?? null));
                 return $upazila ? [
                     'id'      => $upazila->id,
                     'name'    => $upazila->upazila_name,
@@ -40,7 +49,7 @@ class AssignSpecimenResource extends JsonResource
             }),
 
             'district' => $this->whenLoaded('district', function () {
-                $district = $this->district ?? ($this->teacher?->district ?? $this->teacher?->institution?->district ?? $this->library?->district ?? $this->institution?->district);
+                $district = $this->district ?? ($this->teacher?->district ?? $this->teacher?->institution?->district ?? $this->library?->district ?? ($this->institution?->district ?? null));
                 return $district ? [
                     'id'      => $district->district_id,
                     'name'    => $district->district_name,
@@ -49,7 +58,7 @@ class AssignSpecimenResource extends JsonResource
             }),
 
             'division' => $this->whenLoaded('division', function () {
-                $division = $this->division ?? ($this->teacher?->division ?? $this->teacher?->institution?->division ?? $this->library?->division ?? $this->institution?->division);
+                $division = $this->division ?? ($this->teacher?->division ?? $this->teacher?->institution?->division ?? $this->library?->division ?? ($this->institution?->division ?? null));
                 return $division ? [
                     'id'      => $division->id,
                     'name'    => $division->name,
@@ -57,26 +66,13 @@ class AssignSpecimenResource extends JsonResource
                 ] : null;
             }),
 
-            'items' => $this->whenLoaded('items', function () {
-                return $this->items->map(function ($item) {
-                    return [
-                        'id'         => $item->id,
-                        'product_id' => $item->product_id,
-                        'quantity'   => $item->quantity,
-                        'product'    => $item->product ? [
-                            'id'              => $item->product->id,
-                            'name'            => $item->product->name,
-                            'slug'            => $item->product->slug,
-                            'sku'             => $item->product->sku,
-                            'price'           => $item->product->price,
-                            'thumbnail_image' => $item->product->thumbnail_image,
-                            'brand_id'        => $item->product->brand_id,
-                        ] : null,
-                    ];
-                });
-            }),
+            'items' => AssignSpecimenItemResource::collection($this->whenLoaded('items')),
 
             'teacher' => $this->whenLoaded('teacher', function () {
+                if (!$this->teacher) {
+                    return null;
+                }
+
                 $inst = $this->teacher->institution;
                 return [
                     'id'               => $this->teacher->id,
@@ -96,6 +92,10 @@ class AssignSpecimenResource extends JsonResource
             }),
 
             'library' => $this->whenLoaded('library', function () {
+                if (!$this->library) {
+                    return null;
+                }
+
                 return [
                     'id'      => $this->library->id,
                     'name'    => $this->library->library_name,
@@ -106,6 +106,10 @@ class AssignSpecimenResource extends JsonResource
             }),
 
             'institution' => $this->whenLoaded('institution', function () {
+                if (!$this->institution) {
+                    return null;
+                }
+
                 return [
                     'id'      => $this->institution->id,
                     'name'    => $this->institution->institution_name,
@@ -123,7 +127,7 @@ class AssignSpecimenResource extends JsonResource
             return 'teacher';
         }
 
-        if ($this->institution_id) {
+        if (!empty($this->institution_id)) {
             return 'institution';
         }
 

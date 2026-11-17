@@ -406,9 +406,10 @@
             const $dialog = $modal.find('.modal-dialog');
             const $content = $modal.find('.modal-content');
 
-            // apply size
+            // apply size & ensure scrollable
             $dialog.removeClass('modal-sm modal-lg modal-xl');
             if (['sm', 'lg', 'xl'].includes(size)) $dialog.addClass('modal-' + size);
+            $dialog.addClass('modal-dialog-scrollable modal-dialog-centered');
 
             // loading
             $content.html(
@@ -626,10 +627,11 @@
 
         const $modal = $('#AjaxModal');
 
-        // reset size
+        // reset size & ensure scrollable
         $modal.find('.modal-dialog')
             .removeClass('modal-sm modal-lg modal-xl')
-            .addClass('modal-' + size);
+            .addClass('modal-' + size)
+            .addClass('modal-dialog-scrollable modal-dialog-centered');
 
         // loading state
         $modal.find('.modal-content').html(`

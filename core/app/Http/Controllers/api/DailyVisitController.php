@@ -21,7 +21,7 @@ class DailyVisitController extends Controller
     public function index(Request $request)
     {
         $query = DailyVisit::with([
-            'teacher',
+            'teacher.institution',
             'library',
         ])
             ->where('user_id', auth()->id());
@@ -148,8 +148,9 @@ class DailyVisitController extends Controller
             'visit_date' => ['required', 'date_format:Y-m-d'],
             'latitude' => ['nullable', 'numeric'],
             'longitude' => ['nullable', 'numeric'],
-            'status' => ['required', 'string'],
-            'note' => ['nullable', 'string'],
+            'quantity' => ['nullable', 'integer', 'min:0'],
+            'status' => ['nullable', 'string'],
+            'note' => ['nullable', 'string', 'max:255'],
         ]);
 
         // One request cannot create/select both customer types.
@@ -309,16 +310,18 @@ class DailyVisitController extends Controller
             }
 
             // Create Daily Visit 
+            $status = in_array(strtolower(trim((string) ($validated['status'] ?? ''))), ['approved'], true) ? 'approved' : 'pending';
 
             $visit = DailyVisit::create([
-                'user_id' => auth()->id(),
+                'user_id'    => auth()->id(),
                 'teacher_id' => $teacherId,
                 'library_id' => $libraryId,
                 'visit_date' => $validated['visit_date'],
-                'latitude' => $validated['latitude'] ?? null,
-                'longitude' => $validated['longitude'] ?? null,
-                'status' => $validated['status'],
-                'note' => $validated['note'] ?? null,
+                'latitude'   => $validated['latitude'] ?? null,
+                'longitude'  => $validated['longitude'] ?? null,
+                'quantity'   => $validated['quantity'] ?? null,
+                'status'     => $status,
+                'note'       => $validated['note'] ?? null,
             ]);
 
             return $visit;
@@ -337,7 +340,7 @@ class DailyVisitController extends Controller
     public function show($id)
     {
         $visit = DailyVisit::with([
-            'teacher',
+            'teacher.institution',
             'library',
         ])
             ->where('user_id', auth()->id())

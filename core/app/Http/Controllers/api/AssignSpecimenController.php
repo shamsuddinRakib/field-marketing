@@ -12,6 +12,7 @@ use App\Models\backend\Institution;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class AssignSpecimenController extends Controller
 {
@@ -22,7 +23,14 @@ class AssignSpecimenController extends Controller
     public function index(Request $request)
     {
         $mr = MarketingRepresentative::where('user_id', auth()->id())
-            ->firstOrFail();
+            ->first();
+
+        if (!$mr) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Marketing representative profile not found.',
+            ], 404);
+        }
 
         $perPage = min(
             max((int) $request->input('per_page', 10), 1),
@@ -44,7 +52,7 @@ class AssignSpecimenController extends Controller
             $query->where('library_id', $request->library_id);
         }
 
-        if ($request->filled('institution_id')) {
+        if ($request->filled('institution_id') && Schema::hasColumn('assign_specimens', 'institution_id')) {
             $query->where('institution_id', $request->institution_id);
         }
 
@@ -114,6 +122,20 @@ class AssignSpecimenController extends Controller
                 'success' => false,
                 'message' => 'Marketing representative profile not found.',
             ], 404);
+        }
+
+        // Backward-compatible input normalization for items
+        if (!$request->has('items') && $request->has('product_items')) {
+            $request->merge(['items' => $request->input('product_items')]);
+        } elseif (!$request->has('items') && $request->filled('product_id')) {
+            $request->merge([
+                'items' => [
+                    [
+                        'product_id' => $request->input('product_id'),
+                        'quantity'   => $request->input('quantity', 1),
+                    ],
+                ],
+            ]);
         }
 
         $data = $request->validate([
@@ -195,11 +217,10 @@ class AssignSpecimenController extends Controller
         }
 
         $specimen = DB::transaction(function () use ($data, $merged, $teacherId, $libraryId, $institutionId, $assignInstType, $upazilaId, $districtId, $divisionId, $address) {
-            $specimen = AssignSpecimen::create([
+            $payload = [
                 'user_id'          => auth()->id(),
                 'teacher_id'       => $teacherId,
                 'library_id'       => $libraryId,
-                'institution_id'   => $institutionId,
                 'assign_inst_type' => $assignInstType,
                 'upazila_id'       => $upazilaId,
                 'district_id'      => $districtId,
@@ -207,7 +228,13 @@ class AssignSpecimenController extends Controller
                 'address'          => $address,
                 'note'             => $data['note'] ?? null,
                 'status'           => 'pending',
-            ]);
+            ];
+
+            if ($institutionId && Schema::hasColumn('assign_specimens', 'institution_id')) {
+                $payload['institution_id'] = $institutionId;
+            }
+
+            $specimen = AssignSpecimen::create($payload);
 
             foreach ($merged as $productId => $qty) {
                 $specimen->items()->create([
@@ -231,7 +258,14 @@ class AssignSpecimenController extends Controller
     public function show($id)
     {
         $mr = MarketingRepresentative::where('user_id', auth()->id())
-            ->firstOrFail();
+            ->first();
+
+        if (!$mr) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Marketing representative profile not found.',
+            ], 404);
+        }
 
         $specimen = AssignSpecimen::with($this->relations())
             ->where('id', $id)
@@ -262,6 +296,20 @@ class AssignSpecimenController extends Controller
                 'success' => false,
                 'message' => 'Marketing representative profile not found.',
             ], 404);
+        }
+
+        // Backward-compatible input normalization for items
+        if (!$request->has('items') && $request->has('product_items')) {
+            $request->merge(['items' => $request->input('product_items')]);
+        } elseif (!$request->has('items') && $request->filled('product_id')) {
+            $request->merge([
+                'items' => [
+                    [
+                        'product_id' => $request->input('product_id'),
+                        'quantity'   => $request->input('quantity', 1),
+                    ],
+                ],
+            ]);
         }
 
         $data = $request->validate([
@@ -361,17 +409,22 @@ class AssignSpecimenController extends Controller
         }
 
         DB::transaction(function () use ($specimen, $data, $merged, $teacherId, $libraryId, $institutionId, $assignInstType, $upazilaId, $districtId, $divisionId, $address) {
-            $specimen->update([
+            $updatePayload = [
                 'teacher_id'       => $teacherId,
                 'library_id'       => $libraryId,
-                'institution_id'   => $institutionId,
                 'assign_inst_type' => $assignInstType,
                 'upazila_id'       => $upazilaId,
                 'district_id'      => $districtId,
                 'division_id'      => $divisionId,
                 'address'          => $address,
                 'note'             => $data['note'] ?? null,
-            ]);
+            ];
+
+            if (Schema::hasColumn('assign_specimens', 'institution_id')) {
+                $updatePayload['institution_id'] = $institutionId;
+            }
+
+            $specimen->update($updatePayload);
 
             $specimen->items()->delete();
 
@@ -435,8 +488,8 @@ class AssignSpecimenController extends Controller
 
     private function relations(): array
     {
-        return [
-            'items.product:id,name,slug,sku,price,thumbnail_image,brand_id',
+        $relations = [
+            'items.product:id,name,slug,sku,product_code,edition,price,thumbnail_image,brand_id',
             'teacher.institution',
             'teacher.institution.upazila',
             'teacher.institution.district',
@@ -447,40 +500,17 @@ class AssignSpecimenController extends Controller
             'library.upazila',
             'library.district',
             'library.division',
-            'institution.upazila',
-            'institution.district',
-            'institution.division',
             'upazila',
             'district',
             'division',
         ];
+
+        if (Schema::hasColumn('assign_specimens', 'institution_id')) {
+            $relations[] = 'institution.upazila';
+            $relations[] = 'institution.district';
+            $relations[] = 'institution.division';
+        }
+
+        return $relations;
     }
-
-    //   private function validateSpecimenRequest(Request $request): array
-    // {
-    //     $data = $request->validate([
-    //         'product_id' => ['required', 'integer', 'exists:products,id'],
-    //         'teacher_id' => ['nullable', 'integer', Rule::exists('teachers', 'id')->whereNull('deleted_at')],
-    //         'library_id' => ['nullable', 'integer', Rule::exists('libraries', 'id')->whereNull('deleted_at')],
-    //         'institution_id' => ['nullable', 'integer', Rule::exists('institutions', 'id')->whereNull('deleted_at')],
-    //         'quantity' => ['required', 'integer', 'min:1'],
-    //         'note' => ['nullable', 'string', 'max:255'],
-    //     ]);
-
-    //     if (
-    //         empty($data['teacher_id'])
-    //         && empty($data['institution_id'])
-    //         && empty($data['library_id'])
-    //     ) {
-    //         abort(response()->json([
-    //             'success' => false,
-    //             'message' => 'Either teacher_id, institution_id or library_id is required.',
-    //             'errors' => [
-    //                 'recipient' => ['Either teacher_id, institution_id or library_id is required.'],
-    //             ],
-    //         ], 422));
-    //     }
-
-    //     return $data;
-    // }
 }

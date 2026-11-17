@@ -9,6 +9,7 @@ use App\Models\backend\CurrentFund;
 use App\Models\backend\Expense;
 use App\Models\backend\ExpenseCategory;
 use App\Models\backend\ExpenseItem;
+use App\Models\backend\FundTransferLedger;
 // use App\Models\backend\ExpensePayment;
 use App\Models\backend\JournalEntry;
 use App\Models\backend\JournalEntryLine;
@@ -269,16 +270,31 @@ class ExpenseController extends Controller
                 }
 
                 if ($data['status'] === 'posted') {
+                    $currentFund = CurrentFund::where('user_id', $data['user_id'])->lockForUpdate()->first();
+                    $available = $currentFund ? (float) $currentFund->balance : 0.0;
+                    if ($available < (float) $newTotal) {
+                        throw new \Exception('Insufficient fund balance. Available: ' . number_format($available, 2) . ' BDT, Required: ' . number_format((float) $newTotal, 2) . ' BDT');
+                    }
+
                     $updateFields['status'] = 'posted';
                     $updateFields['posted_at'] = now();
 
-                    CurrentFund::updateOrCreate(
-                        ['user_id' => $data['user_id']],
-                        [
-                            'balance' => DB::raw('balance - ' . $newTotal),
-                            'updated_at' => now(),
-                        ]
-                    );
+                    if ($currentFund) {
+                        $currentFund->decrement('balance', $newTotal);
+                    } else {
+                        CurrentFund::create([
+                            'user_id' => $data['user_id'],
+                            'balance' => -$newTotal,
+                        ]);
+                    }
+
+                    FundTransferLedger::create([
+                        'ref_type'  => 'Expense',
+                        'ref_id'    => $expense->id,
+                        'amount'    => (float) $newTotal,
+                        'direction' => 'OUT',
+                        'note'      => 'Expense #' . $expense->id . ($expense->name ? ': ' . $expense->name : ''),
+                    ]);
                 }
 
                 $expense->update($updateFields);
@@ -313,13 +329,28 @@ class ExpenseController extends Controller
                 }
 
                 if ($data['status'] === 'posted') {
-                    CurrentFund::updateOrCreate(
-                        ['user_id' => $data['user_id']],
-                        [
-                            'balance' => DB::raw('balance - ' . $totalAmount),
-                            'updated_at' => now(),
-                        ]
-                    );
+                    $currentFund = CurrentFund::where('user_id', $data['user_id'])->lockForUpdate()->first();
+                    $available = $currentFund ? (float) $currentFund->balance : 0.0;
+                    if ($available < (float) $totalAmount) {
+                        throw new \Exception('Insufficient fund balance. Available: ' . number_format($available, 2) . ' BDT, Required: ' . number_format((float) $totalAmount, 2) . ' BDT');
+                    }
+
+                    if ($currentFund) {
+                        $currentFund->decrement('balance', $totalAmount);
+                    } else {
+                        CurrentFund::create([
+                            'user_id' => $data['user_id'],
+                            'balance' => -$totalAmount,
+                        ]);
+                    }
+
+                    FundTransferLedger::create([
+                        'ref_type'  => 'Expense',
+                        'ref_id'    => $expense->id,
+                        'amount'    => (float) $totalAmount,
+                        'direction' => 'OUT',
+                        'note'      => 'Expense #' . $expense->id . ($expense->name ? ': ' . $expense->name : ''),
+                    ]);
                 }
             }
 
@@ -431,15 +462,28 @@ class ExpenseController extends Controller
 
             /* POSTING (JOURNAL) */
             if ($data['status'] === 'posted') {
-                CurrentFund::updateOrCreate(
-                    [
+                $currentFund = CurrentFund::where('user_id', $data['user_id'])->lockForUpdate()->first();
+                $available = $currentFund ? (float) $currentFund->balance : 0.0;
+                if ($available < (float) $totalAmount) {
+                    throw new \Exception('Insufficient fund balance. Available: ' . number_format($available, 2) . ' BDT, Required: ' . number_format((float) $totalAmount, 2) . ' BDT');
+                }
+
+                if ($currentFund) {
+                    $currentFund->decrement('balance', $totalAmount);
+                } else {
+                    CurrentFund::create([
                         'user_id' => $data['user_id'],
-                    ],
-                    [
-                        'balance' => DB::raw('balance - ' . $totalAmount),
-                        'updated_at' => now(),
-                    ]
-                );
+                        'balance' => -$totalAmount,
+                    ]);
+                }
+
+                FundTransferLedger::create([
+                    'ref_type'  => 'Expense',
+                    'ref_id'    => $expense->id,
+                    'amount'    => (float) $totalAmount,
+                    'direction' => 'OUT',
+                    'note'      => 'Expense #' . $expense->id . ($expense->name ? ': ' . $expense->name : ''),
+                ]);
             }
 
             DB::commit();
@@ -573,20 +617,36 @@ class ExpenseController extends Controller
                 ]);
             }
 
+            $currentFund = CurrentFund::where('user_id', $expense->user_id)->lockForUpdate()->first();
+            $available = $currentFund ? (float) $currentFund->balance : 0.0;
+            if ($available < (float) $expense->total_amount) {
+                return response()->json([
+                    'ok' => false,
+                    'msg' => 'Insufficient fund balance. Available: ' . number_format($available, 2) . ' BDT, Required: ' . number_format((float) $expense->total_amount, 2) . ' BDT',
+                ], 422);
+            }
+
             $expense->update([
                 'status' => 'posted',
                 'posted_at' => now(),
             ]);
 
-            CurrentFund::updateOrCreate(
-                [
+            if ($currentFund) {
+                $currentFund->decrement('balance', $expense->total_amount);
+            } else {
+                CurrentFund::create([
                     'user_id' => $expense->user_id,
-                ],
-                [
-                    'balance' => DB::raw('balance - ' . $expense->total_amount),
-                    'updated_at' => now(),
-                ]
-            );
+                    'balance' => -$expense->total_amount,
+                ]);
+            }
+
+            FundTransferLedger::create([
+                'ref_type'  => 'Expense',
+                'ref_id'    => $expense->id,
+                'amount'    => (float) $expense->total_amount,
+                'direction' => 'OUT',
+                'note'      => 'Expense #' . $expense->id . ($expense->name ? ': ' . $expense->name : ''),
+            ]);
 
             DB::commit();
 

@@ -6,9 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Models\backend\AssignSpecimen;
 use App\Models\backend\AssignSpecimenItem;
 use App\Models\backend\CurrentStock;
+use App\Models\backend\Institution;
+use App\Models\backend\MarketingRepresentative;
 use App\Models\backend\StockLedger;
 use App\Models\backend\Teacher;
-use App\Models\backend\Institution;
+use App\Models\backend\Upazila;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -353,6 +355,70 @@ class AssignSpecimenController extends Controller
 
             return response()->json(['ok' => false, 'msg' => $e->getMessage()], 500);
         }
+    }
+
+    /**
+     * Select2: Upazilas (filtered by Marketing Representative's assigned territories)
+     */
+    public function upazilasSelect2(Request $request)
+    {
+        $term   = trim($request->input('q', ''));
+        $userId = $request->input('user_id');
+        $repId  = $request->input('marketing_representative_id');
+
+        $query = Upazila::query()->with('upazila_district.district_division');
+
+        if ($userId || $repId) {
+            $repQuery = MarketingRepresentative::with('territories');
+            if ($repId) {
+                $repQuery->where('id', $repId);
+            } elseif ($userId) {
+                $repQuery->where('user_id', $userId);
+            }
+
+            $reps = $repQuery->get();
+            $upazilaIds = [];
+            foreach ($reps as $rep) {
+                $territoryIds = $rep->territories->pluck('upazila_id')->filter()->all();
+                $upazilaIds = array_merge($upazilaIds, $territoryIds);
+                if ($rep->upazila_id) {
+                    $upazilaIds[] = $rep->upazila_id;
+                }
+            }
+            $upazilaIds = array_values(array_unique(array_filter($upazilaIds)));
+
+            if (!empty($upazilaIds)) {
+                $query->whereIn('id', $upazilaIds);
+            } else {
+                $query->whereRaw('1 = 0');
+            }
+        }
+
+        if ($term !== '') {
+            $query->where(function ($q) use ($term) {
+                $q->where('upazila_name', 'like', "%{$term}%")
+                  ->orWhere('upazila_bn_name', 'like', "%{$term}%");
+            });
+        }
+
+        $upazilas = $query->orderBy('upazila_name')->limit(50)->get();
+
+        return response()->json([
+            'results' => $upazilas->map(function ($u) {
+                $dist = $u->upazila_district;
+                $div = $dist?->district_division;
+                return [
+                    'id'            => $u->id,
+                    'text'          => $u->upazila_name . ($dist ? " ({$dist->district_name})" : ''),
+                    'upazila_id'    => $u->id,
+                    'upazila_name'  => $u->upazila_name,
+                    'district_id'   => $dist?->district_id,
+                    'district_name' => $dist?->district_name ?? '',
+                    'division_id'   => $div?->id,
+                    'division_name' => $div?->name ?? ($div?->bn_name ?? ''),
+                ];
+            })->values(),
+        ]);
     }
 
     public function teachersByPhoneSelect2(Request $request)

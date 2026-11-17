@@ -371,6 +371,7 @@ Route::middleware(['web', 'auth', 'perm', 'branchscope'])->group(function () {
         Route::post('/list-ajax', [AssignSpecimenController::class, 'listAjax'])->name('listAjax');
         Route::get('/create', [AssignSpecimenController::class, 'createModal'])->name('create');
         Route::post('/store', [AssignSpecimenController::class, 'store'])->name('store');
+        Route::get('/upazilas-select2', [AssignSpecimenController::class, 'upazilasSelect2'])->name('upazilas.select2');
         Route::get('/teachers-by-phone-select2', [AssignSpecimenController::class, 'teachersByPhoneSelect2'])->name('teachersByPhone.select2');
         Route::get('/institutions-select2', [AssignSpecimenController::class, 'institutionsSelect2'])->name('institutions.select2');
         Route::get('/status-modal/{assignSpecimen}', [AssignSpecimenController::class, 'statusModal'])->name('statusModal');

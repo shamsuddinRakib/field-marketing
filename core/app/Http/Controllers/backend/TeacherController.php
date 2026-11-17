@@ -365,6 +365,45 @@ class TeacherController extends Controller
             });
         }
 
+        // =========================================================================
+        // COLUMN-WISE FILTERS (Subject, Class, Upazila, District, Division)
+        // =========================================================================
+        $filterSubject = trim((string) ($request->input('filter_subject') ?: $request->input('columns.6.search.value', '')));
+        if ($filterSubject !== '') {
+            $query->where('teachers.subject', 'like', "%{$filterSubject}%");
+        }
+
+        $filterClass = trim((string) ($request->input('filter_class') ?: $request->input('columns.7.search.value', '')));
+        if ($filterClass !== '') {
+            $query->where('teachers.class_name', 'like', "%{$filterClass}%");
+        }
+
+        $filterUpazila = trim((string) ($request->input('filter_upazila') ?: $request->input('columns.8.search.value', '')));
+        if ($filterUpazila !== '') {
+            $query->where(function ($q) use ($filterUpazila) {
+                $q->where('tu.upazila_name', 'like', "%{$filterUpazila}%")
+                  ->orWhere('iu.upazila_name', 'like', "%{$filterUpazila}%");
+            });
+        }
+
+        $filterDistrict = trim((string) ($request->input('filter_district') ?: $request->input('columns.9.search.value', '')));
+        if ($filterDistrict !== '') {
+            $query->where(function ($q) use ($filterDistrict) {
+                $q->where('td.district_name', 'like', "%{$filterDistrict}%")
+                  ->orWhere('idist.district_name', 'like', "%{$filterDistrict}%");
+            });
+        }
+
+        $filterDivision = trim((string) ($request->input('filter_division') ?: $request->input('columns.10.search.value', '')));
+        if ($filterDivision !== '') {
+            $query->where(function ($q) use ($filterDivision) {
+                $q->where('tdiv.name', 'like', "%{$filterDivision}%")
+                  ->orWhere('tdiv.bn_name', 'like', "%{$filterDivision}%")
+                  ->orWhere('idiv.name', 'like', "%{$filterDivision}%")
+                  ->orWhere('idiv.bn_name', 'like', "%{$filterDivision}%");
+            });
+        }
+
         $filtered = (clone $query)->count('teachers.id');
         $orderColumn = $columns[$orderIndex] ?? 'id';
         $orderMap = [

@@ -4,7 +4,9 @@ namespace App\Http\Controllers\backend;
 
 use App\Http\Controllers\Controller;
 use App\Models\backend\BookReturn;
+use App\Models\backend\CurrentStock;
 use App\Models\backend\MarketingRepresentative;
+use App\Models\backend\StockLedger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -147,30 +149,181 @@ class BookReturnController extends Controller
 
     public function store(Request $request)
     {
-        $bookReturn = BookReturn::create($this->validated($request));
+        $data = $this->validated($request);
 
-        return response()->json([
-            'ok' => true,
-            'id' => $bookReturn->id,
-            'msg' => 'Book return created.',
-        ]);
+        try {
+            return DB::transaction(function () use ($data) {
+                $bookReturn = BookReturn::create($data);
+
+                if (in_array($bookReturn->status, ['received', 'partial'], true) && (int) $bookReturn->returned_quantity > 0) {
+                    $this->adjustStockForReturn($bookReturn, 0, (int) $bookReturn->returned_quantity);
+                }
+
+                return response()->json([
+                    'ok' => true,
+                    'id' => $bookReturn->id,
+                    'msg' => 'Book return created.',
+                ]);
+            });
+        } catch (\Throwable $e) {
+            return response()->json([
+                'ok' => false,
+                'msg' => $e->getMessage(),
+            ], 422);
+        }
     }
 
     public function update(Request $request, BookReturn $bookReturn)
     {
-        $bookReturn->update($this->validated($request));
+        $data = $this->validated($request);
 
-        return response()->json([
-            'ok' => true,
-            'msg' => 'Book return updated.',
-        ]);
+        try {
+            return DB::transaction(function () use ($bookReturn, $data) {
+                $oldStatus = $bookReturn->status;
+                $oldReturnedQty = (int) $bookReturn->returned_quantity;
+                $oldRepresentativeId = (int) $bookReturn->marketing_representative_id;
+                $oldProductId = (int) $bookReturn->product_id;
+
+                $oldEffectiveQty = in_array($oldStatus, ['received', 'partial'], true) ? $oldReturnedQty : 0;
+                $newEffectiveQty = in_array($data['status'], ['received', 'partial'], true) ? (int) $data['returned_quantity'] : 0;
+
+                // If representative or product changed while previously deducted, restore old stock first
+                if ($oldEffectiveQty > 0 && ($oldRepresentativeId !== (int) $data['marketing_representative_id'] || $oldProductId !== (int) $data['product_id'])) {
+                    $this->restoreStock($oldRepresentativeId, $oldProductId, $oldEffectiveQty, $bookReturn->id, 'Book Return #' . $bookReturn->id . ' updated (Product/Representative changed) - Stock restored');
+                    $oldEffectiveQty = 0;
+                }
+
+                $bookReturn->update($data);
+
+                $diff = $newEffectiveQty - $oldEffectiveQty;
+                if ($diff !== 0) {
+                    if ($diff > 0) {
+                        $this->adjustStockForReturn($bookReturn, $oldEffectiveQty, $newEffectiveQty);
+                    } else {
+                        $restoreQty = abs($diff);
+                        $this->restoreStock((int) $bookReturn->marketing_representative_id, (int) $bookReturn->product_id, $restoreQty, $bookReturn->id, 'Book Return #' . $bookReturn->id . ' adjusted - Stock restored');
+                    }
+                }
+
+                return response()->json([
+                    'ok' => true,
+                    'msg' => 'Book return updated.',
+                ]);
+            });
+        } catch (\Throwable $e) {
+            return response()->json([
+                'ok' => false,
+                'msg' => $e->getMessage(),
+            ], 422);
+        }
     }
 
     public function destroy(BookReturn $bookReturn)
     {
-        $bookReturn->delete();
+        try {
+            return DB::transaction(function () use ($bookReturn) {
+                if (in_array($bookReturn->status, ['received', 'partial'], true) && (int) $bookReturn->returned_quantity > 0) {
+                    $this->restoreStock(
+                        (int) $bookReturn->marketing_representative_id,
+                        (int) $bookReturn->product_id,
+                        (int) $bookReturn->returned_quantity,
+                        $bookReturn->id,
+                        'Book Return #' . $bookReturn->id . ' deleted - Stock restored'
+                    );
+                }
 
-        return response()->json(['ok' => true, 'msg' => 'Book return deleted.']);
+                $bookReturn->delete();
+
+                return response()->json(['ok' => true, 'msg' => 'Book return deleted.']);
+            });
+        } catch (\Throwable $e) {
+            return response()->json([
+                'ok' => false,
+                'msg' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Deduct returned books from Marketing Representative's CurrentStock and record StockLedger.
+     */
+    protected function adjustStockForReturn(BookReturn $bookReturn, int $alreadyDeducted, int $targetDeduction): void
+    {
+        $netToDeduct = $targetDeduction - $alreadyDeducted;
+        if ($netToDeduct <= 0) {
+            return;
+        }
+
+        $rep = MarketingRepresentative::find($bookReturn->marketing_representative_id);
+        $userId = $rep?->user_id;
+
+        if (!$userId) {
+            return;
+        }
+
+        $stock = CurrentStock::where('user_id', $userId)
+            ->where('product_id', $bookReturn->product_id)
+            ->lockForUpdate()
+            ->first();
+
+        if ($stock) {
+            if ($stock->current_stock < $netToDeduct) {
+                throw new \Exception('Representative has insufficient stock for this product (Available: ' . $stock->current_stock . ', Attempted return: ' . $netToDeduct . ')');
+            }
+            $stock->decrement('current_stock', $netToDeduct);
+        } else {
+            throw new \Exception('Representative has no allocated stock for product #' . $bookReturn->product_id);
+        }
+
+        StockLedger::create([
+            'ref_type'   => 'Return',
+            'ref_id'     => $bookReturn->id,
+            'product_id' => $bookReturn->product_id,
+            'quantity'   => $netToDeduct,
+            'direction'  => 'OUT',
+            'note'       => 'Book Return #' . $bookReturn->id . ($bookReturn->note ? ': ' . $bookReturn->note : ''),
+        ]);
+    }
+
+    /**
+     * Restore books back to Marketing Representative's CurrentStock and record compensating StockLedger.
+     */
+    protected function restoreStock(int $representativeId, int $productId, int $quantity, int $refId, string $note): void
+    {
+        if ($quantity <= 0) {
+            return;
+        }
+
+        $rep = MarketingRepresentative::find($representativeId);
+        $userId = $rep?->user_id;
+
+        if (!$userId) {
+            return;
+        }
+
+        $stock = CurrentStock::where('user_id', $userId)
+            ->where('product_id', $productId)
+            ->lockForUpdate()
+            ->first();
+
+        if ($stock) {
+            $stock->increment('current_stock', $quantity);
+        } else {
+            CurrentStock::create([
+                'user_id'       => $userId,
+                'product_id'    => $productId,
+                'current_stock' => $quantity,
+            ]);
+        }
+
+        StockLedger::create([
+            'ref_type'   => 'Return',
+            'ref_id'     => $refId,
+            'product_id' => $productId,
+            'quantity'   => $quantity,
+            'direction'  => 'IN',
+            'note'       => $note,
+        ]);
     }
 
     public function representativesSelect2(Request $request)

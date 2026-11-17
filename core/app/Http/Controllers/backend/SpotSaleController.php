@@ -4,11 +4,15 @@ namespace App\Http\Controllers\backend;
 
 use App\Http\Controllers\Controller;
 use App\Models\backend\CourseClass;
+use App\Models\backend\CurrentFund;
+use App\Models\backend\CurrentStock;
+use App\Models\backend\FundTransferLedger;
 use App\Models\backend\Institution;
 use App\Models\backend\Library;
 use App\Models\backend\Product;
 use App\Models\backend\SpotSale;
 use App\Models\backend\SpotSaleItem;
+use App\Models\backend\StockLedger;
 use App\Models\backend\Student;
 use App\Models\backend\Teacher;
 use Illuminate\Http\Request;
@@ -229,6 +233,10 @@ class SpotSaleController extends Controller
                 SpotSaleItem::create(['spot_sale_id' => $spotSale->id] + $line);
             }
 
+            if ($data['status'] === 'approved') {
+                $this->processSpotSaleApproval($spotSale);
+            }
+
             DB::commit();
 
             return response()->json([
@@ -376,6 +384,10 @@ class SpotSaleController extends Controller
                 $spotSale->items()->create($line);
             }
 
+            if ($data['status'] === 'approved') {
+                $this->processSpotSaleApproval($spotSale);
+            }
+
             DB::commit();
 
             return response()->json(['ok' => true, 'msg' => 'Spot sale updated successfully', 'id' => $spotSale->id]);
@@ -404,13 +416,80 @@ class SpotSaleController extends Controller
             return response()->json(['ok' => false, 'msg' => 'Spot sale is already approved'], 422);
         }
 
-        $spotSale->update(['status' => 'approved']);
+        try {
+            DB::transaction(function () use ($spotSale) {
+                $this->processSpotSaleApproval($spotSale);
+            });
 
-        return response()->json([
-            'ok'   => true,
-            'msg'  => 'Spot sale approved successfully',
-            'data' => ['id' => $spotSale->id, 'status' => $spotSale->status],
-        ]);
+            return response()->json([
+                'ok'   => true,
+                'msg'  => 'Spot sale approved successfully',
+                'data' => ['id' => $spotSale->id, 'status' => $spotSale->status],
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json(['ok' => false, 'msg' => $e->getMessage()], 422);
+        }
+    }
+
+    private function processSpotSaleApproval(SpotSale $spotSale): void
+    {
+        $spotSale->loadMissing('items');
+
+        if ($spotSale->items->isEmpty()) {
+            throw new \Exception('No items found in this spot sale to approve.');
+        }
+
+        // 1. Verify and deduct MR CurrentStock and record StockLedger OUT
+        foreach ($spotSale->items as $item) {
+            $stock = CurrentStock::where('user_id', $spotSale->user_id)
+                ->where('product_id', $item->product_id)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$stock || $stock->current_stock < $item->quantity) {
+                $available = $stock ? $stock->current_stock : 0;
+                throw new \Exception("Insufficient stock for product #{$item->product_id}. Available: {$available}, Required: {$item->quantity}");
+            }
+
+            $stock->decrement('current_stock', $item->quantity);
+
+            StockLedger::create([
+                'ref_type'   => 'SpotSale',
+                'ref_id'     => $spotSale->id,
+                'product_id' => $item->product_id,
+                'quantity'   => $item->quantity,
+                'direction'  => 'OUT',
+                'note'       => 'Spot Sale #' . $spotSale->id . ($spotSale->note ? ': ' . $spotSale->note : ''),
+            ]);
+        }
+
+        // 2. Increment MR CurrentFund balance with collected sale cash and record FundTransferLedger IN
+        $saleTotal = (float) $spotSale->total;
+        if ($saleTotal > 0) {
+            $currentFund = CurrentFund::where('user_id', $spotSale->user_id)
+                ->lockForUpdate()
+                ->first();
+
+            if ($currentFund) {
+                $currentFund->increment('balance', $saleTotal);
+            } else {
+                CurrentFund::create([
+                    'user_id' => $spotSale->user_id,
+                    'balance' => $saleTotal,
+                ]);
+            }
+
+            FundTransferLedger::create([
+                'ref_type'  => 'SpotSale',
+                'ref_id'    => $spotSale->id,
+                'amount'    => $saleTotal,
+                'direction' => 'IN',
+                'note'      => 'Spot sale cash collection #' . $spotSale->id,
+            ]);
+        }
+
+        $spotSale->status = 'approved';
+        $spotSale->save();
     }
 
     public function productPrice(Product $product)

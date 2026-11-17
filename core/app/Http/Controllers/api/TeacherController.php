@@ -4,7 +4,12 @@ namespace App\Http\Controllers\api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\TeacherResource;
+use App\Models\backend\CourseClass;
+use App\Models\backend\Department;
+use App\Models\backend\Institution;
+use App\Models\backend\Subject;
 use App\Models\backend\Teacher;
+use App\Models\backend\Upazila;
 use Illuminate\Http\Request;
 
 class TeacherController extends Controller
@@ -106,5 +111,86 @@ class TeacherController extends Controller
                 'prev_page_url' => $teachers->previousPageUrl(),
             ],
         ]);
+    }
+
+    /**
+     * Create a new teacher (from MR mobile app).
+     */
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'teacher_name'   => ['required', 'string', 'max:191'],
+            'phone'          => ['nullable', 'string', 'max:20'],
+            'institution_id' => ['nullable', 'integer', 'exists:institutions,id'],
+            'designation'    => ['nullable', 'string', 'max:100'],
+            'department'     => ['nullable', 'string', 'max:100'],
+            'subject'        => ['nullable', 'string', 'max:100'],
+            'class_name'     => ['nullable', 'string', 'max:100'],
+            'upazila_id'     => ['nullable', 'integer', 'exists:upazilas,id'],
+            'district_id'    => ['nullable', 'integer', 'exists:districts,district_id'],
+            'division_id'    => ['nullable', 'integer', 'exists:divisions,id'],
+            'address'        => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $teacherData = $validated;
+
+        // Auto-resolve Department ID to name if numeric ID passed (matches DailyVisitController pattern)
+        if (!empty($teacherData['department']) && is_numeric($teacherData['department'])) {
+            $department = Department::find($teacherData['department']);
+            if ($department) {
+                $teacherData['department'] = $department->department_name;
+            }
+        }
+
+        // Auto-resolve Subject ID to name if numeric ID passed
+        if (!empty($teacherData['subject']) && is_numeric($teacherData['subject'])) {
+            $subject = Subject::find($teacherData['subject']);
+            if ($subject) {
+                $teacherData['subject'] = $subject->subject_name;
+            }
+        }
+
+        // Auto-resolve Class ID to name if numeric ID passed
+        if (!empty($teacherData['class_name']) && is_numeric($teacherData['class_name'])) {
+            $courseClass = CourseClass::find($teacherData['class_name']);
+            if ($courseClass) {
+                $teacherData['class_name'] = $courseClass->name;
+            }
+        }
+
+        // Auto-resolve location from institution if institution provided but location fields are omitted
+        if (!empty($teacherData['institution_id']) && (empty($teacherData['upazila_id']) || empty($teacherData['district_id']) || empty($teacherData['division_id']))) {
+            $institution = Institution::find($teacherData['institution_id']);
+            if ($institution) {
+                $teacherData['upazila_id']  = $teacherData['upazila_id'] ?? $institution->upazila_id;
+                $teacherData['district_id'] = $teacherData['district_id'] ?? $institution->district_id;
+                $teacherData['division_id'] = $teacherData['division_id'] ?? $institution->division_id;
+                $teacherData['address']     = $teacherData['address'] ?? $institution->address;
+            }
+        } elseif (!empty($teacherData['upazila_id']) && (empty($teacherData['district_id']) || empty($teacherData['division_id']))) {
+            $upazila = Upazila::with('upazila_district')->find($teacherData['upazila_id']);
+            if ($upazila && $upazila->upazila_district) {
+                $teacherData['district_id'] = $teacherData['district_id'] ?? $upazila->upazila_district->district_id;
+                $teacherData['division_id'] = $teacherData['division_id'] ?? $upazila->upazila_district->district_division_id;
+            }
+        }
+
+        $teacherData['status'] = 1;
+        $teacher = Teacher::create($teacherData);
+
+        $teacher->load([
+            'institution.upazila',
+            'institution.district',
+            'institution.division',
+            'upazila',
+            'district',
+            'division',
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Teacher created successfully.',
+            'data'    => new TeacherResource($teacher),
+        ], 201);
     }
 }

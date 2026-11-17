@@ -8,6 +8,7 @@ use App\Models\backend\CurrentFund;
 use App\Models\backend\DailyVisit;
 use App\Models\backend\Expense;
 use App\Models\backend\ExpenseItem;
+use App\Models\backend\FundTransferLedger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -91,18 +92,101 @@ class ExpenseController extends Controller
             $attachmentPath = uploadFile($request->file('attachment'), 'uploads/expense/attachments');
         }
 
-        $expense = DB::transaction(function () use ($data, $userId, $expenseDate, $totalAmount, $attachmentPath) {
-            // Smart Auto-Merge: Check if there is already a draft daily expense for this user on this date
-            $existingExpense = Expense::where('user_id', $userId)
-                ->whereDate('expense_date', $expenseDate)
-                ->where('status', 'draft')
-                ->first();
+        try {
+            $expense = DB::transaction(function () use ($data, $userId, $expenseDate, $totalAmount, $attachmentPath) {
+                // Smart Auto-Merge: Check if there is already a draft daily expense for this user on this date
+                $existingExpense = Expense::where('user_id', $userId)
+                    ->whereDate('expense_date', $expenseDate)
+                    ->where('status', 'draft')
+                    ->first();
 
-            if ($existingExpense) {
-                // Append items to existing draft
+                if ($existingExpense) {
+                    // Append items to existing draft
+                    foreach ($data['items'] as $item) {
+                        ExpenseItem::create([
+                            'expense_id'          => $existingExpense->id,
+                            'expense_category_id' => $item['expense_category_id'],
+                            'from_location'       => $item['from_location'] ?? ($data['from_location'] ?? null),
+                            'to_location'         => $item['to_location'] ?? ($data['to_location'] ?? null),
+                            'description'         => $item['description'] ?? null,
+                            'amount'              => $item['amount'],
+                        ]);
+                    }
+
+                    $newTotal = $existingExpense->items()->sum('amount');
+                    $updateFields = [
+                        'total_amount' => $newTotal,
+                    ];
+
+                    if ($attachmentPath) {
+                        $updateFields['attachment'] = $attachmentPath;
+                    }
+
+                    if (!empty($data['description'])) {
+                        $updateFields['description'] = $existingExpense->description
+                            ? ($existingExpense->description . '; ' . $data['description'])
+                            : $data['description'];
+                    }
+
+                    $lastTo = end($data['items'])['to_location'] ?? ($data['to_location'] ?? null);
+                    if ($lastTo) {
+                        $updateFields['to_location'] = $lastTo;
+                    }
+
+                    if ($data['status'] === 'posted') {
+                        $currentFund = CurrentFund::where('user_id', $userId)->lockForUpdate()->first();
+                        $available = $currentFund ? (float) $currentFund->balance : 0.0;
+                        if ($available < (float) $newTotal) {
+                            throw new \Exception('Insufficient fund balance. Available: ' . number_format($available, 2) . ' BDT, Required: ' . number_format((float) $newTotal, 2) . ' BDT');
+                        }
+
+                        $updateFields['status'] = 'posted';
+                        $updateFields['posted_at'] = now();
+
+                        if ($currentFund) {
+                            $currentFund->decrement('balance', $newTotal);
+                        } else {
+                            CurrentFund::create([
+                                'user_id' => $userId,
+                                'balance' => -$newTotal,
+                            ]);
+                        }
+
+                        FundTransferLedger::create([
+                            'ref_type'  => 'Expense',
+                            'ref_id'    => $existingExpense->id,
+                            'amount'    => (float) $newTotal,
+                            'direction' => 'OUT',
+                            'note'      => 'Expense #' . $existingExpense->id . ($existingExpense->name ? ': ' . $existingExpense->name : ''),
+                        ]);
+                    }
+
+                    $existingExpense->update($updateFields);
+                    return $existingExpense;
+                }
+
+                // Create new expense
+                $firstFrom = $data['items'][0]['from_location'] ?? ($data['from_location'] ?? null);
+                $firstTo = end($data['items'])['to_location'] ?? ($data['to_location'] ?? null);
+
+                $expense = Expense::create([
+                    'user_id'       => $userId,
+                    'posted_at'     => $data['status'] === 'posted' ? now() : null,
+                    'name'          => $data['name'],
+                    'expense_date'  => $expenseDate,
+                    'from_location' => $firstFrom,
+                    'to_location'   => $firstTo,
+                    'description'   => $data['description'] ?? null,
+                    'reference'     => $data['reference'] ?? null,
+                    'total_amount'  => $totalAmount,
+                    'attachment'    => $attachmentPath,
+                    'status'        => $data['status'],
+                    'created_by'    => $userId,
+                ]);
+
                 foreach ($data['items'] as $item) {
                     ExpenseItem::create([
-                        'expense_id'          => $existingExpense->id,
+                        'expense_id'          => $expense->id,
                         'expense_category_id' => $item['expense_category_id'],
                         'from_location'       => $item['from_location'] ?? ($data['from_location'] ?? null),
                         'to_location'         => $item['to_location'] ?? ($data['to_location'] ?? null),
@@ -111,91 +195,45 @@ class ExpenseController extends Controller
                     ]);
                 }
 
-                $newTotal = $existingExpense->items()->sum('amount');
-                $updateFields = [
-                    'total_amount' => $newTotal,
-                ];
-
-                if ($attachmentPath) {
-                    $updateFields['attachment'] = $attachmentPath;
-                }
-
-                if (!empty($data['description'])) {
-                    $updateFields['description'] = $existingExpense->description
-                        ? ($existingExpense->description . '; ' . $data['description'])
-                        : $data['description'];
-                }
-
-                $lastTo = end($data['items'])['to_location'] ?? ($data['to_location'] ?? null);
-                if ($lastTo) {
-                    $updateFields['to_location'] = $lastTo;
-                }
-
                 if ($data['status'] === 'posted') {
-                    $updateFields['status'] = 'posted';
-                    $updateFields['posted_at'] = now();
+                    $currentFund = CurrentFund::where('user_id', $userId)->lockForUpdate()->first();
+                    $available = $currentFund ? (float) $currentFund->balance : 0.0;
+                    if ($available < (float) $totalAmount) {
+                        throw new \Exception('Insufficient fund balance. Available: ' . number_format($available, 2) . ' BDT, Required: ' . number_format((float) $totalAmount, 2) . ' BDT');
+                    }
 
-                    CurrentFund::updateOrCreate(
-                        ['user_id' => $userId],
-                        [
-                            'balance'    => DB::raw('balance - ' . $newTotal),
-                            'updated_at' => now(),
-                        ]
-                    );
+                    if ($currentFund) {
+                        $currentFund->decrement('balance', $totalAmount);
+                    } else {
+                        CurrentFund::create([
+                            'user_id' => $userId,
+                            'balance' => -$totalAmount,
+                        ]);
+                    }
+
+                    FundTransferLedger::create([
+                        'ref_type'  => 'Expense',
+                        'ref_id'    => $expense->id,
+                        'amount'    => (float) $totalAmount,
+                        'direction' => 'OUT',
+                        'note'      => 'Expense #' . $expense->id . ($expense->name ? ': ' . $expense->name : ''),
+                    ]);
                 }
 
-                $existingExpense->update($updateFields);
-                return $existingExpense;
-            }
+                return $expense;
+            });
 
-            // Create new expense
-            $firstFrom = $data['items'][0]['from_location'] ?? ($data['from_location'] ?? null);
-            $firstTo = end($data['items'])['to_location'] ?? ($data['to_location'] ?? null);
-
-            $expense = Expense::create([
-                'user_id'       => $userId,
-                'posted_at'     => $data['status'] === 'posted' ? now() : null,
-                'name'          => $data['name'],
-                'expense_date'  => $expenseDate,
-                'from_location' => $firstFrom,
-                'to_location'   => $firstTo,
-                'description'   => $data['description'] ?? null,
-                'reference'     => $data['reference'] ?? null,
-                'total_amount'  => $totalAmount,
-                'attachment'    => $attachmentPath,
-                'status'        => $data['status'],
-                'created_by'    => $userId,
-            ]);
-
-            foreach ($data['items'] as $item) {
-                ExpenseItem::create([
-                    'expense_id'          => $expense->id,
-                    'expense_category_id' => $item['expense_category_id'],
-                    'from_location'       => $item['from_location'] ?? ($data['from_location'] ?? null),
-                    'to_location'         => $item['to_location'] ?? ($data['to_location'] ?? null),
-                    'description'         => $item['description'] ?? null,
-                    'amount'              => $item['amount'],
-                ]);
-            }
-
-            if ($data['status'] === 'posted') {
-                CurrentFund::updateOrCreate(
-                    ['user_id' => $userId],
-                    [
-                        'balance'    => DB::raw('balance - ' . $totalAmount),
-                        'updated_at' => now(),
-                    ]
-                );
-            }
-
-            return $expense;
-        });
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Expense saved successfully.',
-            'data'    => new ExpenseResource($expense->load('items.category')),
-        ], 201);
+            return response()->json([
+                'success' => true,
+                'message' => 'Expense saved successfully.',
+                'data'    => new ExpenseResource($expense->load('items.category')),
+            ], 201);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+        }
     }
 
     /**
@@ -392,26 +430,48 @@ class ExpenseController extends Controller
             ], 422);
         }
 
-        DB::transaction(function () use ($expense) {
-            $expense->update([
-                'status'    => 'posted',
-                'posted_at' => now(),
+        try {
+            DB::transaction(function () use ($expense) {
+                $currentFund = CurrentFund::where('user_id', $expense->user_id)->lockForUpdate()->first();
+                $available = $currentFund ? (float) $currentFund->balance : 0.0;
+                if ($available < (float) $expense->total_amount) {
+                    throw new \Exception('Insufficient fund balance. Available: ' . number_format($available, 2) . ' BDT, Required: ' . number_format((float) $expense->total_amount, 2) . ' BDT');
+                }
+
+                $expense->update([
+                    'status'    => 'posted',
+                    'posted_at' => now(),
+                ]);
+
+                if ($currentFund) {
+                    $currentFund->decrement('balance', $expense->total_amount);
+                } else {
+                    CurrentFund::create([
+                        'user_id' => $expense->user_id,
+                        'balance' => -$expense->total_amount,
+                    ]);
+                }
+
+                FundTransferLedger::create([
+                    'ref_type'  => 'Expense',
+                    'ref_id'    => $expense->id,
+                    'amount'    => (float) $expense->total_amount,
+                    'direction' => 'OUT',
+                    'note'      => 'Expense #' . $expense->id . ($expense->name ? ': ' . $expense->name : ''),
+                ]);
+            });
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Expense posted successfully.',
+                'data'    => new ExpenseResource($expense->load('items.category')),
             ]);
-
-            CurrentFund::updateOrCreate(
-                ['user_id' => $expense->user_id],
-                [
-                    'balance'    => DB::raw('balance - ' . $expense->total_amount),
-                    'updated_at' => now(),
-                ]
-            );
-        });
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Expense posted successfully.',
-            'data'    => new ExpenseResource($expense->load('items.category')),
-        ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+        }
     }
 
     /* =========================================================================
