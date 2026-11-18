@@ -288,7 +288,7 @@
             <div class="row g-2 text-center mb-16">
                 <div class="col-4">
                     <div class="p-12 bg-white rounded border border-success-200">
-                        <div class="text-xs text-secondary mb-1">Inserted</div>
+                        <div class="text-xs text-secondary mb-1">Inserted / Updated</div>
                         <div class="text-xl fw-bold text-success" id="counterInserted">0</div>
                     </div>
                 </div>
@@ -317,12 +317,12 @@
                             Errors (<span id="tabErrorsCount">0</span>)
                         </button>
                         <button type="button" class="report-tab-btn" data-target="#tabInsertedPane">
-                            Inserted (<span id="tabInsertedCount">0</span>)
+                            Inserted / Updated (<span id="tabInsertedCount">0</span>)
                         </button>
                     </div>
-                    <button type="button" class="btn btn-sm btn-outline-secondary radius-8 d-flex align-items-center gap-1 py-6 px-12" id="btnDownloadLog">
+                    <button type="button" class="btn btn-sm btn-outline-danger radius-8 d-flex align-items-center gap-1 py-6 px-12" id="btnDownloadLog">
                         <iconify-icon icon="lucide:download" class="text-sm"></iconify-icon>
-                        Download Log (.csv)
+                        <span id="btnDownloadLogText">Download Skipped & Failed Rows (.csv)</span>
                     </button>
                 </div>
 
@@ -335,9 +335,11 @@
                                 <thead>
                                     <tr>
                                         <th style="width: 55px;">Row</th>
+                                        <th>Code / EIIN</th>
                                         <th>Institution Name</th>
                                         <th>District</th>
-                                        <th>Reason / Note</th>
+                                        <th>Upazila</th>
+                                        <th>Problem / Reason</th>
                                     </tr>
                                 </thead>
                                 <tbody id="tableSkippedBody"></tbody>
@@ -352,6 +354,7 @@
                                 <thead>
                                     <tr>
                                         <th style="width: 55px;">Row</th>
+                                        <th>Code / EIIN</th>
                                         <th>Institution Name</th>
                                         <th>Error Message</th>
                                     </tr>
@@ -368,9 +371,11 @@
                                 <thead>
                                     <tr>
                                         <th style="width: 55px;">Row</th>
+                                        <th>Code / EIIN</th>
                                         <th>Institution Name</th>
                                         <th>District</th>
-                                        <th>Status</th>
+                                        <th>Upazila</th>
+                                        <th>Action</th>
                                     </tr>
                                 </thead>
                                 <tbody id="tableInsertedBody"></tbody>
@@ -867,7 +872,7 @@
             Swal.fire({
                 icon: totalInserted > 0 ? 'success' : (allErrors.length > 0 ? 'warning' : 'info'),
                 title: 'Import Processed!',
-                text: `${totalInserted} new institutions inserted. ${totalSkipped} duplicates skipped.`,
+                text: `${totalInserted} institutions processed (inserted / updated). ${totalSkipped} duplicates skipped.`,
                 confirmButtonText: 'View Details'
             });
         }
@@ -882,15 +887,17 @@
         // 1. Populate Skipped Table
         const $skippedTbody = $container.find('#tableSkippedBody').empty();
         if (allSkippedItems.length === 0) {
-            $skippedTbody.append('<tr><td colspan="4" class="text-center py-16 text-muted">No institutions were skipped.</td></tr>');
+            $skippedTbody.append('<tr><td colspan="6" class="text-center py-16 text-muted">No institutions were skipped.</td></tr>');
         } else {
             allSkippedItems.forEach(item => {
                 $skippedTbody.append(`
                     <tr>
                         <td class="text-secondary fw-semibold">#${item.row}</td>
+                        <td><span class="badge bg-light text-secondary border">${escapeHtml(item.code || '-')}</span></td>
                         <td class="fw-semibold text-dark">${escapeHtml(item.name || '-')}</td>
                         <td>${escapeHtml(item.district || '-')}</td>
-                        <td><span class="badge bg-warning-subtle text-warning-main border border-warning-200">${escapeHtml(item.reason || 'Duplicate skipped')}</span></td>
+                        <td>${escapeHtml(item.upazila || '-')}</td>
+                        <td><span class="badge bg-warning-subtle text-warning-main border border-warning-200 text-wrap text-start">${escapeHtml(item.reason || 'Duplicate skipped')}</span></td>
                     </tr>
                 `);
             });
@@ -899,15 +906,17 @@
         // 2. Populate Errors Table
         const $errorsTbody = $container.find('#tableErrorsBody').empty();
         if (allErrors.length === 0) {
-            $errorsTbody.append('<tr><td colspan="3" class="text-center py-16 text-success"><iconify-icon icon="lucide:check-circle" class="text-base me-1"></iconify-icon>No errors encountered! All rows were processed cleanly.</td></tr>');
+            $errorsTbody.append('<tr><td colspan="4" class="text-center py-16 text-success"><iconify-icon icon="lucide:check-circle" class="text-base me-1"></iconify-icon>No errors encountered! All rows were processed cleanly.</td></tr>');
         } else {
             allErrors.forEach(err => {
                 const row = err.row || '-';
+                const code = err.code || '-';
                 const name = err.name || '-';
                 const msg = err.message || (typeof err === 'string' ? err : 'Unknown error');
                 $errorsTbody.append(`
                     <tr>
                         <td class="text-danger fw-semibold">#${row}</td>
+                        <td><span class="badge bg-light text-secondary border">${escapeHtml(code)}</span></td>
                         <td class="fw-semibold text-dark">${escapeHtml(name)}</td>
                         <td class="text-danger">${escapeHtml(msg)}</td>
                     </tr>
@@ -918,15 +927,20 @@
         // 3. Populate Inserted Table
         const $insertedTbody = $container.find('#tableInsertedBody').empty();
         if (allInsertedItems.length === 0) {
-            $insertedTbody.append('<tr><td colspan="4" class="text-center py-16 text-muted">No new institutions were added (all existing or empty).</td></tr>');
+            $insertedTbody.append('<tr><td colspan="6" class="text-center py-16 text-muted">No new institutions were added (all existing or empty).</td></tr>');
         } else {
             allInsertedItems.forEach(item => {
+                const isUpdated = item.action === 'updated';
+                const badgeClass = isUpdated ? 'bg-info-subtle text-info-main border-info-200' : 'bg-success-subtle text-success-main border-success-200';
+                const badgeText = isUpdated ? 'Updated' : 'Inserted';
                 $insertedTbody.append(`
                     <tr>
-                        <td class="text-success fw-semibold">#${item.row}</td>
+                        <td class="${isUpdated ? 'text-info' : 'text-success'} fw-semibold">#${item.row}</td>
+                        <td><span class="badge bg-light text-secondary border">${escapeHtml(item.code || '-')}</span></td>
                         <td class="fw-semibold text-dark">${escapeHtml(item.name || '-')}</td>
                         <td>${escapeHtml(item.district || '-')}</td>
-                        <td><span class="badge bg-success-subtle text-success-main border border-success-200">Inserted</span></td>
+                        <td>${escapeHtml(item.upazila || '-')}</td>
+                        <td><span class="badge ${badgeClass} border">${badgeText}</span></td>
                     </tr>
                 `);
             });
@@ -942,37 +956,53 @@
         }
     }
 
-    // Download Log CSV button click
+    // Download Skipped & Failed Rows CSV (for user correction and re-upload)
     $btnDownloadLog.on('click', function() {
-        let csv = '\uFEFFRow Number,Institution Name,District,Status,Details / Reason\n';
+        const problemCount = allErrors.length + allSkippedItems.length;
+        if (problemCount === 0) {
+            if (window.Swal) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'All Rows Processed Cleanly!',
+                    text: 'There are no skipped or failed rows to download. All rows were imported successfully.'
+                });
+            } else {
+                alert('No skipped or failed rows to download! All rows were imported cleanly.');
+            }
+            return;
+        }
+
+        let csv = '\uFEFFRow Number,EIIN / Code,Institution Name,District,Upazila,Division,Address,Status,Problem / Reason\n';
 
         allErrors.forEach(err => {
             const row = err.row || '-';
+            const code = (err.code || '').replace(/"/g, '""');
             const name = (err.name || '').replace(/"/g, '""');
+            const dist = (err.district || '').replace(/"/g, '""');
+            const upz = (err.upazila || '').replace(/"/g, '""');
+            const div = (err.division || '').replace(/"/g, '""');
+            const addr = (err.address || '').replace(/"/g, '""');
             const msg = (err.message || String(err)).replace(/"/g, '""');
-            csv += `"${row}","${name}","","Error","${msg}"\n`;
+            csv += `"${row}","${code}","${name}","${dist}","${upz}","${div}","${addr}","Failed / Error","${msg}"\n`;
         });
 
         allSkippedItems.forEach(item => {
             const row = item.row || '-';
+            const code = (item.code || '').replace(/"/g, '""');
             const name = (item.name || '').replace(/"/g, '""');
             const dist = (item.district || '').replace(/"/g, '""');
-            const reason = (item.reason || 'Duplicate skipped').replace(/"/g, '""');
-            csv += `"${row}","${name}","${dist}","Skipped (Duplicate)","${reason}"\n`;
-        });
-
-        allInsertedItems.forEach(item => {
-            const row = item.row || '-';
-            const name = (item.name || '').replace(/"/g, '""');
-            const dist = (item.district || '').replace(/"/g, '""');
-            csv += `"${row}","${name}","${dist}","Inserted","Successfully saved in database"\n`;
+            const upz = (item.upazila || '').replace(/"/g, '""');
+            const div = (item.division || '').replace(/"/g, '""');
+            const addr = (item.address || '').replace(/"/g, '""');
+            const reason = (item.reason || 'Skipped').replace(/"/g, '""');
+            csv += `"${row}","${code}","${name}","${dist}","${upz}","${div}","${addr}","Skipped","${reason}"\n`;
         });
 
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement('a');
         const url = URL.createObjectURL(blob);
         link.setAttribute('href', url);
-        link.setAttribute('download', `institution_import_log_${new Date().toISOString().slice(0, 10)}.csv`);
+        link.setAttribute('download', `institution_skipped_and_failed_${new Date().toISOString().slice(0, 10)}.csv`);
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);

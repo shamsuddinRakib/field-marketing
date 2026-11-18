@@ -1493,46 +1493,65 @@ if (!function_exists('resolve_district_by_name')) {
             }
         }
 
+        // 2b. Clean alphanumeric match (ignores spaces, hyphens, dots: e.g. "Chapai Nawabganj" -> "chapainawabganj")
+        $cleanCanonical = preg_replace('/[^a-z0-9]/', '', $canonical);
+        if ($cleanCanonical !== '') {
+            foreach ($districtsCache as $d) {
+                $cleanDName = preg_replace('/[^a-z0-9]/', '', mb_strtolower((string)$d->district_name));
+                if ($cleanDName !== '' && $cleanDName === $cleanCanonical) {
+                    return $d;
+                }
+            }
+        }
+
         // 3. Common English spelling aliases
         $aliases = [
-            'chittagong'       => 'chattogram',
-            'bogra'            => 'bogra',
-            'bogura'           => 'bogra',
-            'comilla'          => 'comilla',
-            'cumilla'          => 'comilla',
-            'barisal'          => 'barisal',
-            'barishal'         => 'barisal',
-            'jessore'          => 'jessore',
-            'jashore'          => 'jessore',
-            'kustia'           => 'kushtia',
-            'kushtia'          => 'kushtia',
-            'kurigram'         => 'kurigram',
-            'nawabganj'        => 'chapainawabganj',
-            'chapainawabgonj'  => 'chapainawabganj',
-            'sirajgonj'        => 'sirajganj',
-            'sunamgonj'        => 'sunamganj',
-            'habigonj'         => 'habiganj',
-            'moulvibazar'      => 'moulvibazar',
-            'moulovibazar'     => 'moulvibazar',
-            'b.baria'          => 'brahmanbaria',
-            'b-baria'          => 'brahmanbaria',
-            'bbaria'           => 'brahmanbaria',
-            'laxmipur'         => 'lakshmipur',
-            'jhalokati'        => 'jhalakati',
-            'jhalakathi'       => 'jhalakati',
-            'coxsbazar'        => "cox's bazar",
-            'coxbazar'         => "cox's bazar",
-            'cox bazar'        => "cox's bazar",
-            'mymensing'        => 'mymensingh',
-            'netrakona'        => 'netrokona',
-            'panchagar'        => 'panchagarh',
-            'gaibanda'         => 'gaibandha',
-            'jaipurhat'        => 'joypurhat',
-            'munshigonj'       => 'munshiganj',
-            'manikgonj'        => 'manikganj',
-            'narayangonj'      => 'narayanganj',
-            'kishoregonj'      => 'kishoreganj',
-            'gopalgonj'        => 'gopalganj',
+            'chittagong'             => 'chattogram',
+            'bogra'                  => 'bogra',
+            'bogura'                 => 'bogra',
+            'comilla'                => 'comilla',
+            'cumilla'                => 'comilla',
+            'barisal'                => 'barisal',
+            'barishal'               => 'barisal',
+            'jessore'                => 'jessore',
+            'jashore'                => 'jessore',
+            'kustia'                 => 'kushtia',
+            'kushtia'                => 'kushtia',
+            'kurigram'               => 'kurigram',
+            'chapai'                 => 'chapainawabganj',
+            'chapainawabganj'        => 'chapainawabganj',
+            'chapai nawabganj'       => 'chapainawabganj',
+            'chapai-nawabganj'       => 'chapainawabganj',
+            'c.nawabganj'            => 'chapainawabganj',
+            'c nawabganj'            => 'chapainawabganj',
+            'nawabganj'              => 'chapainawabganj',
+            'chapainawabgonj'        => 'chapainawabganj',
+            'chapai nawabgonj'       => 'chapainawabganj',
+            'sirajgonj'              => 'sirajganj',
+            'sunamgonj'              => 'sunamganj',
+            'habigonj'               => 'habiganj',
+            'moulvibazar'            => 'moulvibazar',
+            'moulvi bazar'           => 'moulvibazar',
+            'moulovibazar'           => 'moulvibazar',
+            'b.baria'                => 'brahmanbaria',
+            'b-baria'                => 'brahmanbaria',
+            'bbaria'                 => 'brahmanbaria',
+            'laxmipur'               => 'lakshmipur',
+            'jhalokati'              => 'jhalakati',
+            'jhalakathi'             => 'jhalakati',
+            'coxsbazar'              => "cox's bazar",
+            'coxbazar'               => "cox's bazar",
+            'cox bazar'              => "cox's bazar",
+            'mymensing'              => 'mymensingh',
+            'netrakona'              => 'netrokona',
+            'panchagar'              => 'panchagarh',
+            'gaibanda'               => 'gaibandha',
+            'jaipurhat'              => 'joypurhat',
+            'munshigonj'             => 'munshiganj',
+            'manikgonj'              => 'manikganj',
+            'narayangonj'            => 'narayanganj',
+            'kishoregonj'            => 'kishoreganj',
+            'gopalgonj'              => 'gopalganj',
         ];
 
         if (isset($aliases[$canonical])) {
@@ -1548,8 +1567,23 @@ if (!function_exists('resolve_district_by_name')) {
         if (mb_strlen($canonical) >= 3) {
             foreach ($districtsCache as $d) {
                 $dName = mb_strtolower(trim((string)$d->district_name));
+                $dBnName = mb_strtolower(trim((string)$d->district_bn_name));
                 if ($dName !== '' && (str_contains($dName, $canonical) || str_contains($canonical, $dName))) {
                     return $d;
+                }
+                if ($dBnName !== '' && (str_contains($dBnName, $canonical) || str_contains($canonical, $dBnName))) {
+                    return $d;
+                }
+            }
+
+            // Phonetic transliteration match (e.g. জামালপ -> jamalp -> jamalpur)
+            $phonetic = function_exists('bangla_to_english_phonetic') ? bangla_to_english_phonetic($name) : '';
+            if ($phonetic !== '' && mb_strlen($phonetic) >= 3) {
+                foreach ($districtsCache as $d) {
+                    $cleanDName = preg_replace('/[^a-z0-9]/', '', mb_strtolower((string)$d->district_name));
+                    if ($cleanDName !== '' && (str_contains($cleanDName, $phonetic) || str_contains($phonetic, $cleanDName))) {
+                        return $d;
+                    }
                 }
             }
         }
@@ -1588,22 +1622,29 @@ if (!function_exists('resolve_upazila_by_name')) {
         $candidates = $districtId ? ($upazilasByDistrict[$districtId] ?? collect()) : null;
 
         if ($candidates && $candidates->isNotEmpty()) {
-            // 1. Special Sadar match (e.g. user wrote "সদর" or "Sadar")
-            if (in_array($canonical, ['সদর', 'sadar'])) {
-                foreach ($candidates as $u) {
-                    $uName = mb_strtolower((string)$u->upazila_name);
-                    if (str_contains($uName, 'sadar')) {
-                        return $u;
-                    }
-                }
-            }
-
-            // 2. Exact English match (if Excel had English)
+            // 1. Exact English or Bangla match
             foreach ($candidates as $u) {
                 $uName = mb_strtolower(trim((string)$u->upazila_name));
                 $uBnName = mb_strtolower(trim((string)$u->upazila_bn_name));
                 if (($uName !== '' && $uName === $canonical) || ($uBnName !== '' && $uBnName === $canonical)) {
                     return $u;
+                }
+            }
+
+            // 2. Special Sadar match (e.g. user wrote "সদর", "Sadar", "Jhalokati Sadar", "Jhalkhati Sadar", "Sadar Upazila")
+            // Every district in BD has only ONE Sadar upazila. If the query specifies Sadar, match that district's Sadar upazila.
+            $isSadarQuery = in_array($canonical, ['সদর', 'sadar'])
+                || str_ends_with($canonical, 'sadar')
+                || str_contains($canonical, 'sadar')
+                || str_contains($canonical, 'সদর');
+
+            if ($isSadarQuery) {
+                foreach ($candidates as $u) {
+                    $uName = mb_strtolower((string)$u->upazila_name);
+                    $uBnName = mb_strtolower((string)$u->upazila_bn_name);
+                    if (str_contains($uName, 'sadar') || str_contains($uBnName, 'সদর')) {
+                        return $u;
+                    }
                 }
             }
 
@@ -1618,7 +1659,28 @@ if (!function_exists('resolve_upazila_by_name')) {
                 }
             }
 
-            // 4. Safe partial match under this district (STRICT: length >= 3)
+            // 4. Normalized English phonetic & spelling tolerance match (handles th <-> t, kathi <-> kati, spaces, hyphens)
+            $simplifyGeo = function (string $str): string {
+                $s = mb_strtolower(trim($str));
+                $s = preg_replace('/[^a-z0-9]/', '', $s);
+                return str_replace(
+                    ['gonj', 'pore', 'khati', 'kathi', 'kati', 'th', 'kh', 'gh', 'ch', 'jh', 'dh', 'bh', 'sh'],
+                    ['ganj', 'pur',  'kati',  'kati',  'kati', 't',  'k',  'g',  'c',  'j',  'd',  'b',  's'],
+                    $s
+                );
+            };
+
+            $canonicalSimplified = $simplifyGeo($canonical);
+            if (mb_strlen($canonicalSimplified) >= 3) {
+                foreach ($candidates as $u) {
+                    $uSimplified = $simplifyGeo((string)$u->upazila_name);
+                    if ($uSimplified !== '' && ($uSimplified === $canonicalSimplified || str_contains($uSimplified, $canonicalSimplified) || str_contains($canonicalSimplified, $uSimplified))) {
+                        return $u;
+                    }
+                }
+            }
+
+            // 5. Safe partial match under this district (STRICT: length >= 3)
             if (mb_strlen($canonical) >= 3) {
                 foreach ($candidates as $u) {
                     $uName = mb_strtolower(trim((string)$u->upazila_name));
@@ -1634,6 +1696,20 @@ if (!function_exists('resolve_upazila_by_name')) {
             $query = \App\Models\backend\Upazila::with('upazila_district.district_division');
             if ($districtId) {
                 $query->where('upazila_district_id', $districtId);
+            } else {
+                // Ambiguity Check: If districtId was NOT provided, check if the upazila name exists in multiple districts!
+                // (e.g. Shibganj in Bogra & Chapainawabganj, Kaliganj in Gazipur/Jhenaidah/Lalmonirhat/Satkhira)
+                // If multiple districts match, DO NOT guess a random district!
+                $matchingDistricts = (clone $query)->where(function ($q) use ($canonical) {
+                    $q->where('upazila_name', $canonical)
+                      ->orWhere('upazila_bn_name', $canonical)
+                      ->orWhere('upazila_name', 'like', "%{$canonical}%");
+                })->pluck('upazila_district_id')->unique();
+
+                if ($matchingDistricts->count() > 1) {
+                    // Ambiguous across multiple districts! Do not guess without district context.
+                    return null;
+                }
             }
 
             // Phonetic match across all upazilas

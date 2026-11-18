@@ -433,7 +433,7 @@ class SpotSaleController extends Controller
 
     private function processSpotSaleApproval(SpotSale $spotSale): void
     {
-        $spotSale->loadMissing('items');
+        $spotSale->loadMissing('items.product');
 
         if ($spotSale->items->isEmpty()) {
             throw new \Exception('No items found in this spot sale to approve.');
@@ -446,9 +446,12 @@ class SpotSaleController extends Controller
                 ->lockForUpdate()
                 ->first();
 
-            if (!$stock || $stock->current_stock < $item->quantity) {
-                $available = $stock ? $stock->current_stock : 0;
-                throw new \Exception("Insufficient stock for product #{$item->product_id}. Available: {$available}, Required: {$item->quantity}");
+            $available = $stock ? (int) $stock->current_stock : 0;
+            $requested = (int) $item->quantity;
+
+            if ($available < $requested) {
+                $productName = $item->product?->name ?? ('Product #' . $item->product_id);
+                throw new \Exception("Insufficient stock for {$productName} (Available: {$available}, Requested: {$requested})");
             }
 
             $stock->decrement('current_stock', $item->quantity);

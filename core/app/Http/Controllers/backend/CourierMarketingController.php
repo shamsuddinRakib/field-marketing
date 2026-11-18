@@ -20,7 +20,8 @@ class CourierMarketingController extends Controller
 {
     public function index()
     {
-        return view('backend.modules.courier_marketing.index');
+        $statuses = CourierMarketing::STATUSES;
+        return view('backend.modules.courier_marketing.index', compact('statuses'));
     }
 
     public function createModal()
@@ -130,12 +131,13 @@ class CourierMarketingController extends Controller
     {
         $courierMarketing->load([
             'representative.user',
+            'representative.mrDesignation',
             'teacher.institution.district',
             'teacher.institution.upazila',
             'institution',
             'creator',
             'receiver',
-            'items.product',
+            'items.product.category',
         ]);
 
         return view('backend.modules.courier_marketing.show', compact('courierMarketing'));
@@ -310,6 +312,22 @@ class CourierMarketingController extends Controller
 
         $total = (clone $query)->count('cm.id');
 
+        // Filter: Status
+        $status = trim((string) $request->input('status', ''));
+        if ($status !== '' && $status !== 'all') {
+            $query->where('cm.status', $status);
+        }
+
+        // Filter: Date Range (Dispatch Date)
+        $dateFrom = $request->input('date_from');
+        $dateTo = $request->input('date_to');
+        if (!empty($dateFrom)) {
+            $query->whereDate('cm.dispatch_date', '>=', $dateFrom);
+        }
+        if (!empty($dateTo)) {
+            $query->whereDate('cm.dispatch_date', '<=', $dateTo);
+        }
+
         if ($search !== '') {
             $query->where(function ($builder) use ($search) {
                 $builder->where('u.name', 'like', "%{$search}%")
@@ -349,9 +367,9 @@ class CourierMarketingController extends Controller
             $statusUrl = route('courier-marketings.statusModal', $item->id);
             $deleteUrl = route('courier-marketings.destroy', $item->id);
 
-            $actions = '<div class="d-inline-flex align-items-center justify-content-end gap-1 w-100">'
+            $actions = '<div class="d-inline-flex align-items-center justify-content-center gap-1 w-100">'
                 . '<a href="#" data-ajax-modal="' . $statusUrl . '" data-size="lg" class="w-32-px h-32-px rounded-circle d-inline-flex align-items-center justify-content-center bg-warning-focus text-warning-main AjaxModal" data-onsuccess="CourierMarketingIndex.onSaved" title="Call Verification / Status"><iconify-icon icon="lucide:phone-call"></iconify-icon></a>'
-                . '<a href="#" data-ajax-modal="' . $showUrl . '" data-size="lg" class="w-32-px h-32-px rounded-circle d-inline-flex align-items-center justify-content-center bg-info-focus text-info-main AjaxModal" title="View Details"><iconify-icon icon="lucide:eye"></iconify-icon></a>'
+                . '<a href="' . $showUrl . '" class="w-32-px h-32-px rounded-circle d-inline-flex align-items-center justify-content-center bg-info-focus text-info-main" title="View Details"><iconify-icon icon="lucide:eye"></iconify-icon></a>'
                 . '<a href="#" data-ajax-modal="' . $editUrl . '" data-size="lg" class="w-32-px h-32-px rounded-circle d-inline-flex align-items-center justify-content-center bg-success-focus text-success-main AjaxModal" data-onsuccess="CourierMarketingIndex.onSaved" title="Edit"><iconify-icon icon="lucide:edit"></iconify-icon></a>'
                 . '<a href="#" class="w-32-px h-32-px rounded-circle d-inline-flex align-items-center justify-content-center bg-danger-focus text-danger-main btn-courier-marketing-delete" data-url="' . $deleteUrl . '" title="Delete"><iconify-icon icon="mdi:delete"></iconify-icon></a>'
                 . '</div>';

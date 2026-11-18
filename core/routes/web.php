@@ -68,6 +68,7 @@ use App\Http\Controllers\backend\LibraryController;
 use App\Http\Controllers\backend\MrLocationController;
 use App\Http\Controllers\backend\MrDesignationController;
 use App\Http\Controllers\backend\ProductDistributionController;
+use App\Http\Controllers\backend\RepresentativeInventoryController;
 use App\Http\Controllers\backend\SubjectController;
 use App\Http\Controllers\backend\TeacherController;
 
@@ -333,6 +334,14 @@ Route::middleware(['web', 'auth', 'perm', 'branchscope'])->group(function () {
         Route::delete('/{productDistribution}', [ProductDistributionController::class, 'destroy'])->name('destroy');
         Route::get('/status-modal/{productDistribution}', [ProductDistributionController::class, 'statusModal'])->name('statusModal');
         Route::post('/status-modal/{productDistribution}', [ProductDistributionController::class, 'updateStatus'])->name('updateStatus');
+    });
+
+    // Representative Inventory (MR Stock)
+    Route::prefix('representative-inventory')->name('representative-inventory.')->group(function () {
+        Route::get('/', [RepresentativeInventoryController::class, 'index'])->name('index');
+        Route::post('/list-ajax', [RepresentativeInventoryController::class, 'listAjax'])->name('listAjax');
+        Route::get('/{representative}', [RepresentativeInventoryController::class, 'show'])->whereNumber('representative')->name('show');
+        Route::get('/details/{representative}', [RepresentativeInventoryController::class, 'detailsModal'])->whereNumber('representative')->name('details');
     });
 
 

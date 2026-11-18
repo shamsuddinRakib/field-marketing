@@ -267,6 +267,13 @@
                                             <span>Distribution List</span>
                                         </a>
                                     </li>
+                                    <li>
+                                        <a class="{{ Route::is('representative-inventory.*') ? 'active' : '' }}"
+                                            href="{{ route('representative-inventory.index') }}">
+                                            <iconify-icon icon="mdi:warehouse" class="menu-icon"></iconify-icon>
+                                            <span>Representative Inventory</span>
+                                        </a>
+                                    </li>
                                 @endperm
                                 @perm('daily-visit.index')
                                     <li>
@@ -491,7 +498,7 @@
                                             </a>
                                         </li>
                                     @endperm
-                                    {{-- @perm('subcategory')
+                                    @perm('subcategory')
                                         <li class="mb-8">
                                             <a class="{{ Route::is('subcategory.subcategories.index') ? 'active' : '' }}"
                                                 href="{{ route('subcategory.subcategories.index') }}">
@@ -500,7 +507,7 @@
                                                 <span>Subcategory List</span>
                                             </a>
                                         </li>
-                                    @endperm --}}
+                                    @endperm
                                 </ul>
                             </li>
                         @endpermgroup

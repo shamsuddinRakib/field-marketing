@@ -12,31 +12,38 @@
             table-layout: fixed !important;
             border-collapse: collapse !important;
         }
+
         #courierItemsTable thead th {
             vertical-align: middle !important;
             padding: 8px 6px !important;
             font-size: 13px !important;
             font-weight: 600 !important;
         }
+
         #courierItemsTable tbody td {
             vertical-align: middle !important;
             padding: 6px 6px !important;
             line-height: 1 !important;
         }
+
         #courierItemsTable .col-qty {
             width: 120px;
         }
+
         #courierItemsTable .col-action {
             width: 54px;
         }
+
         @media (max-width: 575.98px) {
             #courierItemsTable .col-qty {
                 width: 88px;
             }
+
             #courierItemsTable .col-action {
                 width: 48px;
             }
         }
+
         #courierItemsTable .select2-container {
             width: 100% !important;
             margin: 0 !important;
@@ -45,15 +52,18 @@
             height: auto !important;
             line-height: 1 !important;
         }
+
         #courierItemsTable .select2-container .selection {
             display: block !important;
             width: 100% !important;
             height: auto !important;
             line-height: 1 !important;
         }
+
         #courierItemsTable .select2-container .dropdown-wrapper {
             display: none !important;
         }
+
         #courierItemsTable .select2-container--default .select2-selection--single {
             height: 40px !important;
             min-height: 40px !important;
@@ -68,6 +78,7 @@
             box-sizing: border-box !important;
             position: relative !important;
         }
+
         #courierItemsTable .select2-container--default .select2-selection--single .select2-selection__rendered {
             display: block !important;
             width: 100% !important;
@@ -81,14 +92,17 @@
             overflow: hidden !important;
             text-overflow: ellipsis !important;
         }
+
         #courierItemsTable .select2-selection__placeholder {
             display: inline !important;
         }
+
         #courierItemsTable .select2-container--open .select2-selection--single,
         #courierItemsTable .courier-qty:focus {
             border-color: var(--primary-600, #487fff) !important;
             outline: 0 !important;
         }
+
         #courierItemsTable .select2-container--default .select2-selection--single .select2-selection__clear {
             height: 38px !important;
             line-height: 38px !important;
@@ -99,6 +113,7 @@
             align-items: center !important;
             font-size: 16px !important;
         }
+
         #courierItemsTable .select2-container--default .select2-selection--single .select2-selection__arrow {
             position: absolute !important;
             height: 38px !important;
@@ -106,6 +121,7 @@
             right: 6px !important;
             width: 20px !important;
         }
+
         #courierItemsTable .courier-qty {
             display: block !important;
             width: 100% !important;
@@ -121,6 +137,7 @@
             box-sizing: border-box !important;
             background-color: #fff !important;
         }
+
         #courierItemsTable .btnRemoveRow {
             width: 40px !important;
             min-width: 40px !important;
@@ -177,11 +194,53 @@
             </div>
         </div>
         <div class="card-body">
+            {{-- FILTER BAR --}}
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-16 pb-16 border-bottom">
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                    {{-- Status Filter --}}
+                    <div style="min-width: 170px;">
+                        <select id="filterStatus" class="form-select form-select-sm radius-8">
+                            <option value="">All Statuses</option>
+                            @foreach ($statuses as $val => $lbl)
+                                <option value="{{ $val }}">{{ $lbl }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    {{-- Date From --}}
+                    <div class="d-flex align-items-center gap-1">
+                        <span class="text-secondary text-xs text-uppercase fw-semibold">From:</span>
+                        <input type="date" id="filterDateFrom" class="form-control form-control-sm radius-8"
+                            style="width: 150px;" title="Dispatch Date From">
+                    </div>
+
+                    {{-- Date To --}}
+                    <div class="d-flex align-items-center gap-1">
+                        <span class="text-secondary text-xs text-uppercase fw-semibold">To:</span>
+                        <input type="date" id="filterDateTo" class="form-control form-control-sm radius-8"
+                            style="width: 150px;" title="Dispatch Date To">
+                    </div>
+
+                    {{-- Reset Filter Button --}}
+                    <button type="button" id="btnFilterReset"
+                        class="btn btn-outline-secondary btn-sm radius-8 d-inline-flex align-items-center gap-1 px-12 py-6"
+                        title="Reset Filters">
+                        <iconify-icon icon="solar:refresh-linear" class="text-base"></iconify-icon>
+                        <span>Reset</span>
+                    </button>
+                </div>
+            </div>
+
             <table class="table bordered-table table-scroll mb-0 AjaxDataTable" id="courierMarketingTable"
                 style="width:100%">
                 <thead>
                     <tr>
-                        <th style="width:60px">S.L</th>
+                        <th style="width:70px">
+                            <div class="form-check style-check d-flex align-items-center">
+                                <input class="form-check-input" type="checkbox" id="select-all">
+                                <label class="form-check-label ms-1">S.L</label>
+                            </div>
+                        </th>
                         <th>Representative</th>
                         <th>Teacher</th>
                         <th>Institution</th>
@@ -215,9 +274,10 @@
         window.CourierMarketingIndex = {
             onLoad: function($modal) {
                 $modal.find('.modal-dialog').addClass('modal-dialog-scrollable');
-                $modal.off('hidden.bs.modal.courierMarketingScroll').on('hidden.bs.modal.courierMarketingScroll', function() {
-                    $(this).find('.modal-dialog').removeClass('modal-dialog-scrollable');
-                });
+                $modal.off('hidden.bs.modal.courierMarketingScroll').on('hidden.bs.modal.courierMarketingScroll',
+                    function() {
+                        $(this).find('.modal-dialog').removeClass('modal-dialog-scrollable');
+                    });
 
                 const cleanRowHtml = $modal.find('#courierItemsTable tbody tr:first').prop('outerHTML') || '';
 
@@ -312,7 +372,8 @@
                             data: function(params) {
                                 return {
                                     q: params.term || '',
-                                    upazila_id: $modal.find('#courierHiddenUpazilaId').val() || $upazilaSelect.val() || ''
+                                    upazila_id: $modal.find('#courierHiddenUpazilaId').val() ||
+                                        $upazilaSelect.val() || ''
                                 };
                             },
                             processResults: function(data) {
@@ -351,8 +412,10 @@
                             data: function(params) {
                                 return {
                                     q: params.term || '',
-                                    upazila_id: $modal.find('#courierHiddenUpazilaId').val() || $upazilaSelect.val() || '',
-                                    institution_id: $modal.find('#courierHiddenInstitutionId').val() || $instSelect.val() || ''
+                                    upazila_id: $modal.find('#courierHiddenUpazilaId').val() ||
+                                        $upazilaSelect.val() || '',
+                                    institution_id: $modal.find('#courierHiddenInstitutionId').val() ||
+                                        $instSelect.val() || ''
                                 };
                             },
                             processResults: function(data) {
@@ -390,42 +453,47 @@
                     $modal.find('#courierTotalText').text(total);
                 }
 
-                $modal.off('click.addCourierItem', '#btnAddCourierItem').on('click.addCourierItem', '#btnAddCourierItem', function(e) {
-                    e.preventDefault();
-                    if (!cleanRowHtml) return;
+                $modal.off('click.addCourierItem', '#btnAddCourierItem').on('click.addCourierItem',
+                    '#btnAddCourierItem',
+                    function(e) {
+                        e.preventDefault();
+                        if (!cleanRowHtml) return;
 
-                    const $row = $(cleanRowHtml);
-                    $row.find('input, select').each(function() {
-                        const name = $(this).attr('name');
-                        if (!name) return;
-                        $(this).attr('name', name.replace(/\[\d+]/, `[${courierRowIndex}]`));
-                        if ($(this).hasClass('courier-qty')) {
-                            $(this).val(1);
-                        } else {
-                            $(this).val('').html('');
+                        const $row = $(cleanRowHtml);
+                        $row.find('input, select').each(function() {
+                            const name = $(this).attr('name');
+                            if (!name) return;
+                            $(this).attr('name', name.replace(/\[\d+]/, `[${courierRowIndex}]`));
+                            if ($(this).hasClass('courier-qty')) {
+                                $(this).val(1);
+                            } else {
+                                $(this).val('').html('');
+                            }
+                        });
+
+                        $courierTable.append($row);
+
+                        if (window.S2 && typeof window.S2.auto === 'function') {
+                            window.S2.auto($row);
                         }
+
+                        courierRowIndex++;
+                        calculateCourierTotal();
                     });
 
-                    $courierTable.append($row);
+                $modal.off('click.remCourierRow', '.btnRemoveRow').on('click.remCourierRow', '.btnRemoveRow',
+                    function(e) {
+                        e.preventDefault();
+                        if ($courierTable.find('tr').length <= 1) return;
+                        $(this).closest('tr').remove();
+                        calculateCourierTotal();
+                    });
 
-                    if (window.S2 && typeof window.S2.auto === 'function') {
-                        window.S2.auto($row);
-                    }
-
-                    courierRowIndex++;
-                    calculateCourierTotal();
-                });
-
-                $modal.off('click.remCourierRow', '.btnRemoveRow').on('click.remCourierRow', '.btnRemoveRow', function(e) {
-                    e.preventDefault();
-                    if ($courierTable.find('tr').length <= 1) return;
-                    $(this).closest('tr').remove();
-                    calculateCourierTotal();
-                });
-
-                $modal.off('input.courierQty change.courierQty', '.courier-qty').on('input.courierQty change.courierQty', '.courier-qty', function() {
-                    calculateCourierTotal();
-                });
+                $modal.off('input.courierQty change.courierQty', '.courier-qty').on(
+                    'input.courierQty change.courierQty', '.courier-qty',
+                    function() {
+                        calculateCourierTotal();
+                    });
 
                 calculateCourierTotal();
             },
@@ -500,6 +568,43 @@
             } else if (confirm('Delete this courier dispatch?')) {
                 remove();
             }
+        });
+
+        // ================= COURIER DATATABLE FILTERS =================
+        $(function() {
+            var $table = $('#courierMarketingTable');
+
+            // Send filter params with DataTables server-side AJAX requests
+            $table.on('preXhr.dt', function(e, settings, data) {
+                data.status = $('#filterStatus').val();
+                data.date_from = $('#filterDateFrom').val();
+                data.date_to = $('#filterDateTo').val();
+            });
+
+            // Trigger table reload on filter changes
+            $('#filterStatus, #filterDateFrom, #filterDateTo').on('change', function() {
+                $table.DataTable().ajax.reload();
+            });
+
+            // Reset filters
+            $('#btnFilterReset').on('click', function() {
+                $('#filterStatus').val('');
+                $('#filterDateFrom').val('');
+                $('#filterDateTo').val('');
+                $table.DataTable().ajax.reload();
+            });
+
+            // Uncheck header checkbox on table draw/reload
+            $table.on('draw.dt', function() {
+                $('#select-all').prop('checked', false);
+            });
+
+            // Sync master checkbox when individual row checkboxes are toggled
+            $(document).on('change', '.row-check', function() {
+                var total = $('.row-check').length;
+                var checked = $('.row-check:checked').length;
+                $('#select-all').prop('checked', total > 0 && total === checked);
+            });
         });
     </script>
 @endsection

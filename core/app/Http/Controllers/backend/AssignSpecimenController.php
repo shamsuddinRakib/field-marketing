@@ -563,7 +563,7 @@ class AssignSpecimenController extends Controller
             return response()->json(['ok' => true, 'msg' => 'Status is already pending']);
         }
 
-        $assignSpecimen->load('items');
+        $assignSpecimen->load('items.product');
 
         if ($assignSpecimen->items->isEmpty()) {
             return response()->json(['ok' => false, 'msg' => 'No items to approve'], 422);
@@ -577,8 +577,12 @@ class AssignSpecimenController extends Controller
                         ->lockForUpdate()
                         ->first();
 
-                    if (!$stock || $stock->current_stock < $item->quantity) {
-                        throw new \Exception('Insufficient stock for product #' . $item->product_id);
+                    $available = $stock ? (int) $stock->current_stock : 0;
+                    $requested = (int) $item->quantity;
+
+                    if ($available < $requested) {
+                        $productName = $item->product?->name ?? ('Product #' . $item->product_id);
+                        throw new \Exception("Insufficient stock for {$productName} (Available: {$available}, Requested: {$requested})");
                     }
 
                     $stock->decrement('current_stock', $item->quantity);
