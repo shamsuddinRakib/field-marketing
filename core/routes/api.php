@@ -5,6 +5,7 @@ use App\Http\Controllers\api\AuthController;
 use App\Http\Controllers\api\BookRequestController;
 use App\Http\Controllers\api\BookReturnController;
 use App\Http\Controllers\api\CategoryController;
+use App\Http\Controllers\api\SubcategoryController;
 use App\Http\Controllers\api\CouponController;
 use App\Http\Controllers\api\DailyVisitController;
 use App\Http\Controllers\api\DashboardController;
@@ -42,7 +43,11 @@ Route::post('logout', [AuthController::class, 'logout'])->middleware('auth:sanct
 Route::get('/profile', [ProfileController::class, 'show'])->middleware('auth:sanctum');
 Route::put('/profile', [ProfileController::class, 'update'])->middleware('auth:sanctum');
 
+// Categories & Subcategories
 Route::get('categories', [CategoryController::class, 'index']);
+Route::get('subcategories', [SubcategoryController::class, 'index'])->name('subcategories.index');
+Route::get('subcategories/category/{category}', [SubcategoryController::class, 'byCategory'])->name('subcategories.category');
+Route::get('subcategories/{subcategory}', [SubcategoryController::class, 'show'])->name('subcategories.show');
 
 
 Route::get('/swagger-test', function () {

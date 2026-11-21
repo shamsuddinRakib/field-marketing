@@ -138,7 +138,7 @@ class AssignSpecimenController extends Controller
                 <a href="#" class="w-32-px h-32-px rounded-circle d-inline-flex align-items-center justify-content-center
                     bg-success-focus text-success-main AjaxModal"
                     data-ajax-modal="' . route('assign-specimen.edit', $b->id) . '"
-                    data-size="lg"
+                    data-size="xl"
                     data-onsuccess="BranchesIndex.onSaved"
                     title="Edit">
                     <iconify-icon icon="lucide:edit"></iconify-icon>
@@ -165,7 +165,7 @@ class AssignSpecimenController extends Controller
             $actions .= '<a href="#" class="w-32-px h-32-px rounded-circle d-inline-flex align-items-center justify-content-center bg-info-focus text-info-main AjaxModal" data-ajax-modal="' . route('assign-specimen.show', $b->id) . '" data-size="lg" title="View Details"><iconify-icon icon="mdi:eye"></iconify-icon></a>';
 
             if ($b->status !== 'approved') {
-                $actions .= '<a href="#" class="w-32-px h-32-px rounded-circle d-inline-flex align-items-center justify-content-center bg-success-focus text-success-main AjaxModal" data-ajax-modal="' . route('assign-specimen.edit', $b->id) . '" data-size="lg" data-onsuccess="BranchesIndex.onSaved" title="Edit"><iconify-icon icon="lucide:edit"></iconify-icon></a>';
+                $actions .= '<a href="#" class="w-32-px h-32-px rounded-circle d-inline-flex align-items-center justify-content-center bg-success-focus text-success-main AjaxModal" data-ajax-modal="' . route('assign-specimen.edit', $b->id) . '" data-size="xl" data-onsuccess="BranchesIndex.onSaved" title="Edit"><iconify-icon icon="lucide:edit"></iconify-icon></a>';
                 $actions .= '<a href="#" class="w-32-px h-32-px rounded-circle d-inline-flex align-items-center justify-content-center bg-danger-focus text-danger-main btn-branch-delete" data-id="' . $b->id . '" data-url="' . route('assign-specimen.destroy', $b->id) . '" title="Delete"><iconify-icon icon="mdi:delete"></iconify-icon></a>';
             }
 
@@ -280,7 +280,9 @@ class AssignSpecimenController extends Controller
         }
 
         $assignSpecimen->load([
-            'items.product:id,name',
+            'items.product:id,name,category_id,subcategory_id',
+            'items.product.category:id,name',
+            'items.product.subcategory:id,name',
             'user:id,name',
             'teacher.institution.upazila',
             'teacher.institution.district',

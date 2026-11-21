@@ -35,7 +35,7 @@
                     <button type="button"
                         class="btn btn-primary btn-sm px-12 py-8 radius-8 d-flex align-items-center gap-2 AjaxModal"
                         data-ajax-modal="{{ route('book-request.book-requests.createModal') }}"
-                        data-size="lg" data-onload="BookRequestsIndex.onLoad"
+                        data-size="xl" data-onload="BookRequestsIndex.onLoad"
                         data-onsuccess="BookRequestsIndex.onSaved">
                         <iconify-icon icon="ic:baseline-plus" class="text-xl"></iconify-icon>Add book request
                     </button>
@@ -82,45 +82,43 @@
                 const cur = parseInt($qty.val(), 10);
                 if (!isNaN(cur) && cur > availableQty) {
                     $qty.val(availableQty);
-                    const $err = $row.find('.invalid-feedback');
-                    if ($err.length) {
-                        $err.text('Quantity cannot exceed available quantity (' + availableQty + ').').show();
-                        setTimeout(() => { if (!$qty.is(':focus')) $err.hide(); }, 3000);
-                    }
                 }
             } else {
                 $qty.removeAttr('max');
-                if ($hint.length) $hint.text('Available: —');
+                if ($hint.length) $hint.text('');
             }
         }
 
         function initBookRequestProductSelect($select, $modal) {
             if ($select.hasClass('select2-hidden-accessible')) $select.select2('destroy');
-            $select.select2({
+            const $catSelect = $modal.find('#bookRequestCategorySelect');
+            const $subcatSelect = $modal.find('#bookRequestSubcategorySelect');
+            const currentSubcat = $subcatSelect.val();
+
+            if (!currentSubcat) {
+                $select.prop('disabled', true).empty();
+                return;
+            }
+
+            $select.prop('disabled', false).select2({
                 dropdownParent: $modal,
                 width: '100%',
-                placeholder: 'Select product from Distribution List',
+                placeholder: 'Select Product',
                 allowClear: true,
                 ajax: {
-                    url: "{{ route('product-distribution.products.select2') }}",
+                    url: "{{ route('product.select2') }}",
                     dataType: 'json',
-                    delay: 200,
+                    delay: 250,
                     data: params => ({
                         q: params.term || '',
-                        marketing_representative_id: $modal.find('[name="marketing_representative_id"]').val(),
-                        exclude_request_group_id: $modal.find('[name="request_group_id"]').val(),
-                        exclude_request_id: $modal.find('[name="exclude_request_id"]').val()
+                        category_id: $catSelect.val(),
+                        subcategory_id: $subcatSelect.val()
                     }),
                     processResults: data => ({
                         results: (data.results || []).filter(item => !$modal.find('.js-product-select').not($select)
                             .toArray().some(other => String($(other).val()) === String(item.id)))
                     })
                 }
-            }).off('select2:select.distCheck').on('select2:select.distCheck', function(e) {
-                const availableQty = e.params && e.params.data ? e.params.data.available_quantity : null;
-                setDistForRow($(this).closest('.book-request-product-row'), availableQty);
-            }).off('select2:clear.distCheck').on('select2:clear.distCheck', function() {
-                setDistForRow($(this).closest('.book-request-product-row'), null);
             });
         }
 
@@ -149,19 +147,139 @@
                         }
                     });
                 });
+
+                // Category & Subcategory Cascading
+                const $categorySelect = $modal.find('#bookRequestCategorySelect');
+                const $subcategorySelect = $modal.find('#bookRequestSubcategorySelect');
+                const $btnAddProduct = $modal.find('.btn-add-product');
+                const $hint = $modal.find('#bookRequestSelectionHint');
+                const subcategoryUrl = "{{ route('subcategory.select2') }}";
+
+                function initSubcategorySelect2() {
+                    if ($subcategorySelect.hasClass('select2-hidden-accessible')) {
+                        $subcategorySelect.select2('destroy');
+                    }
+                    $subcategorySelect.empty().append(new Option('', '', true, true));
+                    $subcategorySelect.prop('disabled', false).select2({
+                        dropdownParent: $modal,
+                        width: '100%',
+                        placeholder: 'Select Subcategory',
+                        allowClear: true,
+                        ajax: {
+                            url: subcategoryUrl,
+                            dataType: 'json',
+                            delay: 250,
+                            data: function(params) {
+                                return {
+                                    q: params.term || '',
+                                    category_id: $categorySelect.val(),
+                                    type: $categorySelect.val()
+                                };
+                            },
+                            processResults: function(data) {
+                                return { results: Array.isArray(data?.results) ? data.results : [] };
+                            }
+                        }
+                    });
+                }
+
+                function updateAllProductSelects() {
+                    const hasSubcategory = !!$subcategorySelect.val();
+                    if (hasSubcategory) {
+                        $btnAddProduct.prop('disabled', false);
+                        $hint.text('Showing products for selected subcategory').removeClass('text-muted').addClass('text-success');
+                        $modal.find('.js-product-select').each(function() {
+                            initBookRequestProductSelect($(this), $modal);
+                        });
+                    } else {
+                        $btnAddProduct.prop('disabled', true);
+                        $hint.text('Please select a Category and Subcategory above to enable products').removeClass('text-success').addClass('text-muted');
+                        $modal.find('.js-product-select').each(function() {
+                            if ($(this).hasClass('select2-hidden-accessible')) {
+                                $(this).select2('destroy');
+                            }
+                            $(this).empty().prop('disabled', true);
+                            setDistForRow($(this).closest('.book-request-product-row'), null);
+                        });
+                    }
+                }
+
+                // Initialize Category Select2
+                if ($categorySelect.length && !$categorySelect.hasClass('select2-hidden-accessible')) {
+                    $categorySelect.select2({
+                        dropdownParent: $modal,
+                        width: '100%',
+                        placeholder: 'Select Category',
+                        allowClear: true,
+                        ajax: {
+                            url: "{{ route('category.cat.select2') }}",
+                            dataType: 'json',
+                            delay: 250,
+                            data: function(params) {
+                                return { q: params.term || '' };
+                            },
+                            processResults: function(data) {
+                                return { results: Array.isArray(data?.results) ? data.results : [] };
+                            }
+                        }
+                    });
+                }
+
+                // If Category pre-selected (Edit Modal), initialize subcategory select2
+                if ($categorySelect.val()) {
+                    if (!$subcategorySelect.hasClass('select2-hidden-accessible')) {
+                        $subcategorySelect.prop('disabled', false).select2({
+                            dropdownParent: $modal,
+                            width: '100%',
+                            placeholder: 'Select Subcategory',
+                            allowClear: true,
+                            ajax: {
+                                url: subcategoryUrl,
+                                dataType: 'json',
+                                delay: 250,
+                                data: function(params) {
+                                    return {
+                                        q: params.term || '',
+                                        category_id: $categorySelect.val(),
+                                        type: $categorySelect.val()
+                                    };
+                                },
+                                processResults: function(data) {
+                                    return { results: Array.isArray(data?.results) ? data.results : [] };
+                                }
+                            }
+                        });
+                    }
+                }
+
+                $categorySelect.off('change.catCascade').on('change.catCascade', function() {
+                    const catId = $(this).val();
+                    if (catId) {
+                        initSubcategorySelect2();
+                    } else {
+                        if ($subcategorySelect.hasClass('select2-hidden-accessible')) {
+                            $subcategorySelect.select2('destroy');
+                        }
+                        $subcategorySelect.empty().append(new Option('', '', true, true)).prop('disabled', true);
+                    }
+                    $modal.find('.js-product-select').val(null).trigger('change');
+                    updateAllProductSelects();
+                });
+
+                $subcategorySelect.off('change.subCascade').on('change.subCascade', function() {
+                    updateAllProductSelects();
+                    if (!$(this).val()) {
+                        $modal.find('.js-product-select').val(null).trigger('change');
+                    }
+                });
+
                 $modal.find('.js-product-select').each(function() {
                     initBookRequestProductSelect($(this), $modal);
                 });
                 $modal.find('.book-request-product-items').each(function() {
                     $(this).data('next-index', $(this).find('.book-request-product-row').length);
                 });
-                // Refresh distribution products when representative changes
-                $modal.find('.js-representative-select').on('change', function() {
-                    $modal.find('.js-product-select').val(null).trigger('change');
-                    $modal.find('.js-product-select').each(function() {
-                        initBookRequestProductSelect($(this), $modal);
-                    });
-                });
+
             },
             onSaved: function(res) {
                 $('.AjaxDataTable').DataTable().ajax.reload(null, false);
@@ -177,6 +295,19 @@
 
         $(document).on('click', '.btn-add-product', function() {
             const $modal = $(this).closest('.modal');
+            const subcatId = $modal.find('#bookRequestSubcategorySelect').val();
+            if (!subcatId) {
+                if (window.Swal) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Select Subcategory First',
+                        text: 'Please select a Category and Subcategory before adding products.',
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                }
+                return;
+            }
             const $items = $(this).siblings('.book-request-product-items');
             const $row = $($('#book-request-product-template').html().trim());
             const index = Number($items.data('next-index') || 0);

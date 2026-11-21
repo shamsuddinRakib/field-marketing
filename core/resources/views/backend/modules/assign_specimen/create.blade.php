@@ -290,38 +290,70 @@
             </div>
         </div>
 
-        {{-- SPECIMEN ITEMS --}}
-        <div class="table-responsive">
-            <table class="table table-sm align-middle items-table-fixed" id="specimenItemsTable">
-                <thead class="table-light">
-                    <tr>
-                        <th>Product</th>
-                        <th class="text-end col-qty" style="width:120px">Qty</th>
-                        <th class="text-center col-action" style="width:54px"></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr class="specimen-item-row">
-                        <td>
-                            <select name="items[0][product_id]"
-                                class="form-control form-control-sm js-s2-ajax specimen-product"
-                                data-url="{{ route('product.select2') }}" data-placeholder="Select Product"
-                                required></select>
-                        </td>
-                        <td>
-                            <input type="number" step="1" min="1" value="1"
-                                name="items[0][quantity]" class="form-control form-control-sm text-end specimen-qty"
-                                required>
-                        </td>
-                        <td class="text-center">
-                            <button type="button" class="btn btn-sm btn-outline-danger btnRemoveRow">✕</button>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+        {{-- CATEGORY & SUBCATEGORY SELECTION --}}
+        <div class="card mb-16">
+            <div class="card-body">
+                <h6 class="mb-12 fw-semibold">Product Filter (Category & Subcategory)</h6>
+                <div class="row g-3">
+                    <div class="col-md-6 mb-12">
+                        <label class="form-label text-sm mb-8">Category <span class="text-danger">*</span></label>
+                        <select id="specimenCategorySelect" class="form-control form-control-sm js-s2-ajax"
+                            data-url="{{ route('category.cat.select2') }}"
+                            data-placeholder="Select Category">
+                        </select>
+                    </div>
+
+                    <div class="col-md-6 mb-12">
+                        <label class="form-label text-sm mb-8">Subcategory <span class="text-danger">*</span></label>
+                        <select id="specimenSubcategorySelect" class="form-control form-control-sm"
+                            data-placeholder="Select Subcategory" disabled>
+                        </select>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="d-flex justify-content-end mb-8">
-            <button type="button" id="btnAddSpecimenItem" class="btn btn-sm btn-outline-primary">+ Add Item</button>
+
+        {{-- SPECIMEN ITEMS --}}
+        <div class="card mb-16">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-12">
+                    <h6 class="mb-0 fw-semibold">Products</h6>
+                    <span class="text-xs text-muted" id="specimenSelectionHint">Please select a Category and Subcategory above to enable products</span>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle items-table-fixed" id="specimenItemsTable">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Product</th>
+                                <th class="text-end col-qty" style="width:120px">Qty</th>
+                                <th class="text-center col-action" style="width:54px"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="specimen-item-row">
+                                <td>
+                                    <select name="items[0][product_id]"
+                                        class="form-control form-control-sm specimen-product"
+                                        data-placeholder="Select Product"
+                                        disabled required></select>
+                                </td>
+                                <td>
+                                    <input type="number" step="1" min="1" value="1"
+                                        name="items[0][quantity]" class="form-control form-control-sm text-end specimen-qty"
+                                        required>
+                                </td>
+                                <td class="text-center">
+                                    <button type="button" class="btn btn-sm btn-outline-danger btnRemoveRow">✕</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="d-flex justify-content-end mt-12">
+                    <button type="button" id="btnAddSpecimenItem" class="btn btn-sm btn-outline-primary" disabled>+ Add Item</button>
+                </div>
+            </div>
         </div>
 
         {{-- SUMMARY --}}
@@ -578,49 +610,198 @@
             $('#specimenHiddenDivisionId').val('');
         });
 
-        $('#btnAddSpecimenItem').on('click', function() {
-            const $firstRow = $table.find('tr:first');
+        // ================= CASCADING CATEGORY -> SUBCATEGORY -> PRODUCT =================
+        const $categorySelect = $('#specimenCategorySelect');
+        const $subcategorySelect = $('#specimenSubcategorySelect');
+        const $btnAddItem = $('#btnAddSpecimenItem');
+        const $hint = $('#specimenSelectionHint');
 
-            $firstRow.find('.select2-hidden-accessible').each(function() {
-                $(this).select2('destroy');
-            });
+        const subcategoryUrl = "{{ route('subcategory.select2') }}";
+        const productUrl = "{{ route('product.select2') }}";
 
-            const $row = $firstRow.clone();
+        function parentModal() {
+            return $modal.length ? $modal : $(document.body);
+        }
 
-            $row.find('input, select').each(function() {
-                const name = $(this).attr('name');
-                if (!name) return;
-                $(this).attr('name', name.replace(/\[\d+]/, `[${rowIndex}]`));
-                if ($(this).hasClass('specimen-qty')) {
-                    $(this).val(1);
-                } else {
-                    $(this).val('').html('');
+        function initSubcategorySelect2() {
+            if ($subcategorySelect.hasClass('select2-hidden-accessible')) {
+                $subcategorySelect.select2('destroy');
+            }
+
+            $subcategorySelect.empty().append(new Option('', '', true, true));
+            $subcategorySelect.prop('disabled', false).select2({
+                dropdownParent: parentModal(),
+                width: '100%',
+                placeholder: 'Select Subcategory',
+                allowClear: true,
+                ajax: {
+                    url: subcategoryUrl,
+                    dataType: 'json',
+                    delay: 250,
+                    data: function (params) {
+                        return {
+                            q: params.term || '',
+                            category_id: $categorySelect.val(),
+                            type: $categorySelect.val()
+                        };
+                    },
+                    processResults: function (data) {
+                        return { results: Array.isArray(data?.results) ? data.results : [] };
+                    }
                 }
             });
+        }
 
-            $table.append($row);
-
-            if (window.S2 && typeof window.S2.auto === 'function') {
-                window.S2.auto();
+        function initProductSelect2($select) {
+            if ($select.hasClass('select2-hidden-accessible')) {
+                $select.select2('destroy');
             }
+
+            const currentSubcategory = $subcategorySelect.val();
+
+            if (!currentSubcategory) {
+                $select.prop('disabled', true).empty();
+                return;
+            }
+
+            $select.prop('disabled', false).select2({
+                dropdownParent: parentModal(),
+                width: '100%',
+                placeholder: 'Select Product',
+                allowClear: true,
+                ajax: {
+                    url: productUrl,
+                    dataType: 'json',
+                    delay: 250,
+                    data: function (params) {
+                        return {
+                            q: params.term || '',
+                            category_id: $categorySelect.val(),
+                            subcategory_id: $subcategorySelect.val()
+                        };
+                    },
+                    processResults: function (data) {
+                        return { results: Array.isArray(data?.results) ? data.results : [] };
+                    }
+                }
+            });
+        }
+
+        function updateAllProductSelects() {
+            const hasSubcategory = !!$subcategorySelect.val();
+            if (hasSubcategory) {
+                $btnAddItem.prop('disabled', false);
+                $hint.text('Showing products for selected subcategory').removeClass('text-muted').addClass('text-success');
+                $table.find('.specimen-product').each(function () {
+                    initProductSelect2($(this));
+                });
+            } else {
+                $btnAddItem.prop('disabled', true);
+                $hint.text('Please select a Category and Subcategory above to enable products').removeClass('text-success').addClass('text-muted');
+                $table.find('.specimen-product').each(function () {
+                    if ($(this).hasClass('select2-hidden-accessible')) {
+                        $(this).select2('destroy');
+                    }
+                    $(this).empty().prop('disabled', true);
+                });
+            }
+        }
+
+        // On Category change -> reset Subcategory & Products
+        $categorySelect.on('change', function () {
+            const catId = $(this).val();
+
+            if ($subcategorySelect.hasClass('select2-hidden-accessible')) {
+                $subcategorySelect.select2('destroy');
+            }
+            $subcategorySelect.empty().prop('disabled', true);
+
+            // Reset table to single row
+            $table.find('tr:gt(0)').remove();
+            const $firstRowProduct = $table.find('tr:first .specimen-product');
+            if ($firstRowProduct.hasClass('select2-hidden-accessible')) {
+                $firstRowProduct.select2('destroy');
+            }
+            $firstRowProduct.empty().prop('disabled', true);
+            $table.find('tr:first .specimen-qty').val(1);
+            calculateTotal();
+
+            if (catId) {
+                initSubcategorySelect2();
+            } else {
+                updateAllProductSelects();
+            }
+        });
+
+        // On Subcategory change -> reload product selects
+        $subcategorySelect.on('change', function () {
+            $table.find('tr:gt(0)').remove();
+            const $firstRowProduct = $table.find('tr:first .specimen-product');
+            if ($firstRowProduct.hasClass('select2-hidden-accessible')) {
+                $firstRowProduct.select2('destroy');
+            }
+            $firstRowProduct.empty();
+            $table.find('tr:first .specimen-qty').val(1);
+            calculateTotal();
+
+            updateAllProductSelects();
+        });
+
+        // Add Item row
+        $('#btnAddSpecimenItem').on('click', function () {
+            if (!$subcategorySelect.val()) {
+                if (window.Swal) {
+                    Swal.fire({
+                        icon: 'info',
+                        title: 'Select Subcategory',
+                        text: 'Please select a Subcategory first to add products.'
+                    });
+                }
+                return;
+            }
+
+            const newRowHtml = `
+                <tr class="specimen-item-row">
+                    <td>
+                        <select name="items[${rowIndex}][product_id]" class="form-control form-control-sm specimen-product"
+                            data-placeholder="Select Product" required></select>
+                    </td>
+                    <td>
+                        <input type="number" step="1" min="1" value="1" name="items[${rowIndex}][quantity]"
+                            class="form-control form-control-sm text-end specimen-qty" required>
+                    </td>
+                    <td class="text-center">
+                        <button type="button" class="btn btn-sm btn-outline-danger btnRemoveRow">✕</button>
+                    </td>
+                </tr>
+            `;
+
+            const $newRow = $(newRowHtml);
+            $table.append($newRow);
+            initProductSelect2($newRow.find('.specimen-product'));
 
             rowIndex++;
             calculateTotal();
         });
 
-        $table.on('click', '.btnRemoveRow', function() {
-            if ($table.find('tr').length === 1) return;
-            $(this).closest('tr').remove();
+        $table.on('click', '.btnRemoveRow', function () {
+            if ($table.find('tr').length === 1) {
+                const $firstRowProduct = $table.find('tr:first .specimen-product');
+                $firstRowProduct.val(null).trigger('change');
+                $table.find('tr:first .specimen-qty').val(1);
+            } else {
+                $(this).closest('tr').remove();
+            }
             calculateTotal();
         });
 
-        $table.on('input', '.specimen-qty', function() {
+        $table.on('input', '.specimen-qty', function () {
             calculateTotal();
         });
 
         function calculateTotal() {
             let total = 0;
-            $('.specimen-qty').each(function() {
+            $('.specimen-qty').each(function () {
                 total += parseInt($(this).val() || 0, 10);
             });
             $('#specimenTotalText').text(total);
@@ -629,7 +810,7 @@
         calculateTotal();
 
         if (window.S2 && typeof window.S2.auto === 'function') {
-            window.S2.auto();
+            window.S2.auto($modal.length ? $modal : undefined);
         }
     })();
 </script>

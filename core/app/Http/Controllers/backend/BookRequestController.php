@@ -28,21 +28,11 @@ class BookRequestController extends Controller
     {
         $bookRequest->load('representative.user');
         $bookRequests = $bookRequest->request_group_id
-            ? BookRequest::with('items.product')->where('request_group_id', $bookRequest->request_group_id)->get()
+            ? BookRequest::with(['items.product.category:id,name', 'items.product.subcategory:id,name'])->where('request_group_id', $bookRequest->request_group_id)->get()
                 ->flatMap(fn (BookRequest $request) => $request->items)->values()
-            : $bookRequest->items()->with('product')->get();
+            : $bookRequest->items()->with(['product.category:id,name', 'product.subcategory:id,name'])->get();
 
-        // Dist quantities for this MR, to enforce quantity <= Dist in the form.
-        $availability = app(BookRequestAvailabilityService::class)->forRepresentative(
-            (int) $bookRequest->marketing_representative_id,
-            $bookRequest->request_group_id,
-            $bookRequest->request_group_id ? null : (int) $bookRequest->id
-        );
-        $distQuantities = collect($availability)
-            ->map(fn ($item) => $item['available_quantity'])
-            ->all();
-
-        return view('backend.modules.book_requests.edit_modal', compact('bookRequest', 'bookRequests', 'distQuantities'));
+        return view('backend.modules.book_requests.edit_modal', compact('bookRequest', 'bookRequests'));
     }
 
     public function show(BookRequest $bookRequest)
@@ -128,7 +118,7 @@ class BookRequestController extends Controller
 
             $actions = '<div class="d-inline-flex align-items-center justify-content-end gap-1 w-100">'
                 . '<a href="#" data-ajax-modal="' . $showUrl . '" data-size="lg" class="w-32-px h-32-px rounded-circle d-inline-flex align-items-center justify-content-center bg-info-focus text-info-main AjaxModal" title="View"><iconify-icon icon="lucide:eye"></iconify-icon></a>'
-                . '<a href="#" class="w-32-px h-32-px rounded-circle d-inline-flex align-items-center justify-content-center bg-success-focus text-success-main AjaxModal" data-ajax-modal="' . $editUrl . '" data-size="lg" data-onload="BookRequestsIndex.onLoad" data-onsuccess="BookRequestsIndex.onSaved" title="Edit"><iconify-icon icon="lucide:edit"></iconify-icon></a>'
+                . '<a href="#" class="w-32-px h-32-px rounded-circle d-inline-flex align-items-center justify-content-center bg-success-focus text-success-main AjaxModal" data-ajax-modal="' . $editUrl . '" data-size="xl" data-onload="BookRequestsIndex.onLoad" data-onsuccess="BookRequestsIndex.onSaved" title="Edit"><iconify-icon icon="lucide:edit"></iconify-icon></a>'
                 . '<a href="#" class="w-32-px h-32-px rounded-circle d-inline-flex align-items-center justify-content-center bg-danger-focus text-danger-main btn-book-request-delete" data-url="' . $deleteUrl . '" title="Delete"><iconify-icon icon="mdi:delete"></iconify-icon></a>'
                 . '</div>';
 
@@ -275,22 +265,6 @@ class BookRequestController extends Controller
 
         $products = $data['product_items'];
         unset($data['product_items']);
-
-        $availability = app(BookRequestAvailabilityService::class)->forRepresentative(
-            (int) $data['marketing_representative_id'],
-            $excludeRequestGroupId,
-            $excludeRequestId
-        );
-
-        foreach ($products as $index => $item) {
-            $available = (int) ($availability[$item['product_id']]['available_quantity'] ?? 0);
-
-            if ((int) $item['quantity'] > $available) {
-                throw ValidationException::withMessages([
-                    "product_items.{$index}.quantity" => "Quantity cannot exceed remaining distributed quantity (Available: {$available}).",
-                ]);
-            }
-        }
 
         return [$data, $products];
     }

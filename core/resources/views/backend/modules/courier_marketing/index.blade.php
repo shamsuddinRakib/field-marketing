@@ -441,9 +441,140 @@
                     });
                 }
 
-                // 5. Products Table (Assign Specimen style)
+                // 5. Products Table & Cascading Select2 (Assign Specimen style)
                 const $courierTable = $modal.find('#courierItemsTable tbody');
+                const $categorySelect = $modal.find('#courierCategorySelect');
+                const $subcategorySelect = $modal.find('#courierSubcategorySelect');
+                const $btnAddItem = $modal.find('#btnAddCourierItem');
+                const $hint = $modal.find('#courierSelectionHint');
                 let courierRowIndex = 1;
+
+                const subcategoryUrl = "{{ route('subcategory.select2') }}";
+                const productUrl = "{{ route('product.select2') }}";
+
+                function initCourierSubcategorySelect2() {
+                    if ($subcategorySelect.hasClass('select2-hidden-accessible')) {
+                        $subcategorySelect.select2('destroy');
+                    }
+
+                    $subcategorySelect.empty().append(new Option('', '', true, true));
+                    $subcategorySelect.prop('disabled', false).select2({
+                        dropdownParent: $modal,
+                        width: '100%',
+                        placeholder: 'Select Subcategory',
+                        allowClear: true,
+                        ajax: {
+                            url: subcategoryUrl,
+                            dataType: 'json',
+                            delay: 250,
+                            data: function (params) {
+                                return {
+                                    q: params.term || '',
+                                    category_id: $categorySelect.val(),
+                                    type: $categorySelect.val()
+                                };
+                            },
+                            processResults: function (data) {
+                                return { results: Array.isArray(data?.results) ? data.results : [] };
+                            }
+                        }
+                    });
+                }
+
+                function initCourierProductSelect2($select) {
+                    if ($select.hasClass('select2-hidden-accessible')) {
+                        $select.select2('destroy');
+                    }
+
+                    const currentSubcategory = $subcategorySelect.val();
+
+                    if (!currentSubcategory) {
+                        $select.prop('disabled', true).empty();
+                        return;
+                    }
+
+                    $select.prop('disabled', false).select2({
+                        dropdownParent: $modal,
+                        width: '100%',
+                        placeholder: 'Select Product',
+                        allowClear: true,
+                        ajax: {
+                            url: productUrl,
+                            dataType: 'json',
+                            delay: 250,
+                            data: function (params) {
+                                return {
+                                    q: params.term || '',
+                                    category_id: $categorySelect.val(),
+                                    subcategory_id: $subcategorySelect.val()
+                                };
+                            },
+                            processResults: function (data) {
+                                return { results: Array.isArray(data?.results) ? data.results : [] };
+                            }
+                        }
+                    });
+                }
+
+                function updateAllCourierProductSelects() {
+                    const hasSubcategory = !!$subcategorySelect.val();
+                    if (hasSubcategory) {
+                        $btnAddItem.prop('disabled', false);
+                        $hint.text('Showing products for selected subcategory').removeClass('text-muted').addClass('text-success');
+                        $courierTable.find('.courier-product-select').each(function () {
+                            initCourierProductSelect2($(this));
+                        });
+                    } else {
+                        $btnAddItem.prop('disabled', true);
+                        $hint.text('Please select a Category and Subcategory above to enable products').removeClass('text-success').addClass('text-muted');
+                        $courierTable.find('.courier-product-select').each(function () {
+                            if ($(this).hasClass('select2-hidden-accessible')) {
+                                $(this).select2('destroy');
+                            }
+                            $(this).empty().prop('disabled', true);
+                        });
+                    }
+                }
+
+                // On Category change -> reset Subcategory & Products
+                $categorySelect.off('change.courierCategory').on('change.courierCategory', function () {
+                    const catId = $(this).val();
+
+                    if ($subcategorySelect.hasClass('select2-hidden-accessible')) {
+                        $subcategorySelect.select2('destroy');
+                    }
+                    $subcategorySelect.empty().prop('disabled', true);
+
+                    // Reset table to single row
+                    $courierTable.find('tr:gt(0)').remove();
+                    const $firstRowProduct = $courierTable.find('tr:first .courier-product-select');
+                    if ($firstRowProduct.hasClass('select2-hidden-accessible')) {
+                        $firstRowProduct.select2('destroy');
+                    }
+                    $firstRowProduct.empty().prop('disabled', true);
+                    $courierTable.find('tr:first .courier-qty').val(1);
+                    calculateCourierTotal();
+
+                    if (catId) {
+                        initCourierSubcategorySelect2();
+                    } else {
+                        updateAllCourierProductSelects();
+                    }
+                });
+
+                // On Subcategory change -> reload product selects
+                $subcategorySelect.off('change.courierSubcategory').on('change.courierSubcategory', function () {
+                    $courierTable.find('tr:gt(0)').remove();
+                    const $firstRowProduct = $courierTable.find('tr:first .courier-product-select');
+                    if ($firstRowProduct.hasClass('select2-hidden-accessible')) {
+                        $firstRowProduct.select2('destroy');
+                    }
+                    $firstRowProduct.empty();
+                    $courierTable.find('tr:first .courier-qty').val(1);
+                    calculateCourierTotal();
+
+                    updateAllCourierProductSelects();
+                });
 
                 function calculateCourierTotal() {
                     let total = 0;
@@ -457,25 +588,41 @@
                     '#btnAddCourierItem',
                     function(e) {
                         e.preventDefault();
-                        if (!cleanRowHtml) return;
-
-                        const $row = $(cleanRowHtml);
-                        $row.find('input, select').each(function() {
-                            const name = $(this).attr('name');
-                            if (!name) return;
-                            $(this).attr('name', name.replace(/\[\d+]/, `[${courierRowIndex}]`));
-                            if ($(this).hasClass('courier-qty')) {
-                                $(this).val(1);
-                            } else {
-                                $(this).val('').html('');
+                        if (!$subcategorySelect.val()) {
+                            if (window.Swal) {
+                                Swal.fire({
+                                    icon: 'info',
+                                    title: 'Select Subcategory',
+                                    text: 'Please select a Subcategory first to add products.'
+                                });
                             }
-                        });
-
-                        $courierTable.append($row);
-
-                        if (window.S2 && typeof window.S2.auto === 'function') {
-                            window.S2.auto($row);
+                            return;
                         }
+
+                        const newRowHtml = `
+                            <tr class="courier-item-row">
+                                <td>
+                                    <select name="items[${courierRowIndex}][product_id]"
+                                        class="form-control form-control-sm courier-product-select"
+                                        data-placeholder="Select Product"
+                                        placeholder="Select Product"
+                                        required></select>
+                                </td>
+                                <td>
+                                    <input type="number" step="1" min="1" value="1"
+                                        name="items[${courierRowIndex}][quantity]"
+                                        class="form-control form-control-sm text-end courier-qty"
+                                        required>
+                                </td>
+                                <td class="text-center">
+                                    <button type="button" class="btn btn-sm btn-outline-danger btnRemoveRow">✕</button>
+                                </td>
+                            </tr>
+                        `;
+
+                        const $row = $(newRowHtml);
+                        $courierTable.append($row);
+                        initCourierProductSelect2($row.find('.courier-product-select'));
 
                         courierRowIndex++;
                         calculateCourierTotal();
@@ -484,9 +631,14 @@
                 $modal.off('click.remCourierRow', '.btnRemoveRow').on('click.remCourierRow', '.btnRemoveRow',
                     function(e) {
                         e.preventDefault();
-                        if ($courierTable.find('tr').length <= 1) return;
-                        $(this).closest('tr').remove();
-                        calculateCourierTotal();
+                        if ($courierTable.find('tr').length <= 1) {
+                            const $firstRowProduct = $courierTable.find('tr:first .courier-product-select');
+                            $firstRowProduct.val(null).trigger('change');
+                            $courierTable.find('tr:first .courier-qty').val(1);
+                        } else {
+                            $(this).closest('tr').remove();
+                            calculateCourierTotal();
+                        }
                     });
 
                 $modal.off('input.courierQty change.courierQty', '.courier-qty').on(

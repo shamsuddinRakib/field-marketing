@@ -383,7 +383,13 @@ class InstitutionController extends Controller
                 ->leftJoin('upazilas as u', 'u.id', '=', 'institutions.upazila_id')
                 ->leftJoin('districts as d', 'd.district_id', '=', 'institutions.district_id')
                 ->leftJoin('divisions as div', 'div.id', '=', 'institutions.division_id')
-                ->select('institutions.*', 'u.upazila_name', 'd.district_name', 'div.name as division_name');
+                ->select(
+                    'institutions.*',
+                    'u.upazila_name',
+                    'd.district_name',
+                    'div.name as division_name',
+                    'div.bn_name as division_bn_name'
+                );
 
             $total = (clone $query)->count('institutions.id');
 
@@ -395,8 +401,41 @@ class InstitutionController extends Controller
                         ->orWhere('institutions.address', 'like', "%{$search}%")
                         ->orWhere('u.upazila_name', 'like', "%{$search}%")
                         ->orWhere('d.district_name', 'like', "%{$search}%")
-                        ->orWhere('div.name', 'like', "%{$search}%");
+                        ->orWhere('div.name', 'like', "%{$search}%")
+                        ->orWhere('div.bn_name', 'like', "%{$search}%");
                 });
+            }
+
+            // =========================================================================
+            // COLUMN-WISE FILTERS (Upazila, District, Division, Status)
+            // =========================================================================
+            $filterUpazila = trim((string) ($request->input('filter_upazila') ?: $request->input('columns.4.search.value', '')));
+            if ($filterUpazila !== '') {
+                $query->where('u.upazila_name', 'like', "%{$filterUpazila}%");
+            }
+
+            $filterDistrict = trim((string) ($request->input('filter_district') ?: $request->input('columns.5.search.value', '')));
+            if ($filterDistrict !== '') {
+                $query->where('d.district_name', 'like', "%{$filterDistrict}%");
+            }
+
+            $filterDivision = trim((string) ($request->input('filter_division') ?: $request->input('columns.6.search.value', '')));
+            if ($filterDivision !== '') {
+                $query->where(function ($q) use ($filterDivision) {
+                    $q->where('div.name', 'like', "%{$filterDivision}%")
+                      ->orWhere('div.bn_name', 'like', "%{$filterDivision}%");
+                });
+            }
+
+            $filterStatus = $request->input('filter_status');
+            if ($filterStatus !== null && $filterStatus !== '') {
+                if (in_array(strtolower((string)$filterStatus), ['active', '1', 'true', 'সক্রিয়'])) {
+                    $query->where('institutions.status', 1);
+                } elseif (in_array(strtolower((string)$filterStatus), ['inactive', '0', 'false', 'নিষ্ক্রিয়'])) {
+                    $query->where('institutions.status', 0);
+                } else {
+                    $query->where('institutions.status', (int) $filterStatus);
+                }
             }
 
             $filtered = (clone $query)->count('institutions.id');

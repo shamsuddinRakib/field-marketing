@@ -29,9 +29,6 @@ class CourierMarketingController extends Controller
         return view('backend.modules.courier_marketing.create_modal');
     }
 
-    /**
-     * Store new courier dispatch entry
-     */
     public function store(Request $request)
     {
         if (!$request->has('product_items') && $request->has('items')) {
@@ -124,9 +121,6 @@ class CourierMarketingController extends Controller
         ]);
     }
 
-    /**
-     * Show courier details modal
-     */
     public function show(CourierMarketing $courierMarketing)
     {
         $courierMarketing->load([
@@ -143,9 +137,6 @@ class CourierMarketingController extends Controller
         return view('backend.modules.courier_marketing.show', compact('courierMarketing'));
     }
 
-    /**
-     * Edit modal
-     */
     public function editModal(CourierMarketing $courierMarketing)
     {
         $courierMarketing->load([
@@ -158,9 +149,6 @@ class CourierMarketingController extends Controller
         return view('backend.modules.courier_marketing.edit_modal', compact('courierMarketing'));
     }
 
-    /**
-     * Update courier details
-     */
     public function update(Request $request, CourierMarketing $courierMarketing)
     {
         $data = $request->validate([
@@ -179,9 +167,6 @@ class CourierMarketingController extends Controller
         ]);
     }
 
-    /**
-     * Call Center & Delivery Status Modal
-     */
     public function statusModal(CourierMarketing $courierMarketing)
     {
         $courierMarketing->load([
@@ -194,9 +179,6 @@ class CourierMarketingController extends Controller
         return view('backend.modules.courier_marketing.status_modal', compact('courierMarketing'));
     }
 
-    /**
-     * Update courier status & append Call Center verification note
-     */
     public function updateStatus(Request $request, CourierMarketing $courierMarketing)
     {
         $data = $request->validate([
@@ -238,9 +220,6 @@ class CourierMarketingController extends Controller
         ]);
     }
 
-    /**
-     * DataTable listing
-     */
     public function listAjax(Request $request)
     {
         $columns = [
@@ -401,9 +380,6 @@ class CourierMarketingController extends Controller
         ]);
     }
 
-    /**
-     * Delete courier entry
-     */
     public function destroy(CourierMarketing $courierMarketing)
     {
         $courierMarketing->items()->delete();
@@ -415,9 +391,6 @@ class CourierMarketingController extends Controller
         ]);
     }
 
-    /**
-     * Select2: Upazilas (filtered by Marketing Representative's assigned territories)
-     */
     public function upazilasSelect2(Request $request)
     {
         $term = trim($request->input('q', ''));
@@ -465,9 +438,6 @@ class CourierMarketingController extends Controller
         ]);
     }
 
-    /**
-     * Select2: Institutions (filtered by Upazila)
-     */
     public function institutionsSelect2(Request $request)
     {
         $term = trim($request->input('q', ''));
@@ -512,9 +482,6 @@ class CourierMarketingController extends Controller
         ]);
     }
 
-    /**
-     * Select2: Teachers searchable by Phone or Name (filtered by Upazila and/or Institution)
-     */
     public function teachersByPhoneSelect2(Request $request)
     {
         $term = trim($request->input('q', ''));
@@ -585,9 +552,6 @@ class CourierMarketingController extends Controller
         ]);
     }
 
-    /**
-     * Quick confirm receiving route handler
-     */
     public function confirmReceiving(Request $request, CourierMarketing $courierMarketing)
     {
         $updateData = [
@@ -610,9 +574,6 @@ class CourierMarketingController extends Controller
         ]);
     }
 
-    /**
-     * Guard writes to `received_by` when DB column is misconfigured as timestamp/datetime
-     */
     private function canStoreUserIdInReceivedBy(): bool
     {
         if (!Schema::hasColumn('courier_marketings', 'received_by')) {

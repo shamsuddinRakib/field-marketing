@@ -1,7 +1,42 @@
+@php
+    $firstItem = $bookRequests->first();
+    $currentCategory = $firstItem?->product?->category;
+    $currentSubcategory = $firstItem?->product?->subcategory;
+@endphp
 <div class="modal-header py-16 px-24 border-0" data-modal-key="book-request-edit">
     <h5 class="modal-title">Edit Book Request</h5>
     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 </div>
+
+<style>
+    /* Desktop & Tablet Modal Width */
+    @media (min-width: 992px) {
+        #AjaxModal .modal-dialog {
+            max-width: 960px !important;
+        }
+    }
+    @media (min-width: 1200px) {
+        #AjaxModal .modal-dialog {
+            max-width: 1050px !important;
+        }
+    }
+
+    /* Mobile Modal Width & Spacing */
+    @media (max-width: 767.98px) {
+        #AjaxModal .modal-dialog {
+            margin: 0.5rem auto !important;
+            max-width: calc(100% - 1rem) !important;
+            width: calc(100% - 1rem) !important;
+        }
+        #AjaxModal .modal-header {
+            padding: 14px 16px !important;
+        }
+        #AjaxModal .modal-body {
+            padding: 16px 14px !important;
+        }
+    }
+</style>
+
 <div class="modal-body p-24">
     <form action="{{ route('book-request.book-requests.update', $bookRequest->id) }}" method="post"
         data-ajax="true">
@@ -26,8 +61,53 @@
                 </select>
                 <div class="invalid-feedback d-block marketing_representative_id-error" style="display:none"></div>
             </div>
+
+            <div class="col-md-6 mb-16">
+                <label class="form-label text-sm mb-6">Date <span class="text-danger">*</span></label>
+                <input type="date" name="request_date" class="form-control radius-8"
+                    value="{{ old('request_date', $bookRequest->request_date?->format('Y-m-d')) }}" required>
+                <div class="invalid-feedback d-block request_date-error" style="display:none"></div>
+            </div>
+
+            {{-- Category & Subcategory Filter Card --}}
             <div class="col-12 mb-16">
-                <label class="form-label text-sm mb-6">Products <span class="text-danger">*</span></label>
+                <div class="card border">
+                    <div class="card-body p-16">
+                        <h6 class="text-sm fw-bold mb-12 text-dark">Product Filter (Category & Subcategory)</h6>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label text-sm mb-6">Category <span class="text-danger">*</span></label>
+                                <select id="bookRequestCategorySelect" class="form-control radius-8 js-s2-ajax"
+                                    data-url="{{ route('category.cat.select2') }}"
+                                    data-placeholder="Select Category">
+                                    @if ($currentCategory)
+                                        <option value="{{ $currentCategory->id }}" selected>{{ $currentCategory->name }}</option>
+                                    @endif
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label text-sm mb-6">Subcategory <span class="text-danger">*</span></label>
+                                <select id="bookRequestSubcategorySelect" class="form-control radius-8"
+                                    data-placeholder="Select Subcategory"
+                                    @disabled(!$currentCategory)>
+                                    @if ($currentSubcategory)
+                                        <option value="{{ $currentSubcategory->id }}" selected>{{ $currentSubcategory->name }}</option>
+                                    @endif
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Products Section --}}
+            <div class="col-12 mb-16">
+                <div class="d-flex align-items-center justify-content-between mb-6">
+                    <label class="form-label text-sm mb-0">Products <span class="text-danger">*</span></label>
+                    <small id="bookRequestSelectionHint" class="{{ $currentSubcategory ? 'text-success' : 'text-muted' }}" style="font-size: 11px;">
+                        {{ $currentSubcategory ? 'Showing products for selected subcategory' : 'Please select a Category and Subcategory above to enable products' }}
+                    </small>
+                </div>
                 <div class="row g-2 book-request-product-items">
                     @foreach ($bookRequests as $index => $requestItem)
                         <div class="col-12 row g-2 align-items-start book-request-product-row">
@@ -41,10 +121,8 @@
                                 <div class="invalid-feedback d-block product_items.{{ $index }}.product_id-error" style="display:none"></div>
                             </div>
                             <div class="col-md-3">
-                                @php $distQty = $distQuantities[$requestItem->product_id] ?? 0; @endphp
                                 <input type="number" name="product_items[{{ $index }}][quantity]" class="form-control radius-8 js-quantity-input"
-                                    value="{{ $requestItem->quantity }}" min="1" @if($distQty > 0) max="{{ $distQty }}" @endif required>
-                                <small class="text-muted js-dist-hint d-block mt-4" style="font-size:11px;">Available: {{ $distQty }}</small>
+                                    value="{{ $requestItem->quantity }}" min="1" required>
                                 <div class="invalid-feedback d-block product_items.{{ $index }}.quantity-error" style="display:none"></div>
                             </div>
                             <div class="col-md-1">
@@ -53,14 +131,9 @@
                         </div>
                     @endforeach
                 </div>
-                <button type="button" class="btn btn-sm btn-outline-primary mt-8 btn-add-product">Add product</button>
+                <button type="button" class="btn btn-sm btn-outline-primary mt-8 btn-add-product" @disabled(!$currentSubcategory)>Add product</button>
             </div>
-            <div class="col-md-6 mb-16">
-                <label class="form-label text-sm mb-6">Date <span class="text-danger">*</span></label>
-                <input type="date" name="request_date" class="form-control radius-8"
-                    value="{{ old('request_date', $bookRequest->request_date?->format('Y-m-d')) }}" required>
-                <div class="invalid-feedback d-block request_date-error" style="display:none"></div>
-            </div>
+
             <div class="col-12 mb-16">
                 <label class="form-label text-sm mb-6">Note</label>
                 <textarea name="note" class="form-control radius-8" rows="3">{{ old('note', $bookRequest->note) }}</textarea>
@@ -90,7 +163,6 @@
         </div>
         <div class="col-md-3">
             <input type="number" class="form-control radius-8 js-quantity-input" value="1" min="1" required>
-            <small class="text-muted js-dist-hint d-block mt-4" style="font-size:11px;">Available: —</small>
             <div class="invalid-feedback d-block" style="display:none"></div>
         </div>
         <div class="col-md-1">

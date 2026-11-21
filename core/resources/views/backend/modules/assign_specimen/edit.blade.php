@@ -4,6 +4,12 @@
     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
 </div>
 
+@php
+    $firstItem = $assignSpecimen->items->first();
+    $currentCategory = $firstItem?->product?->category;
+    $currentSubcategory = $firstItem?->product?->subcategory;
+@endphp
+
 <style>
     @media (min-width: 992px) {
         #AjaxModal .modal-dialog.modal-lg {
@@ -317,42 +323,100 @@
             </div>
         </div>
 
-        {{-- ================= SPECIMEN ITEMS ================= --}}
-        <div class="table-responsive"><table class="table table-sm align-middle items-table-fixed" id="specimenItemsTable">
-            <thead class="table-light">
-                <tr>
-                    <th>Product</th>
-                    <th class="text-end col-qty" style="width:120px">Qty</th>
-                    <th class="text-center col-action" style="width:54px"></th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach ($assignSpecimen->items as $i => $item)
-                    <tr class="specimen-item-row">
-                        <td>
-                            <select name="items[{{ $i }}][product_id]"
-                                class="form-control form-control-sm js-s2-ajax specimen-product"
-                                data-url="{{ route('product.select2') }}" data-placeholder="Select Product" required>
-                                @if ($item->product)
-                                    <option value="{{ $item->product->id }}" selected>{{ $item->product->name }}</option>
-                                @endif
-                            </select>
-                        </td>
-                        <td>
-                            <input type="number" step="1" min="1" name="items[{{ $i }}][quantity]"
-                                class="form-control form-control-sm text-end specimen-qty"
-                                value="{{ $item->quantity }}" required>
-                        </td>
-                        <td class="text-center">
-                            <button type="button" class="btn btn-sm btn-outline-danger btnRemoveRow">✕</button>
-                        </td>
-                    </tr>
-                @endforeach
-            </tbody>
-        </table></div>
+        {{-- ================= CATEGORY & SUBCATEGORY SELECTION ================= --}}
+        <div class="card mb-16">
+            <div class="card-body">
+                <h6 class="mb-12 fw-semibold">Product Filter (Category & Subcategory)</h6>
+                <div class="row g-3">
+                    <div class="col-md-6 mb-12">
+                        <label class="form-label text-sm mb-8">Category <span class="text-danger">*</span></label>
+                        <select id="specimenCategorySelect" class="form-control form-control-sm js-s2-ajax"
+                            data-url="{{ route('category.cat.select2') }}"
+                            data-placeholder="Select Category">
+                            @if ($currentCategory)
+                                <option value="{{ $currentCategory->id }}" selected>{{ $currentCategory->name }}</option>
+                            @endif
+                        </select>
+                    </div>
 
-        <div class="d-flex justify-content-end mb-8">
-            <button type="button" id="btnAddSpecimenItem" class="btn btn-sm btn-outline-primary">+ Add Item</button>
+                    <div class="col-md-6 mb-12">
+                        <label class="form-label text-sm mb-8">Subcategory <span class="text-danger">*</span></label>
+                        <select id="specimenSubcategorySelect" class="form-control form-control-sm"
+                            data-placeholder="Select Subcategory" {{ $currentCategory ? '' : 'disabled' }}>
+                            @if ($currentSubcategory)
+                                <option value="{{ $currentSubcategory->id }}" selected>{{ $currentSubcategory->name }}</option>
+                            @endif
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {{-- ================= SPECIMEN ITEMS ================= --}}
+        <div class="card mb-16">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-12">
+                    <h6 class="mb-0 fw-semibold">Products</h6>
+                    <span class="text-xs {{ $currentSubcategory ? 'text-success' : 'text-muted' }}" id="specimenSelectionHint">
+                        {{ $currentSubcategory ? 'Showing products for selected subcategory' : 'Please select a Category and Subcategory above to enable products' }}
+                    </span>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle items-table-fixed" id="specimenItemsTable">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Product</th>
+                                <th class="text-end col-qty" style="width:120px">Qty</th>
+                                <th class="text-center col-action" style="width:54px"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse ($assignSpecimen->items as $i => $item)
+                                <tr class="specimen-item-row">
+                                    <td>
+                                        <select name="items[{{ $i }}][product_id]"
+                                            class="form-control form-control-sm specimen-product"
+                                            data-placeholder="Select Product" required>
+                                            @if ($item->product)
+                                                <option value="{{ $item->product->id }}" selected>{{ $item->product->name }}</option>
+                                            @endif
+                                        </select>
+                                    </td>
+                                    <td>
+                                        <input type="number" step="1" min="1" name="items[{{ $i }}][quantity]"
+                                            class="form-control form-control-sm text-end specimen-qty"
+                                            value="{{ $item->quantity }}" required>
+                                    </td>
+                                    <td class="text-center">
+                                        <button type="button" class="btn btn-sm btn-outline-danger btnRemoveRow">✕</button>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr class="specimen-item-row">
+                                    <td>
+                                        <select name="items[0][product_id]"
+                                            class="form-control form-control-sm specimen-product"
+                                            data-placeholder="Select Product" disabled required></select>
+                                    </td>
+                                    <td>
+                                        <input type="number" step="1" min="1" value="1"
+                                            name="items[0][quantity]" class="form-control form-control-sm text-end specimen-qty"
+                                            required>
+                                    </td>
+                                    <td class="text-center">
+                                        <button type="button" class="btn btn-sm btn-outline-danger btnRemoveRow">✕</button>
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="d-flex justify-content-end mt-12">
+                    <button type="button" id="btnAddSpecimenItem" class="btn btn-sm btn-outline-primary" {{ $currentSubcategory ? '' : 'disabled' }}>+ Add Item</button>
+                </div>
+            </div>
         </div>
 
         {{-- ================= SUMMARY ================= --}}
@@ -607,42 +671,201 @@
             $('#specimenHiddenDivisionId').val('');
         });
 
-        $('#btnAddSpecimenItem').on('click', function () {
-            const $first = $table.find('tr:first');
+        // ================= CASCADING CATEGORY -> SUBCATEGORY -> PRODUCT =================
+        const $categorySelect = $('#specimenCategorySelect');
+        const $subcategorySelect = $('#specimenSubcategorySelect');
+        const $btnAddItem = $('#btnAddSpecimenItem');
+        const $hint = $('#specimenSelectionHint');
+        let rowIndex = {{ max($assignSpecimen->items->count(), 1) }};
 
-            $first.find('.select2-hidden-accessible').each(function () {
-                $(this).select2('destroy');
-            });
+        const subcategoryUrl = "{{ route('subcategory.select2') }}";
+        const productUrl = "{{ route('product.select2') }}";
 
-            const $row = $first.clone();
+        function parentModal() {
+            return $modal.length ? $modal : $(document.body);
+        }
 
-            $row.find('input, select').each(function () {
-                const name = $(this).attr('name');
-                if (!name) return;
-                $(this).attr('name', name.replace(/\[\d+]/, `[${rowIndex}]`));
-                if ($(this).hasClass('specimen-qty')) {
-                    $(this).val(1);
-                } else if ($(this).is('select')) {
-                    $(this).html('');
-                } else {
-                    $(this).val('');
+        function initSubcategorySelect2() {
+            if ($subcategorySelect.hasClass('select2-hidden-accessible')) {
+                $subcategorySelect.select2('destroy');
+            }
+
+            $subcategorySelect.prop('disabled', false).select2({
+                dropdownParent: parentModal(),
+                width: '100%',
+                placeholder: 'Select Subcategory',
+                allowClear: true,
+                ajax: {
+                    url: subcategoryUrl,
+                    dataType: 'json',
+                    delay: 250,
+                    data: function (params) {
+                        return {
+                            q: params.term || '',
+                            category_id: $categorySelect.val(),
+                            type: $categorySelect.val()
+                        };
+                    },
+                    processResults: function (data) {
+                        return { results: Array.isArray(data?.results) ? data.results : [] };
+                    }
                 }
             });
+        }
 
-            $table.append($row);
-            if (window.S2 && typeof window.S2.auto === 'function') {
-                window.S2.auto();
+        function initProductSelect2($select) {
+            if ($select.hasClass('select2-hidden-accessible')) {
+                $select.select2('destroy');
             }
+
+            const currentSubcategory = $subcategorySelect.val();
+
+            if (!currentSubcategory && !$select.val()) {
+                $select.prop('disabled', true).empty();
+                return;
+            }
+
+            $select.prop('disabled', false).select2({
+                dropdownParent: parentModal(),
+                width: '100%',
+                placeholder: 'Select Product',
+                allowClear: true,
+                ajax: {
+                    url: productUrl,
+                    dataType: 'json',
+                    delay: 250,
+                    data: function (params) {
+                        return {
+                            q: params.term || '',
+                            category_id: $categorySelect.val(),
+                            subcategory_id: $subcategorySelect.val()
+                        };
+                    },
+                    processResults: function (data) {
+                        return { results: Array.isArray(data?.results) ? data.results : [] };
+                    }
+                }
+            });
+        }
+
+        function updateAllProductSelects() {
+            const hasSubcategory = !!$subcategorySelect.val();
+            if (hasSubcategory) {
+                $btnAddItem.prop('disabled', false);
+                $hint.text('Showing products for selected subcategory').removeClass('text-muted').addClass('text-success');
+                $table.find('.specimen-product').each(function () {
+                    initProductSelect2($(this));
+                });
+            } else {
+                $btnAddItem.prop('disabled', true);
+                $hint.text('Please select a Category and Subcategory above to enable products').removeClass('text-success').addClass('text-muted');
+                $table.find('.specimen-product').each(function () {
+                    if ($(this).hasClass('select2-hidden-accessible')) {
+                        $(this).select2('destroy');
+                    }
+                    $(this).empty().prop('disabled', true);
+                });
+            }
+        }
+
+        // Initialize existing subcategory & products if loaded
+        if ($categorySelect.val()) {
+            initSubcategorySelect2();
+        }
+        $table.find('.specimen-product').each(function () {
+            initProductSelect2($(this));
+        });
+
+        // On Category change -> reset Subcategory & Products
+        $categorySelect.on('change', function () {
+            const catId = $(this).val();
+
+            if ($subcategorySelect.hasClass('select2-hidden-accessible')) {
+                $subcategorySelect.select2('destroy');
+            }
+            $subcategorySelect.empty().prop('disabled', true);
+
+            // Reset table rows
+            $table.find('tr:gt(0)').remove();
+            const $firstRowProduct = $table.find('tr:first .specimen-product');
+            if ($firstRowProduct.hasClass('select2-hidden-accessible')) {
+                $firstRowProduct.select2('destroy');
+            }
+            $firstRowProduct.empty().prop('disabled', true);
+            $table.find('tr:first .specimen-qty').val(1);
+            calculateTotal();
+
+            if (catId) {
+                initSubcategorySelect2();
+            } else {
+                updateAllProductSelects();
+            }
+        });
+
+        // On Subcategory change -> reload product selects
+        $subcategorySelect.on('change', function () {
+            $table.find('tr:gt(0)').remove();
+            const $firstRowProduct = $table.find('tr:first .specimen-product');
+            if ($firstRowProduct.hasClass('select2-hidden-accessible')) {
+                $firstRowProduct.select2('destroy');
+            }
+            $firstRowProduct.empty();
+            $table.find('tr:first .specimen-qty').val(1);
+            calculateTotal();
+
+            updateAllProductSelects();
+        });
+
+        // Add Item row
+        $('#btnAddSpecimenItem').on('click', function () {
+            if (!$subcategorySelect.val()) {
+                if (window.Swal) {
+                    Swal.fire({
+                        icon: 'info',
+                        title: 'Select Subcategory',
+                        text: 'Please select a Subcategory first to add products.'
+                    });
+                }
+                return;
+            }
+
+            const newRowHtml = `
+                <tr class="specimen-item-row">
+                    <td>
+                        <select name="items[${rowIndex}][product_id]" class="form-control form-control-sm specimen-product"
+                            data-placeholder="Select Product" required></select>
+                    </td>
+                    <td>
+                        <input type="number" step="1" min="1" value="1" name="items[${rowIndex}][quantity]"
+                            class="form-control form-control-sm text-end specimen-qty" required>
+                    </td>
+                    <td class="text-center">
+                        <button type="button" class="btn btn-sm btn-outline-danger btnRemoveRow">✕</button>
+                    </td>
+                </tr>
+            `;
+
+            const $newRow = $(newRowHtml);
+            $table.append($newRow);
+            initProductSelect2($newRow.find('.specimen-product'));
+
             rowIndex++;
             calculateTotal();
         });
 
+        // Remove row
         $table.on('click', '.btnRemoveRow', function () {
-            if ($table.find('tr').length === 1) return;
-            $(this).closest('tr').remove();
+            if ($table.find('tr').length === 1) {
+                const $firstRowProduct = $table.find('tr:first .specimen-product');
+                $firstRowProduct.val(null).trigger('change');
+                $table.find('tr:first .specimen-qty').val(1);
+            } else {
+                $(this).closest('tr').remove();
+            }
             calculateTotal();
         });
 
+        // Quantity input
         $table.on('input', '.specimen-qty', function () {
             calculateTotal();
         });
@@ -655,8 +878,11 @@
             $('#specimenTotalText').text(total);
         }
 
+        calculateTotal();
+
+        // Auto initialize normal S2 components
         if (window.S2 && typeof window.S2.auto === 'function') {
-            window.S2.auto();
+            window.S2.auto($modal.length ? $modal : undefined);
         }
     })();
 </script>

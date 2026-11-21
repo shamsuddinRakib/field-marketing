@@ -1152,9 +1152,16 @@ class ProductController extends Controller
     }
     public function select2(Request $r)
     {
-
         $q    = trim($r->input('q', ''));
         $base = Product::query()->where('has_variants', 0)->where('is_active', 1);
+
+        if ($r->filled('category_id')) {
+            $base->where('category_id', $r->input('category_id'));
+        }
+
+        if ($r->filled('subcategory_id')) {
+            $base->where('subcategory_id', $r->input('subcategory_id'));
+        }
 
         if ($q !== '') {
             $base->where(function ($x) use ($q) {

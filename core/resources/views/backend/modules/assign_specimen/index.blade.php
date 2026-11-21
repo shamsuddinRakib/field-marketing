@@ -38,7 +38,7 @@
             <button
                 class="d-flex btn btn-primary btn-sm px-12 py-8 radius-8 AjaxModal"
                 data-ajax-modal="{{ route('assign-specimen.create') }}"
-                data-size="lg"
+                data-size="xl"
                 data-onload="AssignSpecimenIndex.onLoad"
                 data-onsuccess="BranchesIndex.onSaved">
                 <iconify-icon icon="ic:baseline-plus" class="text-xl"></iconify-icon>Assign Specimen

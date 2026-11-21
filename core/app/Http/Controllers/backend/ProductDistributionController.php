@@ -69,7 +69,7 @@ class ProductDistributionController extends Controller
                 <a href="#" class="w-32-px h-32-px rounded-circle d-inline-flex align-items-center justify-content-center
                     bg-success-focus text-success-main AjaxModal"
                     data-ajax-modal="' . route('product-distribution.edit', $b->id) . '"
-                    data-size="lg"
+                    data-size="xl"
                     data-onsuccess="BranchesIndex.onSaved"
                     title="Edit">
                     <iconify-icon icon="lucide:edit"></iconify-icon>
@@ -97,7 +97,7 @@ class ProductDistributionController extends Controller
             $actions .= '<a href="#" class="w-32-px h-32-px rounded-circle d-inline-flex align-items-center justify-content-center bg-info-focus text-info-main AjaxModal" data-ajax-modal="' . route('product-distribution.show', $b->id) . '" data-size="lg" title="View Details"><iconify-icon icon="mdi:eye"></iconify-icon></a>';
 
             if ($b->status !== 'delivered') {
-                $actions .= '<a href="#" class="w-32-px h-32-px rounded-circle d-inline-flex align-items-center justify-content-center bg-success-focus text-success-main AjaxModal" data-ajax-modal="' . route('product-distribution.edit', $b->id) . '" data-size="lg" data-onsuccess="BranchesIndex.onSaved" title="Edit"><iconify-icon icon="lucide:edit"></iconify-icon></a>';
+                $actions .= '<a href="#" class="w-32-px h-32-px rounded-circle d-inline-flex align-items-center justify-content-center bg-success-focus text-success-main AjaxModal" data-ajax-modal="' . route('product-distribution.edit', $b->id) . '" data-size="xl" data-onsuccess="BranchesIndex.onSaved" title="Edit"><iconify-icon icon="lucide:edit"></iconify-icon></a>';
                 $actions .= '<a href="#" class="w-32-px h-32-px rounded-circle d-inline-flex align-items-center justify-content-center bg-danger-focus text-danger-main btn-branch-delete" data-id="' . $b->id . '" data-url="' . route('product-distribution.destroy', $b->id) . '" title="Delete"><iconify-icon icon="mdi:delete"></iconify-icon></a>';
             }
 
@@ -185,7 +185,12 @@ class ProductDistributionController extends Controller
             abort(403, 'Delivered record cannot be edited');
         }
 
-        $productDistribution->load(['items.product:id,name', 'user:id,name']);
+        $productDistribution->load([
+            'items.product:id,name,category_id,subcategory_id',
+            'items.product.category:id,name',
+            'items.product.subcategory:id,name',
+            'user:id,name'
+        ]);
 
         return view('backend.modules.product_distribution.edit', compact('productDistribution'));
     }
@@ -340,6 +345,12 @@ class ProductDistributionController extends Controller
 
         $products = Product::query()
             ->whereIn('id', $productIds)
+            ->when($request->filled('category_id'), function ($q) use ($request) {
+                $q->where('category_id', $request->input('category_id'));
+            })
+            ->when($request->filled('subcategory_id'), function ($q) use ($request) {
+                $q->where('subcategory_id', $request->input('subcategory_id'));
+            })
             ->when($term !== '', function ($q) use ($term) {
                 $q->where('name', 'like', "%{$term}%");
             })

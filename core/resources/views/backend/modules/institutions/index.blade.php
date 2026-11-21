@@ -5,6 +5,59 @@
 @endsection
 
 @section('content')
+  <style>
+    .institution-filters-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+        transition: all 0.2s ease-in-out;
+    }
+    .institution-col-filter {
+        height: 38px !important;
+        font-size: 13px !important;
+        padding: 6px 12px !important;
+        border-radius: 6px !important;
+        border: 1px solid #d1d5db !important;
+        background-color: #ffffff !important;
+        width: 100% !important;
+        transition: all 0.15s ease-in-out;
+    }
+    .institution-col-filter:focus {
+        border-color: #487fff !important;
+        outline: 0 !important;
+        box-shadow: 0 0 0 3px rgba(72, 127, 255, 0.15) !important;
+        background-color: #ffffff !important;
+    }
+    .institution-col-filter::placeholder {
+        color: #94a3b8 !important;
+        font-size: 12px !important;
+    }
+    .institution-col-filter:not(:placeholder-shown) {
+        border-color: #487fff !important;
+        background-color: #f0f7ff !important;
+        font-weight: 500;
+    }
+    .institution-reset-btn {
+        height: 38px !important;
+        font-size: 13px !important;
+        font-weight: 600 !important;
+        border: 1px solid #fca5a5 !important;
+        color: #ef4444 !important;
+        background-color: #fff5f5 !important;
+        transition: all 0.2s ease-in-out !important;
+    }
+    .institution-reset-btn:hover {
+        background-color: #ef4444 !important;
+        border-color: #ef4444 !important;
+        color: #ffffff !important;
+        box-shadow: 0 4px 10px rgba(239, 68, 68, 0.25) !important;
+        transform: translateY(-1px);
+    }
+    .institution-reset-btn:active {
+        transform: translateY(0);
+    }
+  </style>
   <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-24">
     <div>
       <h6 class="fw-semibold mb-0">Institution List</h6>
@@ -65,6 +118,74 @@
         </thead>
         <tbody></tbody>
       </table>
+
+      <!-- Column Quick Filters Row (Positioned below Table, above Pagination) -->
+      <div id="institutionFiltersBox" class="institution-filters-card p-16 radius-8 bg-neutral-50 border border-neutral-200 mt-16 mb-12">
+        <div class="d-flex align-items-center justify-content-between mb-12">
+          <div class="d-flex align-items-center gap-2">
+            <span class="d-inline-flex align-items-center justify-content-center w-28-px h-28-px bg-warning-500 text-primary-600 radius-6">
+              <iconify-icon icon="solar:filter-bold-duotone" class="text-base"></iconify-icon>
+            </span>
+            <span class="fw-semibold text-sm text-neutral-800">Quick Column Filters</span>
+            <span class="badge bg-primary-50 text-primary-600 border border-primary-200 text-xs px-8 py-2 radius-4 d-none" id="activeInstitutionFilterBadge">
+              <span id="activeInstitutionFilterCount">0</span> Filter Active
+            </span>
+          </div>
+          <span class="text-secondary-light text-xs d-none d-sm-inline-block">Filter directly by table columns</span>
+        </div>
+        <div class="row g-2 g-md-3 align-items-end">
+          <div class="col-xl-3 col-lg-3 col-md-4 col-sm-6">
+            <label class="form-label text-xs fw-semibold text-neutral-700 mb-1 d-flex align-items-center gap-1">
+              <iconify-icon icon="solar:map-point-wave-bold-duotone" class="text-primary-600 text-sm"></iconify-icon>
+              Upazila
+            </label>
+            <div class="position-relative">
+              <input type="search" class="form-control form-control-sm institution-col-filter radius-6"
+                  data-col="upazila" placeholder="Filter Upazila..." title="Filter by Upazila">
+            </div>
+          </div>
+          <div class="col-xl-3 col-lg-3 col-md-4 col-sm-6">
+            <label class="form-label text-xs fw-semibold text-neutral-700 mb-1 d-flex align-items-center gap-1">
+              <iconify-icon icon="solar:city-bold-duotone" class="text-primary-600 text-sm"></iconify-icon>
+              District
+            </label>
+            <div class="position-relative">
+              <input type="search" class="form-control form-control-sm institution-col-filter radius-6"
+                  data-col="district" placeholder="Filter District..." title="Filter by District">
+            </div>
+          </div>
+          <div class="col-xl-2 col-lg-2 col-md-4 col-sm-6">
+            <label class="form-label text-xs fw-semibold text-neutral-700 mb-1 d-flex align-items-center gap-1">
+              <iconify-icon icon="solar:global-bold-duotone" class="text-primary-600 text-sm"></iconify-icon>
+              Division
+            </label>
+            <div class="position-relative">
+              <input type="search" class="form-control form-control-sm institution-col-filter radius-6"
+                  data-col="division" placeholder="Filter Division..." title="Filter by Division">
+            </div>
+          </div>
+          <div class="col-xl-2 col-lg-2 col-md-6 col-sm-6">
+            <label class="form-label text-xs fw-semibold text-neutral-700 mb-1 d-flex align-items-center gap-1">
+              <iconify-icon icon="solar:check-circle-bold-duotone" class="text-primary-600 text-sm"></iconify-icon>
+              Status
+            </label>
+            <div class="position-relative">
+              <select class="form-select form-select-sm institution-col-filter radius-6" data-col="status" title="Filter by Status">
+                <option value="">All Status</option>
+                <option value="1">Active</option>
+                <option value="0">Inactive</option>
+              </select>
+            </div>
+          </div>
+          <div class="col-xl-2 col-lg-2 col-md-6 col-sm-6">
+            <label class="form-label d-none d-md-block text-xs text-transparent mb-1">Action</label>
+            <button type="button" class="btn btn-outline-danger btn-sm radius-6 w-100 d-inline-flex align-items-center justify-content-center gap-2 institution-reset-btn" id="btnResetInstitutionFilters" title="Clear all column filters">
+              <iconify-icon icon="solar:restart-bold" class="text-base"></iconify-icon>
+              <span class="fw-semibold text-xs">Reset Filters</span>
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 @endsection
@@ -228,6 +349,71 @@
           if (result.isConfirmed) remove();
         });
       } else if (confirm('Delete this institution?')) remove();
+    });
+
+    // =========================================================================
+    // COLUMN-WISE LIVE SEARCH FILTERS (Positioned below table, above pagination)
+    // =========================================================================
+    function positionInstitutionFilters() {
+      const $box = $('#institutionFiltersBox');
+      const $dtBottom = $('#institutionsTable_wrapper .dt-bottom');
+      if ($dtBottom.length && $box.length) {
+        if (!$box.next().is($dtBottom)) {
+          $box.insertBefore($dtBottom);
+        }
+      }
+    }
+
+    function updateInstitutionFilterBadge() {
+      let activeCount = 0;
+      $('.institution-col-filter').each(function() {
+        if (($(this).val() || '').trim() !== '') {
+          activeCount++;
+        }
+      });
+      const $badge = $('#activeInstitutionFilterBadge');
+      const $count = $('#activeInstitutionFilterCount');
+      if (activeCount > 0) {
+        $count.text(activeCount);
+        $badge.removeClass('d-none');
+      } else {
+        $badge.addClass('d-none');
+      }
+    }
+
+    // Position filters above pagination on DataTables init / draw / ready
+    $(document).on('init.dt draw.dt', function() {
+      positionInstitutionFilters();
+    });
+    $(document).ready(function() {
+      positionInstitutionFilters();
+      setTimeout(positionInstitutionFilters, 150);
+    });
+
+    // Pass filter parameters on every DataTables AJAX call
+    $('.AjaxDataTable').on('preXhr.dt', function(e, settings, data) {
+      data.filter_upazila  = ($('.institution-col-filter[data-col="upazila"]').val() || '').trim();
+      data.filter_district = ($('.institution-col-filter[data-col="district"]').val() || '').trim();
+      data.filter_division = ($('.institution-col-filter[data-col="division"]').val() || '').trim();
+      data.filter_status   = ($('.institution-col-filter[data-col="status"]').val() || '').trim();
+    });
+
+    // Debounced live typing search (350ms)
+    let institutionFilterTimer;
+    $(document).on('input keyup change search', '.institution-col-filter', function(e) {
+      updateInstitutionFilterBadge();
+      clearTimeout(institutionFilterTimer);
+      institutionFilterTimer = setTimeout(function() {
+        $('.AjaxDataTable').DataTable().ajax.reload();
+      }, 350);
+    });
+
+    // Clear all column filters
+    $(document).on('click', '#btnResetInstitutionFilters', function(e) {
+      e.preventDefault();
+      $('.institution-col-filter').val('');
+      updateInstitutionFilterBadge();
+      $('.AjaxDataTable').DataTable().ajax.reload();
     });
   </script>
 @endsection

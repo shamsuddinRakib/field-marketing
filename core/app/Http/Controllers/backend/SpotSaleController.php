@@ -108,7 +108,7 @@ class SpotSaleController extends Controller
                class="w-32-px h-32-px rounded-circle d-inline-flex align-items-center justify-content-center
                       bg-success-focus text-success-main AjaxModal"
                data-ajax-modal="' . route('spot-sales.editModal', $b->id) . '"
-               data-size="lg"
+               data-size="xl"
                data-onload="SpotSaleIndex.onLoad"
                data-onsuccess="SpotSaleIndex.onSaved"
                title="Edit Spot Sale">
@@ -152,15 +152,11 @@ class SpotSaleController extends Controller
 
     public function createModal()
     {
-
         $classes = CourseClass::where('is_active', 1)
             ->orderBy('name')
             ->get(['id', 'name']);
 
-        $institutions = Institution::orderBy('institution_name')
-            ->get(['id', 'institution_name']);
-
-        return view('backend.modules.spot_sale.create', compact('classes', 'institutions')); // modal partial
+        return view('backend.modules.spot_sale.create', compact('classes'));
     }
 
     public function store(Request $req)
@@ -258,7 +254,9 @@ class SpotSaleController extends Controller
         }
 
         $spotSale->load([
-            'items.product:id,name,price',
+            'items.product:id,name,price,category_id,subcategory_id',
+            'items.product.category:id,name',
+            'items.product.subcategory:id,name',
             'user:id,name',
             'teacher:id,teacher_name',
             'library:id,name,library_name',
@@ -272,10 +270,7 @@ class SpotSaleController extends Controller
             ->orderBy('name')
             ->get(['id', 'name']);
 
-        $institutions = Institution::orderBy('institution_name')
-            ->get(['id', 'institution_name']);
-
-        return view('backend.modules.spot_sale.edit', compact('spotSale', 'classes', 'institutions'));
+        return view('backend.modules.spot_sale.edit', compact('spotSale', 'classes'));
     }
 
     public function show(SpotSale $spotSale)

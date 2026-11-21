@@ -115,8 +115,36 @@
 
         <hr class="border-neutral-200 my-20">
 
+        {{-- Section: Product Filter (Category & Subcategory) --}}
+        <div class="card mb-16 border">
+            <div class="card-body p-16">
+                <h6 class="text-sm fw-bold mb-12 text-dark">Product Filter (Category & Subcategory)</h6>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label text-sm mb-6">Category <span class="text-danger">*</span></label>
+                        <select id="courierCategorySelect" class="form-control radius-8 js-s2-ajax"
+                            data-url="{{ route('category.cat.select2') }}"
+                            data-placeholder="Select Category">
+                        </select>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label text-sm mb-6">Subcategory <span class="text-danger">*</span></label>
+                        <select id="courierSubcategorySelect" class="form-control radius-8"
+                            data-placeholder="Select Subcategory" disabled>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         {{-- Section: Products Dispatched (Assign Specimen Style) --}}
         <div class="mb-20">
+            <div class="d-flex justify-content-between align-items-center mb-12">
+                <h6 class="text-sm fw-bold mb-0 text-dark">Products Dispatched</h6>
+                <span class="text-xs text-muted" id="courierSelectionHint">Please select a Category and Subcategory above to enable products</span>
+            </div>
+
             <div class="table-responsive">
                 <table class="table table-sm align-middle items-table-fixed mb-0" id="courierItemsTable">
                     <thead class="table-light">
@@ -130,11 +158,10 @@
                         <tr class="courier-item-row">
                             <td>
                                 <select name="items[0][product_id]"
-                                    class="form-control form-control-sm js-s2-ajax courier-product-select"
-                                    data-url="{{ route('product.select2') }}"
+                                    class="form-control form-control-sm courier-product-select"
                                     data-placeholder="Select Product"
                                     placeholder="Select Product"
-                                    required></select>
+                                    disabled required></select>
                             </td>
                             <td>
                                 <input type="number" step="1" min="1" value="1"
@@ -151,7 +178,7 @@
             </div>
             <div class="invalid-feedback d-block product_items-error mt-4" style="display:none"></div>
             <div class="d-flex justify-content-end mb-8 mt-8">
-                <button type="button" id="btnAddCourierItem" class="btn btn-sm btn-outline-primary">+ Add Item</button>
+                <button type="button" id="btnAddCourierItem" class="btn btn-sm btn-outline-primary" disabled>+ Add Item</button>
             </div>
 
             {{-- Summary --}}
