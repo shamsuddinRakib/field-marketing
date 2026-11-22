@@ -3,8 +3,11 @@
 namespace App\Http\Controllers\backend;
 
 use App\Http\Controllers\Controller;
+use App\Models\backend\CurrentFund;
 use App\Models\backend\FundRequest;
+use App\Models\backend\FundTransferLedger;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class FundRequestController extends Controller
 {
@@ -154,13 +157,12 @@ class FundRequestController extends Controller
 
     public function destroy(FundRequest $fundRequest)
     {
-        // return $productDistribution;
-        if ($fundRequest->status === 'pending') {
-            $fundRequest->delete();
-            return response()->json(['ok' => true, 'msg' => 'Deleted Successfully']);
+        if ($fundRequest->status !== 'pending') {
+            return response()->json(['ok' => false, 'msg' => 'Approved record cannot be deleted.'], 422);
         }
 
-        return response()->json(['ok' => false, 'msg' => 'Approved record cannt be deleted.']);
+        $fundRequest->delete();
+        return response()->json(['ok' => true, 'msg' => 'Deleted Successfully']);
     }
 
     public function statusModal(FundRequest $fundRequest)
@@ -168,16 +170,50 @@ class FundRequestController extends Controller
         return view('backend.modules.fund_request.statusModal', compact('fundRequest'));
     }
 
-
     public function updateStatus(FundRequest $fundRequest, Request $req)
     {
-        if ($fundRequest->status === 'approved' || $req->status == 'pending') {
-            return response()->json(['ok' => false, 'msg' => ['Approved record cannot be updated']], 402);
+        $targetStatus = in_array($req->input('status'), ['approved', 'delivered'], true) ? 'approved' : $req->input('status');
+
+        if ($fundRequest->status === 'approved') {
+            return response()->json(['ok' => false, 'msg' => 'Approved record cannot be updated'], 422);
         }
 
-       $fundRequest->status = 'approved';
-       $fundRequest->save();
+        if ($targetStatus === 'pending') {
+            return response()->json(['ok' => true, 'msg' => 'Status is already pending']);
+        }
 
-        return response()->json(['success' => true, 'msg' => 'Status Updated Successfully']);
+        try {
+            DB::transaction(function () use ($fundRequest) {
+                $fundRequest->status = 'approved';
+                $fundRequest->save();
+
+                $amount = (float) $fundRequest->amount;
+
+                $currentFund = CurrentFund::where('user_id', $fundRequest->user_id)
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($currentFund) {
+                    $currentFund->increment('balance', $amount);
+                } else {
+                    CurrentFund::create([
+                        'user_id' => $fundRequest->user_id,
+                        'balance' => $amount,
+                    ]);
+                }
+
+                FundTransferLedger::create([
+                    'ref_type'  => 'FundRequest',
+                    'ref_id'    => $fundRequest->id,
+                    'amount'    => $amount,
+                    'direction' => 'IN',
+                    'note'      => 'Fund Request #' . $fundRequest->id . ($fundRequest->note ? ': ' . $fundRequest->note : ''),
+                ]);
+            });
+
+            return response()->json(['success' => true, 'ok' => true, 'msg' => 'Fund request approved and balance added to representative']);
+        } catch (\Throwable $e) {
+            return response()->json(['ok' => false, 'msg' => 'Something went wrong: ' . $e->getMessage()], 500);
+        }
     }
 }

@@ -3,10 +3,17 @@
 namespace App\Http\Controllers\backend;
 
 use App\Http\Controllers\Controller;
+use App\Models\backend\CourseClass;
+use App\Models\backend\CurrentFund;
+use App\Models\backend\CurrentStock;
+use App\Models\backend\FundTransferLedger;
+use App\Models\backend\Institution;
 use App\Models\backend\Library;
 use App\Models\backend\Product;
 use App\Models\backend\SpotSale;
 use App\Models\backend\SpotSaleItem;
+use App\Models\backend\StockLedger;
+use App\Models\backend\Student;
 use App\Models\backend\Teacher;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -27,11 +34,12 @@ class SpotSaleController extends Controller
         $searchVal = trim($request->input('search.value', ''));
 
         $base = SpotSale::query()
-            ->select(['id', 'user_id', 'total', 'teacher_id', 'library_id', 'status', 'note', 'created_at'])
+            ->select(['id', 'user_id', 'total', 'teacher_id', 'library_id', 'student_id', 'status', 'note', 'created_at'])
             ->with([
                 'user:id,name',
                 'teacher:id,teacher_name',
                 'library:id,library_name',
+                'student:id,student_name',
                 'items.product:id,name',
             ])
             // NOTE: withSum() must come AFTER select() — select() replaces
@@ -44,7 +52,7 @@ class SpotSaleController extends Controller
             $base->where(function ($q) use ($searchVal) {
                 $q->where('note', 'like', "%{$searchVal}%")
                     ->orWhere('id', $searchVal)
-                    ->orWhereHas('user', fn ($u) => $u->where('name', 'like', "%{$searchVal}%"));
+                    ->orWhereHas('user', fn($u) => $u->where('name', 'like', "%{$searchVal}%"));
             });
         }
 
@@ -58,18 +66,20 @@ class SpotSaleController extends Controller
 
         $data = [];
         foreach ($rows as $b) {
-            $type = $b->teacher_id ? 'teacher' : ($b->library_id ? 'library' : '—');
+            $type = $b->teacher_id ? 'teacher' : ($b->library_id ? 'library' : ($b->student_id ? 'student' : '—'));
             $typeBadge = $type === 'teacher'
                 ? '<span class="badge text-sm fw-semibold bg-primary px-12 py-6 radius-4">Teacher</span>'
                 : ($type === 'library'
                     ? '<span class="badge text-sm fw-semibold bg-info px-12 py-6 radius-4">Library</span>'
-                    : '—');
+                    : ($type === 'student'
+                        ? '<span class="badge text-sm fw-semibold bg-success px-12 py-6 radius-4">Student</span>' : '—'));
 
             $customer = $b->teacher_id
-                ? e(optional($b->teacher)->teacher_name ?? ('#'.$b->teacher_id))
+                ? e(optional($b->teacher)->teacher_name ?? ('#' . $b->teacher_id))
                 : ($b->library_id
-                    ? e(optional($b->library)->library_name ?? ('#'.$b->library_id))
-                    : '—');
+                    ? e(optional($b->library)->library_name ?? ('#' . $b->library_id))
+                    : ($b->student_id
+                        ? e(optional($b->student)->student_name ?? ('#' . $b->student_id)) : '—'));
 
             $statusBadge = $b->status === 'approved'
                 ? '<span class="badge text-sm fw-semibold bg-dark-success-gradient px-20 py-9 radius-4 text-white">Approved</span>'
@@ -94,13 +104,9 @@ class SpotSaleController extends Controller
 
             if ($b->status !== 'approved') {
                 $actions .= '
-            <a href="#"
+            <a href="' . route('spot-sales.edit', $b->id) . '"
                class="w-32-px h-32-px rounded-circle d-inline-flex align-items-center justify-content-center
-                      bg-success-focus text-success-main AjaxModal"
-               data-ajax-modal="' . route('spot-sales.editModal', $b->id) . '"
-               data-size="lg"
-               data-onload="SpotSaleIndex.onLoad"
-               data-onsuccess="SpotSaleIndex.onSaved"
+                      bg-success-focus text-success-main"
                title="Edit Spot Sale">
                 <iconify-icon icon="lucide:edit"></iconify-icon>
             </a>
@@ -121,7 +127,7 @@ class SpotSaleController extends Controller
 
             $data[] = [
                 $b->id,
-                '<strong>' . e(optional($b->user)->name ?? ('#'.$b->user_id)) . '</strong>',
+                '<strong>' . e(optional($b->user)->name ?? ('#' . $b->user_id)) . '</strong>',
                 $typeBadge,
                 $customer,
                 e($b->note ?? '—'),
@@ -140,18 +146,32 @@ class SpotSaleController extends Controller
         ]);
     }
 
+    public function create()
+    {
+        $classes = CourseClass::where('is_active', 1)
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        return view('backend.modules.spot_sale.create', compact('classes'));
+    }
+
     public function createModal()
     {
-        return view('backend.modules.spot_sale.create'); // modal partial
+        return $this->create();
     }
 
     public function store(Request $req)
     {
         $data = $req->validate([
             'user_id'               => 'required|integer|exists:users,id',
-            'customer_type'         => 'required|in:teacher,library',
+            'customer_type'         => 'required|in:teacher,library,student',
             'teacher_id'            => 'nullable|integer|exists:teachers,id|required_if:customer_type,teacher',
             'library_id'            => 'nullable|integer|exists:libraries,id|required_if:customer_type,library',
+
+            'student_name' => 'required_if:customer_type,student|nullable|string|max:255',
+            'course_class_id' => 'required_if:customer_type,student|nullable|integer|exists:course_class,id',
+            'institution_id' => 'required_if:customer_type,student|nullable|integer|exists:institutions,id',
+
             'note'                  => 'nullable|string|max:255',
             'status'                => 'required|in:pending,approved',
 
@@ -184,11 +204,24 @@ class SpotSaleController extends Controller
         DB::beginTransaction();
 
         try {
+            $studentId = null;
+
+            if ($data['customer_type'] === 'student') {
+                $student = Student::create([
+                    'user_id'         => $data['user_id'],
+                    'student_name'    => $data['student_name'],
+                    'course_class_id' => $data['course_class_id'],
+                    'institution_id'  => $data['institution_id'],
+                ]);
+
+                $studentId = $student->id;
+            }
             $spotSale = SpotSale::create([
                 'user_id'    => $data['user_id'],
                 'total'      => (int) round($total),
                 'teacher_id' => $data['customer_type'] === 'teacher' ? $data['teacher_id'] : null,
                 'library_id' => $data['customer_type'] === 'library' ? $data['library_id'] : null,
+                'student_id' => $studentId,
                 'status'     => $data['status'],
                 'note'       => $data['note'] ?? null,
             ]);
@@ -197,12 +230,17 @@ class SpotSaleController extends Controller
                 SpotSaleItem::create(['spot_sale_id' => $spotSale->id] + $line);
             }
 
+            if ($data['status'] === 'approved') {
+                $this->processSpotSaleApproval($spotSale);
+            }
+
             DB::commit();
 
             return response()->json([
-                'ok'   => true,
-                'msg'  => 'Spot sale saved successfully',
-                'data' => ['id' => $spotSale->id, 'status' => $spotSale->status],
+                'ok'       => true,
+                'msg'      => 'Spot sale saved successfully',
+                'data'     => ['id' => $spotSale->id, 'status' => $spotSale->status],
+                'redirect' => route('spot-sales.index'),
             ]);
         } catch (\Throwable $e) {
             DB::rollBack();
@@ -211,20 +249,35 @@ class SpotSaleController extends Controller
         }
     }
 
-    public function editModal(SpotSale $spotSale)
+    public function edit(SpotSale $spotSale)
     {
         if ($spotSale->status === 'approved') {
             abort(403, 'Approved spot sale cannot be edited');
         }
 
         $spotSale->load([
-            'items.product:id,name,price',
+            'items.product:id,name,price,thumbnail_image,category_id,subcategory_id',
+            'items.product.category:id,name',
+            'items.product.subcategory:id,name',
             'user:id,name',
             'teacher:id,teacher_name',
             'library:id,name,library_name',
+
+            'student:id,user_id,student_name,course_class_id,institution_id',
+            'student.courseClass:id,name',
+            'student.institution:id,institution_name',
         ]);
 
-        return view('backend.modules.spot_sale.edit', compact('spotSale'));
+        $classes = CourseClass::where('is_active', 1)
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        return view('backend.modules.spot_sale.edit', compact('spotSale', 'classes'));
+    }
+
+    public function editModal(SpotSale $spotSale)
+    {
+        return $this->edit($spotSale);
     }
 
     public function show(SpotSale $spotSale)
@@ -234,6 +287,10 @@ class SpotSaleController extends Controller
             'user:id,name',
             'teacher:id,teacher_name',
             'library:id,name,library_name',
+
+            'student:id,user_id,student_name,course_class_id,institution_id',
+            'student.courseClass:id,name',
+            'student.institution:id,institution_name',
         ]);
 
         return view('backend.modules.spot_sale.show', compact('spotSale'));
@@ -247,9 +304,14 @@ class SpotSaleController extends Controller
 
         $data = $req->validate([
             'user_id'               => 'required|integer|exists:users,id',
-            'customer_type'         => 'required|in:teacher,library',
+            'customer_type'         => 'required|in:teacher,library,student',
             'teacher_id'            => 'nullable|integer|exists:teachers,id|required_if:customer_type,teacher',
             'library_id'            => 'nullable|integer|exists:libraries,id|required_if:customer_type,library',
+
+            'student_name'          => 'required_if:customer_type,student|nullable|string|max:255',
+            'course_class_id'       => 'required_if:customer_type,student|nullable|integer|exists:course_class,id',
+            'institution_id'        => 'required_if:customer_type,student|nullable|integer|exists:institutions,id',
+
             'note'                  => 'nullable|string|max:255',
             'status'                => 'required|in:pending,approved',
 
@@ -282,11 +344,38 @@ class SpotSaleController extends Controller
         DB::beginTransaction();
 
         try {
+
+            $studentId = null;
+
+            if ($data['customer_type'] === 'student') {
+                if ($spotSale->student_id) {
+                    $student = Student::findOrFail($spotSale->student_id);
+
+                    $student->update([
+                        'user_id'         => $data['user_id'],
+                        'student_name'    => $data['student_name'],
+                        'course_class_id' => $data['course_class_id'],
+                        'institution_id'  => $data['institution_id'],
+                    ]);
+                } else {
+                    $student = Student::create([
+                        'user_id'         => $data['user_id'],
+                        'student_name'    => $data['student_name'],
+                        'course_class_id' => $data['course_class_id'],
+                        'institution_id'  => $data['institution_id'],
+                    ]);
+                }
+
+                $studentId = $student->id;
+            }
+
             $spotSale->update([
                 'user_id'    => $data['user_id'],
                 'total'      => (int) round($total),
                 'teacher_id' => $data['customer_type'] === 'teacher' ? $data['teacher_id'] : null,
                 'library_id' => $data['customer_type'] === 'library' ? $data['library_id'] : null,
+                'student_id' => $studentId,
+
                 'status'     => $data['status'],
                 'note'       => $data['note'] ?? null,
             ]);
@@ -297,9 +386,18 @@ class SpotSaleController extends Controller
                 $spotSale->items()->create($line);
             }
 
+            if ($data['status'] === 'approved') {
+                $this->processSpotSaleApproval($spotSale);
+            }
+
             DB::commit();
 
-            return response()->json(['ok' => true, 'msg' => 'Spot sale updated successfully', 'id' => $spotSale->id]);
+            return response()->json([
+                'ok'       => true,
+                'msg'      => 'Spot sale updated successfully',
+                'id'       => $spotSale->id,
+                'redirect' => route('spot-sales.index'),
+            ]);
         } catch (\Throwable $e) {
             DB::rollBack();
 
@@ -325,13 +423,83 @@ class SpotSaleController extends Controller
             return response()->json(['ok' => false, 'msg' => 'Spot sale is already approved'], 422);
         }
 
-        $spotSale->update(['status' => 'approved']);
+        try {
+            DB::transaction(function () use ($spotSale) {
+                $this->processSpotSaleApproval($spotSale);
+            });
 
-        return response()->json([
-            'ok'   => true,
-            'msg'  => 'Spot sale approved successfully',
-            'data' => ['id' => $spotSale->id, 'status' => $spotSale->status],
-        ]);
+            return response()->json([
+                'ok'   => true,
+                'msg'  => 'Spot sale approved successfully',
+                'data' => ['id' => $spotSale->id, 'status' => $spotSale->status],
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json(['ok' => false, 'msg' => $e->getMessage()], 422);
+        }
+    }
+
+    private function processSpotSaleApproval(SpotSale $spotSale): void
+    {
+        $spotSale->loadMissing('items.product');
+
+        if ($spotSale->items->isEmpty()) {
+            throw new \Exception('No items found in this spot sale to approve.');
+        }
+
+        // 1. Verify and deduct MR CurrentStock and record StockLedger OUT
+        foreach ($spotSale->items as $item) {
+            $stock = CurrentStock::where('user_id', $spotSale->user_id)
+                ->where('product_id', $item->product_id)
+                ->lockForUpdate()
+                ->first();
+
+            $available = $stock ? (int) $stock->current_stock : 0;
+            $requested = (int) $item->quantity;
+
+            if ($available < $requested) {
+                $productName = $item->product?->name ?? ('Product #' . $item->product_id);
+                throw new \Exception("Insufficient stock for {$productName} (Available: {$available}, Requested: {$requested})");
+            }
+
+            $stock->decrement('current_stock', $item->quantity);
+
+            StockLedger::create([
+                'ref_type'   => 'SpotSale',
+                'ref_id'     => $spotSale->id,
+                'product_id' => $item->product_id,
+                'quantity'   => $item->quantity,
+                'direction'  => 'OUT',
+                'note'       => 'Spot Sale #' . $spotSale->id . ($spotSale->note ? ': ' . $spotSale->note : ''),
+            ]);
+        }
+
+        // 2. Increment MR CurrentFund balance with collected sale cash and record FundTransferLedger IN
+        $saleTotal = (float) $spotSale->total;
+        if ($saleTotal > 0) {
+            $currentFund = CurrentFund::where('user_id', $spotSale->user_id)
+                ->lockForUpdate()
+                ->first();
+
+            if ($currentFund) {
+                $currentFund->increment('balance', $saleTotal);
+            } else {
+                CurrentFund::create([
+                    'user_id' => $spotSale->user_id,
+                    'balance' => $saleTotal,
+                ]);
+            }
+
+            FundTransferLedger::create([
+                'ref_type'  => 'SpotSale',
+                'ref_id'    => $spotSale->id,
+                'amount'    => $saleTotal,
+                'direction' => 'IN',
+                'note'      => 'Spot sale cash collection #' . $spotSale->id,
+            ]);
+        }
+
+        $spotSale->status = 'approved';
+        $spotSale->save();
     }
 
     public function productPrice(Product $product)

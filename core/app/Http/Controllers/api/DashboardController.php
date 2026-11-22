@@ -160,8 +160,11 @@ class DashboardController extends Controller
             'visit_date'
         )->count();
 
-        // 2. Total posted expenses
-        $expenseQuery = Expense::where('created_by', $userId)
+        // 2. Total posted expenses (matching ExpenseController query scope)
+        $expenseQuery = Expense::where(function ($q) use ($userId) {
+                $q->where('user_id', $userId)
+                  ->orWhere('created_by', $userId);
+            })
             ->where('status', 'posted');
 
         $totalExpense = $applyDateFilter(
@@ -169,11 +172,11 @@ class DashboardController extends Controller
             'expense_date'
         )->sum('total_amount');
 
-        // 3. Book requests belonging to the authenticated MR
+        // 3. Book requests belonging to the authenticated MR (with line items)
         $marketingRepresentativeId =
             $user->marketingRepresentative?->id;
 
-        $bookRequestQuery = BookRequest::with('product')
+        $bookRequestQuery = BookRequest::with('items.product')
             ->where(
                 'marketing_representative_id',
                 $marketingRepresentativeId ?? 0

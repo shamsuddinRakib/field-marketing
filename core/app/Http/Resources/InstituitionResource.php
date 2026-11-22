@@ -16,11 +16,19 @@ class InstituitionResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'institution_name' => $this->institution_name,
-            'address' => $this->address,
-            'phone' => $this->phone,
+            'name' => $this->institution_name,
+            'code' => $this->code,
             'email' => $this->email,
-           
+            'address' => $this->address,
+
+            'upazila_id' => $this->upazila_id,
+            'upazila_name' => $this->upazila?->upazila_name,
+
+            'district_id' => $this->district_id,
+            'district_name' => $this->district?->district_name,
+
+            'division_id' => $this->division_id,
+            'division_name' => $this->division?->name,
         ];
     }
 }

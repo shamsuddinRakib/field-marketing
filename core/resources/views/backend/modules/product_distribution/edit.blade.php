@@ -1,27 +1,53 @@
-{{-- ================= MODAL HEADER ================= --}}
-<div class="modal-header py-16 px-24">
-    <h5 class="modal-title fw-semibold">Edit Distribution #{{ $productDistribution->id }}</h5>
-    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-</div>
+@extends('backend.layouts.master')
 
-{{-- ================= MODAL BODY ================= --}}
-<div class="modal-body px-24 py-16">
+@section('meta')
+    <title>Edit Distribution #{{ $productDistribution->id }}</title>
+@endsection
 
-    <form id="productDistEditForm" action="{{ route('product-distribution.update', $productDistribution->id) }}" method="POST" data-ajax="true">
+@section('content')
+    {{-- Breadcrumb & Title --}}
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-24">
+        <div>
+            <h6 class="fw-semibold mb-0">Product Distribution</h6>
+            <p class="fw-semibold mb-0">Edit Distribution #{{ $productDistribution->id }}</p>
+        </div>
 
+        <ul class="d-flex align-items-center gap-2 mb-0">
+            <li class="fw-medium">
+                <a href="{{ route('backend.dashboard') }}" class="d-flex align-items-center gap-1 hover-text-primary">
+                    <iconify-icon icon="solar:home-smile-angle-outline" class="icon text-lg"></iconify-icon> Dashboard
+                </a>
+            </li>
+            <li>-</li>
+            <li class="fw-medium">
+                <a href="{{ route('product-distribution.index') }}" class="hover-text-primary">Product Distribution</a>
+            </li>
+            <li>-</li>
+            <li class="fw-medium">Edit #{{ $productDistribution->id }}</li>
+        </ul>
+
+        {{-- Button on a new line (right aligned) --}}
+        <div class="text-end w-100">
+            <a href="{{ route('product-distribution.index') }}" class="btn btn-secondary bg-dark">
+                <i data-feather="arrow-left" class="me-2"></i>Back to Distribution
+            </a>
+        </div>
+    </div>
+
+    {{-- Form --}}
+    <form id="productDistEditForm" action="{{ route('product-distribution.update', $productDistribution->id) }}" method="POST">
         @csrf
         @method('PUT')
 
-        {{-- ================= DISTRIBUTION INFO ================= --}}
+        {{-- 1. DISTRIBUTION INFORMATION --}}
         <div class="card mb-16">
             <div class="card-body">
-
                 <h6 class="mb-12 fw-semibold">Distribution Information</h6>
 
                 <div class="row g-3">
                     <div class="col-md-6 mb-12">
                         <label class="form-label text-sm mb-8">Marketing Representative <span class="text-danger">*</span></label>
-                        <select class="form-control form-control-sm js-s2-ajax" name="user_id"
+                        <select class="form-control form-control-sm js-s2-ajax" name="user_id" id="distRepSelect"
                             data-url="{{ route('marketing-representative.marketing-representatives.select2') }}"
                             data-placeholder="Select Marketing Representative" required>
                             @if ($productDistribution->user)
@@ -36,123 +62,99 @@
                             value="{{ $productDistribution->note }}" placeholder="Optional note">
                     </div>
                 </div>
-
             </div>
         </div>
 
-        {{-- ================= DISTRIBUTION ITEMS ================= --}}
-        <div class="table-responsive"><table class="table table-sm align-middle items-table-fixed" id="productDistItemsTable">
-            <thead class="table-light">
-                <tr>
-                    <th style="width:55%">Product</th>
-                    <th class="text-end" style="width:140px">Qty</th>
-                    <th style="width:40px"></th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach ($productDistribution->items as $i => $item)
-                    <tr class="product-dist-item-row">
-                        <td>
-                            <select name="items[{{ $i }}][product_id]"
-                                class="form-control form-control-sm js-s2-ajax dist-product"
-                                data-url="{{ route('product.select2') }}" data-placeholder="Select Product" required>
-                                @if ($item->product)
-                                    <option value="{{ $item->product->id }}" selected>{{ $item->product->name }}</option>
-                                @endif
-                            </select>
-                        </td>
-                        <td>
-                            <input type="number" step="1" min="1" name="items[{{ $i }}][quantity]"
-                                class="form-control form-control-sm text-end dist-qty"
-                                value="{{ $item->quantity }}" required>
-                        </td>
-                        <td class="text-center">
-                            <button type="button" class="btn btn-sm btn-outline-danger btnRemoveRow">✕</button>
-                        </td>
-                    </tr>
-                @endforeach
-            </tbody>
-        </table></div>
+        {{-- 2. REUSABLE POS PRODUCT PICKER COMPONENT (Pre-populated with existing items) --}}
+        @include('backend.modules.products.partial.product_item_picker', [
+            'items' => $productDistribution->items
+        ])
 
-        <div class="d-flex justify-content-end mb-8">
-            <button type="button" id="btnAddDistItem" class="btn btn-sm btn-outline-primary">+ Add Item</button>
+        {{-- 3. ACTIONS --}}
+        <div class="d-flex justify-content-end gap-2 mt-24 mb-32">
+            <a href="{{ route('product-distribution.index') }}" class="btn btn-sm btn-outline-secondary">Cancel</a>
+            <button type="submit" class="btn btn-sm btn-primary" id="btnSubmitDist">Update Distribution</button>
         </div>
-
-        {{-- ================= SUMMARY ================= --}}
-        <div class="card mb-16">
-            <div class="card-body d-flex justify-content-between align-items-center">
-                <h6 class="mb-0">Total Quantity</h6>
-                <h5 class="mb-0 fw-bold"><span id="distTotalText">{{ $productDistribution->items->sum('quantity') }}</span></h5>
-            </div>
-        </div>
-
-        {{-- ================= ACTION ================= --}}
-        <div class="d-flex justify-content-end gap-2">
-            <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-            <button type="submit" class="btn btn-sm btn-primary">Update Pending</button>
-        </div>
-
     </form>
-</div>
+@endsection
 
-{{-- ================= JS ================= --}}
+@section('script')
 <script>
-    window.ProductDistIndex = window.ProductDistIndex || { onLoad: function () {} };
+    (function checkDeps() {
+        if (typeof jQuery === 'undefined' || typeof jQuery.fn.select2 === 'undefined') {
+            setTimeout(checkDeps, 30);
+            return;
+        }
 
-    (function () {
-        const $table = $('#productDistItemsTable tbody');
-        let rowIndex = {{ $productDistribution->items->count() }};
-
-        $('#btnAddDistItem').on('click', function () {
-            const $first = $table.find('tr:first');
-
-            $first.find('.select2-hidden-accessible').each(function () {
-                $(this).select2('destroy');
-            });
-
-            const $row = $first.clone();
-
-            $row.find('input, select').each(function () {
-                const name = $(this).attr('name');
-                if (!name) return;
-                $(this).attr('name', name.replace(/\[\d+]/, `[${rowIndex}]`));
-                if ($(this).hasClass('dist-qty')) {
-                    $(this).val(1);
-                } else if ($(this).is('select')) {
-                    $(this).html('');
-                } else {
-                    $(this).val('');
+        jQuery(function($) {
+            // Initialize Representative Select2
+            $('#distRepSelect').select2({
+                width: '100%',
+                placeholder: 'Select Marketing Representative',
+                allowClear: true,
+                ajax: {
+                    url: "{{ route('marketing-representative.marketing-representatives.select2') }}",
+                    dataType: 'json',
+                    delay: 200,
+                    data: function(params) {
+                        return { q: params.term || '' };
+                    },
+                    processResults: function(data) {
+                        return { results: Array.isArray(data?.results) ? data.results : [] };
+                    }
                 }
             });
 
-            $table.append($row);
-            if (window.S2 && typeof window.S2.auto === 'function') {
-                window.S2.auto();
-            }
-            rowIndex++;
-            calculateTotal();
-        });
+            // AJAX Form Submit with redirect
+            $('#productDistEditForm').on('submit', function(e) {
+                e.preventDefault();
+                const $form = $(this);
+                const $btn = $('#btnSubmitDist');
 
-        $table.on('click', '.btnRemoveRow', function () {
-            if ($table.find('tr').length === 1) return;
-            $(this).closest('tr').remove();
-            calculateTotal();
-        });
+                $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1" role="status"></span> Updating...');
 
-        $table.on('input', '.dist-qty', function () {
-            calculateTotal();
-        });
-
-        function calculateTotal() {
-            let total = 0;
-            $('.dist-qty').each(function () {
-                total += parseInt($(this).val() || 0, 10);
+                $.ajax({
+                    url: $form.attr('action'),
+                    type: 'POST',
+                    data: $form.serialize(),
+                    dataType: 'json',
+                    success: function(res) {
+                        if (res?.ok) {
+                            if (window.Swal) {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Success',
+                                    text: res.msg || 'Updated Successfully',
+                                    timer: 1500,
+                                    showConfirmButton: false
+                                }).then(() => {
+                                    window.location.href = res.redirect || "{{ route('product-distribution.index') }}";
+                                });
+                            } else {
+                                alert(res.msg || 'Updated Successfully');
+                                window.location.href = res.redirect || "{{ route('product-distribution.index') }}";
+                            }
+                        } else {
+                            $btn.prop('disabled', false).text('Update Distribution');
+                            if (window.Swal) {
+                                Swal.fire({ icon: 'error', title: 'Error', text: res?.msg || 'Something went wrong' });
+                            } else {
+                                alert(res?.msg || 'Something went wrong');
+                            }
+                        }
+                    },
+                    error: function(xhr) {
+                        $btn.prop('disabled', false).text('Update Distribution');
+                        const errorMsg = xhr.responseJSON?.message || xhr.responseJSON?.msg || 'Failed to update distribution.';
+                        if (window.Swal) {
+                            Swal.fire({ icon: 'error', title: 'Validation Error', text: errorMsg });
+                        } else {
+                            alert(errorMsg);
+                        }
+                    }
+                });
             });
-            $('#distTotalText').text(total);
-        }
-
-        if (window.S2 && typeof window.S2.auto === 'function') {
-            window.S2.auto();
-        }
+        });
     })();
 </script>
+@endsection

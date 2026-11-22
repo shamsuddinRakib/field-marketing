@@ -359,11 +359,11 @@
                     </div>
                     <div class="card-body p-20">
                         <div class="d-flex flex-column gap-24">
-                         
-                                <div class="text-center text-secondary-light py-4">
-                                    <p>No users found</p>
-                                </div>
-                           
+
+                            <div class="text-center text-secondary-light py-4">
+                                <p>No users found</p>
+                            </div>
+
                         </div>
                     </div>
                 </div>
@@ -375,8 +375,7 @@
                     <div class="card-header">
                         <div class="d-flex align-items-center flex-wrap gap-2 justify-content-between">
                             <h6 class="mb-2 fw-bold text-lg mb-0">Top Suppliers</h6>
-                            <a href="#"
-                                class="text-primary-600 hover-text-primary d-flex align-items-center gap-1">
+                            <a href="#" class="text-primary-600 hover-text-primary d-flex align-items-center gap-1">
                                 View All
                                 <iconify-icon icon="solar:alt-arrow-right-linear" class="icon"></iconify-icon>
                             </a>
@@ -393,7 +392,7 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                   
+
                                 </tbody>
                             </table>
                         </div>
@@ -409,8 +408,7 @@
                     <div class="card-header">
                         <div class="d-flex align-items-center flex-wrap gap-2 justify-content-between">
                             <h6 class="mb-2 fw-bold text-lg mb-0">Top Customer</h6>
-                            <a href="#"
-                                class="text-primary-600 hover-text-primary d-flex align-items-center gap-1">
+                            <a href="#" class="text-primary-600 hover-text-primary d-flex align-items-center gap-1">
                                 View All
                                 <iconify-icon icon="solar:alt-arrow-right-linear" class="icon"></iconify-icon>
                             </a>
@@ -427,7 +425,7 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                 
+
                                 </tbody>
                             </table>
                         </div>
@@ -496,8 +494,7 @@
                             <li class="d-flex align-items-center gap-2">
                                 <span class="w-12-px h-8-px rounded-pill bg-warning-600"></span>
                                 <span class="text-secondary-light text-sm fw-semibold">Purchase: ৳<span
-                                        id="purchaseSummaryVal"
-                                        class="text-primary-light fw-bold">0</span>
+                                        id="purchaseSummaryVal" class="text-primary-light fw-bold">0</span>
                                 </span>
                             </li>
                             <li class="d-flex align-items-center gap-2">
@@ -540,12 +537,13 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                   
-                                  
+
+
                                     <tr>
-                                        <td colspan="7" class="text-center text-secondary-light">No transactions found</td>
+                                        <td colspan="7" class="text-center text-secondary-light">No transactions found
+                                        </td>
                                     </tr>
-                                  
+
                                 </tbody>
                             </table>
                         </div>
@@ -559,6 +557,73 @@
 
 @section('script')
     <script>
+        const makePeriodData = (labels) => ({
+            income: labels.map(() => 0),
+            expense: labels.map(() => 0),
+            labels: labels,
+            totalIncome: 0,
+            totalExpense: 0
+        });
+
+        // Income vs Expense chart
+        const chartData = {
+            monthly: makePeriodData([
+                'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+            ]),
+            yearly: makePeriodData([
+                'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+            ]),
+            weekly: makePeriodData([
+                'Sat', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri'
+            ]),
+            today: makePeriodData(['Today'])
+        };
+
+        // Overall report donut chart
+        const overallData = {
+            monthly: [0, 0, 0, 0],
+            yearly: [0, 0, 0, 0],
+            weekly: [0, 0, 0, 0],
+            today: [0, 0, 0, 0]
+        };
+
+        // Purchase & Sale chart
+        const purchaseSaleChartFullData = {
+            this_month: {
+                purchase: Array(12).fill(0),
+                sales: Array(12).fill(0),
+                labels: chartData.monthly.labels
+            },
+            this_week: {
+                purchase: Array(7).fill(0),
+                sales: Array(7).fill(0),
+                labels: chartData.weekly.labels
+            },
+            this_year: {
+                purchase: Array(12).fill(0),
+                sales: Array(12).fill(0),
+                labels: chartData.yearly.labels
+            }
+        };
+
+        const purchaseSalesMetrics = {
+            this_month: {
+                purchase: 0,
+                sales: 0
+            },
+            this_week: {
+                purchase: 0,
+                sales: 0
+            },
+            this_year: {
+                purchase: 0,
+                sales: 0
+            }
+        };
+
+        
         // ===================== Income VS Expense Start =============================== 
         function createChartTwo(chartId, color1, color2, incomeData, expenseData, monthLabels) {
             // Destroy existing chart if it exists
@@ -697,7 +762,7 @@
         }
 
         // Data from PHP
-      
+
         // Function to format currency
         function formatCurrency(value) {
             return '৳ ' + value.toLocaleString('en-US', {
@@ -726,7 +791,7 @@
         // ===================== Income VS Expense End =============================== 
 
         // ================================ Users Overview Donut chart Start ================================ 
-       
+
 
         var donutOptions = {
             series: overallData.monthly,
@@ -796,100 +861,105 @@
         });
         // ================================ Users Overview Donut chart End ================================ 
 
-                // ================================ Purchase & sale chart Start ================================ 
-                var purchaseSalesMetrics = 0;
-                var purchaseSaleChartFullData = 0;
-        
-                var purchaseSaleOptions = {
-                    series: [{
-                        name: 'Purchase',
-                        data: purchaseSaleChartFullData.this_week.purchase
-                    }, {
-                        name: 'Sales',
-                        data: purchaseSaleChartFullData.this_week.sales
-                    }],
-                    colors: ['#FF9F29', '#45B369'],
-                    legend: {
-                        show: false
-                    },
-                    chart: {
-                        type: 'bar',
-                        height: 260,
-                        toolbar: {
-                            show: false
-                        },
-                    },
-                    grid: {
-                        show: true,
-                        borderColor: '#D1D5DB',
-                        strokeDashArray: 4,
-                        position: 'back',
-                    },
-                    plotOptions: {
-                        bar: {
-                            borderRadius: 4,
-                            columnWidth: 8,
-                        },
-                    },
-                    dataLabels: {
-                        enabled: false
-                    },
-                    states: {
-                        hover: {
-                            filter: {
-                                type: 'none'
-                            }
-                        }
-                    },
-                    stroke: {
-                        show: true,
-                        width: 0,
-                        colors: ['transparent']
-                    },
-                    xaxis: {
-                        categories: purchaseSaleChartFullData.this_week.labels,
-                    },
-                    fill: {
-                        opacity: 1,
-                        width: 18,
-                    },
-                    tooltip: {
-                        y: {
-                            formatter: function(val) {
-                                return "৳" + val.toLocaleString('en-US', {minimumFractionDigits: 2});
-                            }
-                        }
+        // ================================ Purchase & sale chart Start ================================ 
+        var purchaseSalesMetrics = 0;
+        var purchaseSaleChartFullData = 0;
+
+        var purchaseSaleOptions = {
+            series: [{
+                name: 'Purchase',
+                data: purchaseSaleChartFullData.this_week.purchase
+            }, {
+                name: 'Sales',
+                data: purchaseSaleChartFullData.this_week.sales
+            }],
+            colors: ['#FF9F29', '#45B369'],
+            legend: {
+                show: false
+            },
+            chart: {
+                type: 'bar',
+                height: 260,
+                toolbar: {
+                    show: false
+                },
+            },
+            grid: {
+                show: true,
+                borderColor: '#D1D5DB',
+                strokeDashArray: 4,
+                position: 'back',
+            },
+            plotOptions: {
+                bar: {
+                    borderRadius: 4,
+                    columnWidth: 8,
+                },
+            },
+            dataLabels: {
+                enabled: false
+            },
+            states: {
+                hover: {
+                    filter: {
+                        type: 'none'
                     }
-                };
-        
-                var purchaseSaleChart = new ApexCharts(document.querySelector("#purchaseSaleChart"), purchaseSaleOptions);
-                purchaseSaleChart.render();
-        
-                document.getElementById('purchaseSaleFilter').addEventListener('change', function(e) {
-                    var period = e.target.value;
-                    var metrics = purchaseSalesMetrics[period];
-                    var chartData = purchaseSaleChartFullData[period];
-                    
-                    // Update summary text values
-                    document.getElementById('purchaseSummaryVal').textContent = metrics.purchase.toLocaleString('en-US', {minimumFractionDigits: 2});
-                    document.getElementById('salesSummaryVal').textContent = metrics.sales.toLocaleString('en-US', {minimumFractionDigits: 2});
-        
-                    // Update chart series and categories
-                    purchaseSaleChart.updateOptions({
-                        series: [{
-                            name: 'Purchase',
-                            data: chartData.purchase
-                        }, {
-                            name: 'Sales',
-                            data: chartData.sales
-                        }],
-                        xaxis: {
-                            categories: chartData.labels
-                        }
-                    });
-                });
-                // ================================ Purchase & sale chart End ================================ 
-         
+                }
+            },
+            stroke: {
+                show: true,
+                width: 0,
+                colors: ['transparent']
+            },
+            xaxis: {
+                categories: purchaseSaleChartFullData.this_week.labels,
+            },
+            fill: {
+                opacity: 1,
+                width: 18,
+            },
+            tooltip: {
+                y: {
+                    formatter: function(val) {
+                        return "৳" + val.toLocaleString('en-US', {
+                            minimumFractionDigits: 2
+                        });
+                    }
+                }
+            }
+        };
+
+        var purchaseSaleChart = new ApexCharts(document.querySelector("#purchaseSaleChart"), purchaseSaleOptions);
+        purchaseSaleChart.render();
+
+        document.getElementById('purchaseSaleFilter').addEventListener('change', function(e) {
+            var period = e.target.value;
+            var metrics = purchaseSalesMetrics[period];
+            var chartData = purchaseSaleChartFullData[period];
+
+            // Update summary text values
+            document.getElementById('purchaseSummaryVal').textContent = metrics.purchase.toLocaleString('en-US', {
+                minimumFractionDigits: 2
+            });
+            document.getElementById('salesSummaryVal').textContent = metrics.sales.toLocaleString('en-US', {
+                minimumFractionDigits: 2
+            });
+
+            // Update chart series and categories
+            purchaseSaleChart.updateOptions({
+                series: [{
+                    name: 'Purchase',
+                    data: chartData.purchase
+                }, {
+                    name: 'Sales',
+                    data: chartData.sales
+                }],
+                xaxis: {
+                    categories: chartData.labels
+                }
+            });
+        });
+        // ================================ Purchase & sale chart End ================================ 
     </script>
 
 

@@ -99,7 +99,7 @@
 
 {{-- Global Form submit Modal  --}}
 <div class="modal fade" id="AjaxModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1">
-    <div class="modal-dialog  modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
 
 
@@ -109,9 +109,103 @@
 
 {{-- Global Ajax View Modal --}}
 <div class="modal fade" id="AjaxViewModal" tabindex="-1">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
             {{-- AJAX content will be loaded here --}}
         </div>
     </div>
 </div>
+
+{{-- Secondary Nested Modal (For Quick Add while inside another modal, e.g. Add Institution) --}}
+<div class="modal fade" id="secondaryAjaxModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" style="z-index: 1060;">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content radius-16 border-0 shadow-lg">
+            {{-- Secondary AJAX content will be loaded here --}}
+        </div>
+    </div>
+</div>
+
+<style>
+/* ==========================================================================
+   Global Modal Scroll & Viewport Stabilization Fix
+   Ensures modals scroll smoothly, never freeze or clip off-screen
+   ========================================================================== */
+.modal {
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Ensure scrollable modals fit comfortably within viewport and scroll smoothly */
+.modal-dialog-scrollable {
+    max-height: calc(100vh - 2.5rem) !important;
+}
+
+.modal-dialog-scrollable .modal-content {
+    max-height: calc(100vh - 2.5rem) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+}
+
+.modal-dialog-scrollable .modal-header {
+    flex-shrink: 0 !important;
+}
+
+.modal-dialog-scrollable .modal-footer {
+    flex-shrink: 0 !important;
+}
+
+.modal-dialog-scrollable .modal-body {
+    overflow-y: auto !important;
+    flex: 1 1 auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    overscroll-behavior: contain !important;
+}
+
+/* Smooth clean custom scrollbar for modal body */
+.modal-dialog-scrollable .modal-body::-webkit-scrollbar {
+    width: 6px;
+}
+.modal-dialog-scrollable .modal-body::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+}
+.modal-dialog-scrollable .modal-body::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+/* Maintain body scroll lock when modal is open */
+body.modal-open {
+    overflow: hidden !important;
+}
+
+#secondaryAjaxModal .modal-content {
+    border-radius: 16px;
+    border: none;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.22);
+}
+#secondaryAjaxModal .select2-container .select2-selection--single {
+    height: 44px !important;
+    border-radius: 8px !important;
+    border: 1px solid #d1d5db !important;
+    display: flex !important;
+    align-items: center !important;
+}
+#secondaryAjaxModal .select2-container--default .select2-selection--single .select2-selection__rendered {
+    line-height: 42px !important;
+    padding-left: 14px !important;
+    font-size: 14px !important;
+    color: var(--text-primary-light, #212529) !important;
+}
+#secondaryAjaxModal .select2-container--default .select2-selection--single .select2-selection__arrow {
+    height: 42px !important;
+    right: 12px !important;
+}
+#secondaryAjaxModal .select2-dropdown {
+    border-radius: 8px !important;
+    border: 1px solid #d1d5db !important;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1) !important;
+    z-index: 1075 !important;
+}
+</style>

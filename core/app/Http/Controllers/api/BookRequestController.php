@@ -256,6 +256,13 @@ class BookRequestController extends Controller
             'request_date' => ['nullable', 'date'],
         ]);
 
+        if (count($data['product_id']) !== count($data['quantity'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Product and quantity counts must match.',
+            ], 422);
+        }
+
         $mr = MarketingRepresentative::where('user_id', auth()->id())->first();
 
         if (!$mr) {
@@ -340,6 +347,13 @@ class BookRequestController extends Controller
             'note' => ['nullable', 'string'],
             'request_date' => ['nullable', 'date'],
         ]);
+
+        if (count($data['product_id']) !== count($data['quantity'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Product and quantity counts must match.',
+            ], 422);
+        }
 
         $mr = MarketingRepresentative::where('user_id', auth()->id())->first();
 

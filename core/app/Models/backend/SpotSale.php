@@ -3,6 +3,7 @@
 namespace App\Models\backend;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Models\backend\Student;
 
 class SpotSale extends Model
 {
@@ -11,6 +12,7 @@ class SpotSale extends Model
         'total',
         'teacher_id',
         'library_id',
+        'student_id',
         'status', // pending | approved
         'note',
     ];
@@ -54,12 +56,21 @@ class SpotSale extends Model
     public function customerName(): string
     {
         if ($this->teacher_id && $this->relationLoaded('teacher') && $this->teacher) {
-            return $this->teacher->teacher_name;
+            return $this->teacher->teacher_name ?? '-';
         }
         if ($this->library_id && $this->relationLoaded('library') && $this->library) {
-            return $this->library->library_name ?: $this->library->name;
+            return $this->library->library_name ?? '-';
+        }
+        if ($this->student_id) {
+            return $this->student?->student_name ?? '-';
         }
 
+
         return '—';
+    }
+
+    public function student()
+    {
+        return $this->belongsTo(Student::class, 'student_id');
     }
 }

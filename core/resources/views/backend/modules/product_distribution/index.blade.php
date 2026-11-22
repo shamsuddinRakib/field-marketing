@@ -35,14 +35,10 @@
         </ul>
 
         @perm('product-distribution.store')
-            <button
-                class="d-flex btn btn-primary btn-sm px-12 py-8 radius-8 AjaxModal"
-                data-ajax-modal="{{ route('product-distribution.create') }}"
-                data-size="lg"
-                data-onload="ProductDistIndex.onLoad"
-                data-onsuccess="BranchesIndex.onSaved">
+            <a href="{{ route('product-distribution.create') }}"
+               class="d-flex align-items-center gap-1 btn btn-primary btn-sm px-12 py-8 radius-8">
                 <iconify-icon icon="ic:baseline-plus" class="text-xl"></iconify-icon>Assign Products
-        </button>
+            </a>
         @endperm
       </div>
     </div>

@@ -35,14 +35,10 @@
         </ul>
 
         @perm('spot-sales.store')
-            <button
-                class="d-flex btn btn-primary btn-sm px-12 py-8 radius-8 AjaxModal"
-                        data-ajax-modal="{{ route('spot-sales.createModal') }}"
-                        data-size="lg"
-                        data-onload="SpotSaleIndex.onLoad"
-                        data-onsuccess="SpotSaleIndex.onSaved">
+            <a href="{{ route('spot-sales.create') }}"
+                class="d-flex align-items-center gap-1 btn btn-primary btn-sm px-12 py-8 radius-8">
                 <iconify-icon icon="ic:baseline-plus" class="text-xl"></iconify-icon>Add Spot Sale
-        </button>
+            </a>
         @endperm
       </div>
     </div>

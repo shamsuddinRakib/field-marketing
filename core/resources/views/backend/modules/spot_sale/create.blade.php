@@ -1,257 +1,283 @@
-{{-- ================= MODAL HEADER ================= --}}
-<div class="modal-header py-16 px-24">
-    <h5 class="modal-title fw-semibold">Add Spot Sale</h5>
-    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-</div>
+ @extends('backend.layouts.master')
 
-{{-- ================= MODAL BODY ================= --}}
-<div class="modal-body px-24 py-16">
+@section('meta')
+    <title>Add Spot Sale</title>
+@endsection
 
-    <form id="spotSaleCreateForm" action="{{ route('spot-sales.store') }}" method="POST" data-ajax="true">
+@section('content')
+    {{-- Breadcrumb & Title --}}
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-24">
+        <div>
+            <h6 class="fw-semibold mb-0">Spot Sales</h6>
+            <p class="fw-semibold mb-0">Add Spot Sale</p>
+        </div>
 
+        <ul class="d-flex align-items-center gap-2 mb-0">
+            <li class="fw-medium">
+                <a href="{{ route('backend.dashboard') }}" class="d-flex align-items-center gap-1 hover-text-primary">
+                    <iconify-icon icon="solar:home-smile-angle-outline" class="icon text-lg"></iconify-icon> Dashboard
+                </a>
+            </li>
+            <li>-</li>
+            <li class="fw-medium">
+                <a href="{{ route('spot-sales.index') }}" class="hover-text-primary">Spot Sales</a>
+            </li>
+            <li>-</li>
+            <li class="fw-medium">Add Spot Sale</li>
+        </ul>
+
+        {{-- Button on a new line (right aligned) --}}
+        <div class="text-end w-100">
+            <a href="{{ route('spot-sales.index') }}" class="btn btn-secondary bg-dark">
+                <i data-feather="arrow-left" class="me-2"></i>Back to Spot Sales
+            </a>
+        </div>
+    </div>
+
+    {{-- Form --}}
+    <form id="spotSaleCreateForm" action="{{ route('spot-sales.store') }}" method="POST">
         @csrf
 
-        {{-- ================= SALE INFO ================= --}}
+        {{-- 1. SPOT SALE INFORMATION --}}
         <div class="card mb-16">
             <div class="card-body">
-
                 <h6 class="mb-12 fw-semibold">Spot Sale Information</h6>
 
                 <div class="row g-3">
+                    {{-- Marketing Representative --}}
                     <div class="col-md-6 mb-12">
-                        <label class="form-label text-sm mb-8">Select User <span class="text-danger">*</span></label>
-                        <select class="form-control form-control-sm js-s2-ajax" name="user_id"
+                        <label class="form-label text-sm mb-8">Marketing Representative <span class="text-danger">*</span></label>
+                        @php
+                            $userRep = auth()->user()->representative ?? \App\Models\backend\MarketingRepresentative::where('user_id', auth()->id())->first();
+                        @endphp
+                        <select class="form-control form-control-sm js-s2-ajax" name="user_id" id="spotSaleUserSelect"
                             data-url="{{ route('marketing-representative.marketing-representatives.select2') }}"
                             data-placeholder="Select Marketing Representative" required>
+                            @if ($userRep)
+                                <option value="{{ $userRep->user_id ?? auth()->id() }}" selected>
+                                    {{ $userRep->user?->name ?? auth()->user()->name }} ({{ $userRep->employee_id }})
+                                </option>
+                            @endif
                         </select>
+                        <div class="invalid-feedback d-block user_id-error" style="display:none"></div>
                     </div>
 
+                    {{-- Customer Type --}}
                     <div class="col-md-6 mb-12">
                         <label class="form-label text-sm mb-8">Customer Type <span class="text-danger">*</span></label>
-                        <select class="form-control form-control-sm" name="customer_type" id="customerType" required>
+                        <select class="form-select form-select-sm radius-8" name="customer_type" id="customerType" required>
                             <option value="">Select Type</option>
                             <option value="teacher">Teacher</option>
                             <option value="library">Library</option>
+                            <option value="student">Student</option>
                         </select>
+                        <div class="invalid-feedback d-block customer_type-error" style="display:none"></div>
                     </div>
 
-                    <div class="col-md-6 mb-12" id="teacherWrap" style="display:none">
+                    {{-- Teacher Wrap --}}
+                    <div class="col-md-12 mb-12" id="teacherWrap" style="display:none;">
                         <label class="form-label text-sm mb-8">Select Teacher <span class="text-danger">*</span></label>
                         <select class="form-control form-control-sm js-s2-ajax" name="teacher_id" id="teacherSelect"
-                            data-url="{{ route('teacher.teachers.select2') }}"
-                            data-placeholder="Select Teacher">
+                            data-url="{{ route('teacher.teachers.select2') }}" data-placeholder="Select Teacher">
                         </select>
+                        <div class="invalid-feedback d-block teacher_id-error" style="display:none"></div>
                     </div>
 
-                    <div class="col-md-6 mb-12" id="libraryWrap" style="display:none">
+                    {{-- Library Wrap --}}
+                    <div class="col-md-12 mb-12" id="libraryWrap" style="display:none;">
                         <label class="form-label text-sm mb-8">Select Library <span class="text-danger">*</span></label>
                         <select class="form-control form-control-sm js-s2-ajax" name="library_id" id="librarySelect"
-                            data-url="{{ route('library.libraries.select2') }}"
-                            data-placeholder="Select Library">
+                            data-url="{{ route('library.libraries.select2') }}" data-placeholder="Select Library">
                         </select>
+                        <div class="invalid-feedback d-block library_id-error" style="display:none"></div>
                     </div>
 
-                    <div class="col-md-12">
-                        <label class="form-label text-sm">Note</label>
-                        <input type="text" name="note" class="form-control form-control-sm radius-8"
-                            placeholder="Optional note">
+                    {{-- Student Wrap --}}
+                    <div class="col-12" id="studentWrap" style="display:none;">
+                        <div class="row g-3">
+                            <div class="col-md-4 mb-12">
+                                <label class="form-label text-sm mb-8">Student Name <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control form-control-sm radius-8" name="student_name" id="studentName" placeholder="Enter student name">
+                                <div class="invalid-feedback d-block student_name-error" style="display:none"></div>
+                            </div>
+                            <div class="col-md-4 mb-12">
+                                <label class="form-label text-sm mb-8">Course Class <span class="text-danger">*</span></label>
+                                <select class="form-select form-select-sm radius-8" name="course_class_id" id="courseClassSelect">
+                                    <option value="">Select Class</option>
+                                    @foreach ($classes ?? [] as $class)
+                                        <option value="{{ $class->id }}">{{ $class->name }}</option>
+                                    @endforeach
+                                </select>
+                                <div class="invalid-feedback d-block course_class_id-error" style="display:none"></div>
+                            </div>
+                            <div class="col-md-4 mb-12">
+                                <label class="form-label text-sm mb-8">Institution <span class="text-danger">*</span></label>
+                                <select class="form-control form-control-sm js-s2-ajax" name="institution_id" id="institutionSelect"
+                                    data-url="{{ route('institution.institutions.select2') }}" data-placeholder="Select Institution">
+                                </select>
+                                <div class="invalid-feedback d-block institution_id-error" style="display:none"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Note --}}
+                    <div class="col-12 mb-12">
+                        <label class="form-label text-sm mb-8">Note</label>
+                        <textarea name="note" class="form-control form-control-sm radius-8" rows="2" placeholder="Write any note about this spot sale...">{{ old('note') }}</textarea>
+                        <div class="invalid-feedback d-block note-error" style="display:none"></div>
                     </div>
                 </div>
-
             </div>
         </div>
 
-        {{-- ================= SALE ITEMS ================= --}}
-        <div class="table-responsive"><table class="table table-sm align-middle items-table-fixed" id="spotSaleItemsTable">
-            <thead class="table-light">
-                <tr>
-                    <th style="width:38%">Product</th>
-                    <th class="text-end" style="width:110px">Price</th>
-                    <th class="text-end" style="width:110px">Qty</th>
-                    <th class="text-end" style="width:120px">Total</th>
-                    <th style="width:40px"></th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr class="spot-sale-item-row">
-                    <td>
-                        <select name="items[0][product_id]" class="form-control form-control-sm js-s2-ajax spot-product"
-                            data-url="{{ route('product.select2') }}" required></select>
-                    </td>
-                    <td class="text-end">
-                        <span class="spot-price-text">0.00</span>
-                    </td>
-                    <td>
-                        <input type="number" step="1" min="1" value="1" name="items[0][quantity]"
-                            class="form-control form-control-sm text-end spot-qty" required>
-                    </td>
-                    <td class="text-end">
-                        <span class="spot-line-total-text">0.00</span>
-                    </td>
-                    <td class="text-center">
-                        <button type="button" class="btn btn-sm btn-outline-danger btnRemoveRow">
-                            ✕
-                        </button>
-                    </td>
-                </tr>
-            </tbody>
-        </table></div>
-        <div class="d-flex justify-content-end mb-8">
-            <button type="button" id="btnAddSpotSaleItem" class="btn btn-sm btn-outline-primary">
-                + Add Item
-            </button>
+        {{-- 2. REUSABLE POS PRODUCT PICKER (With Price & Grand Total) --}}
+        @include('backend.modules.products.partial.product_item_picker', ['show_price' => true])
+
+        {{-- Hidden Status Input --}}
+        <input type="hidden" name="status" id="spotSaleStatus" value="pending">
+
+        {{-- 3. ACTIONS --}}
+        <div class="d-flex justify-content-end gap-2 mt-24 mb-32">
+            <a href="{{ route('spot-sales.index') }}" class="btn btn-sm btn-outline-secondary">Cancel</a>
+            <button type="button" class="btn btn-sm btn-outline-warning" id="btnSavePending">Save as Pending</button>
+            <button type="button" class="btn btn-sm btn-success" id="btnApproveSale">Approve Sale</button>
         </div>
-
-        {{-- ================= SUMMARY ================= --}}
-        <div class="card mb-16">
-            <div class="card-body d-flex justify-content-between align-items-center">
-                <h6 class="mb-0">Grand Total</h6>
-                <h5 class="mb-0 fw-bold">
-                    <span id="spotSaleTotalText">0.00</span>
-                </h5>
-            </div>
-        </div>
-
-        {{-- ================= ACTION ================= --}}
-        <input type="hidden" name="status" id="spotSaleStatus" value="">
-        <div class="d-flex justify-content-end gap-2">
-            <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">
-                Cancel
-            </button>
-
-            <button type="button" class="btn btn-sm btn-outline-warning" id="btnSavePending">
-                Save as Pending
-            </button>
-
-            <button type="button" class="btn btn-sm btn-success" id="btnApproveSale">
-                Approve Sale
-            </button>
-        </div>
-
     </form>
-</div>
+@endsection
 
-{{-- ================= JS HOOKS ================= --}}
+@section('script')
 <script>
-    window.SpotSaleIndex = window.SpotSaleIndex || {
-        onSaved: function(res) {
-            if ($.fn.DataTable) {
-                $('.AjaxDataTable').DataTable().ajax.reload(null, false);
-            }
-            $('.modal').modal('hide');
-        },
-        onLoad: function() {}
-    };
-
-    (function() {
-        const PRODUCT_PRICE_URL = "{{ route('spot-sales.productPrice', ':id') }}";
-        const $table = $('#spotSaleItemsTable tbody');
-        let rowIndex = 1;
-
-        function toggleCustomer() {
-            const type = $('#customerType').val();
-            $('#teacherWrap').toggle(type === 'teacher');
-            $('#libraryWrap').toggle(type === 'library');
-            if (type !== 'teacher') $('#teacherSelect').val(null).trigger('change');
-            if (type !== 'library') $('#librarySelect').val(null).trigger('change');
+    (function checkDeps() {
+        if (typeof jQuery === 'undefined' || typeof jQuery.fn.select2 === 'undefined') {
+            setTimeout(checkDeps, 30);
+            return;
         }
 
-        $('#customerType').on('change', toggleCustomer);
+        jQuery(function($) {
+            // Customer Type Toggle
+            function toggleCustomer() {
+                const type = $('#customerType').val();
+                $('#teacherWrap').toggle(type === 'teacher');
+                $('#libraryWrap').toggle(type === 'library');
+                $('#studentWrap').toggle(type === 'student');
 
-        /* ================= ADD ROW ================= */
-        $('#btnAddSpotSaleItem').on('click', function() {
-            const $firstRow = $table.find('tr:first');
+                $('#teacherSelect').prop('required', type === 'teacher');
+                $('#librarySelect').prop('required', type === 'library');
+                $('#studentName').prop('required', type === 'student');
+                $('#courseClassSelect').prop('required', type === 'student');
+                $('#institutionSelect').prop('required', type === 'student');
 
-            $firstRow.find('.select2-hidden-accessible').each(function() {
-                $(this).select2('destroy');
-            });
-
-            const $row = $firstRow.clone();
-
-            $row.find('input, select').each(function() {
-                const name = $(this).attr('name');
-                if (!name) return;
-                const newName = name.replace(/\[\d+]/, `[${rowIndex}]`);
-                $(this).attr('name', newName);
-                if ($(this).hasClass('spot-qty')) {
-                    $(this).val(1);
-                } else {
-                    $(this).val('');
+                if (type !== 'teacher') $('#teacherSelect').val(null).trigger('change');
+                if (type !== 'library') $('#librarySelect').val(null).trigger('change');
+                if (type !== 'student') {
+                    $('#studentName').val('');
+                    $('#courseClassSelect').val('');
+                    $('#institutionSelect').val(null).trigger('change');
                 }
-            });
-            $row.find('.spot-price-text').text('0.00');
-            $row.find('.spot-line-total-text').text('0.00');
+            }
 
-            $table.append($row);
+            $('#customerType').on('change', toggleCustomer);
+            toggleCustomer();
 
+            // Auto-init Select2 for dynamically added fields
             if (window.S2 && typeof window.S2.auto === 'function') {
-                window.S2.auto();
+                window.S2.auto($('#spotSaleCreateForm'));
             }
 
-            rowIndex++;
-        });
+            // Save as Pending Click
+            $('#btnSavePending').on('click', function() {
+                if (!$('#customerType').val()) {
+                    if (window.Swal) Swal.fire({ icon: 'warning', title: 'Customer Type Required', text: 'Please select customer type.' });
+                    else alert('Please select customer type.');
+                    return;
+                }
+                $('#spotSaleStatus').val('pending');
+                $('#spotSaleCreateForm').submit();
+            });
 
-        /* ================= REMOVE ROW ================= */
-        $table.on('click', '.btnRemoveRow', function() {
-            if ($table.find('tr').length === 1) return;
-            $(this).closest('tr').remove();
-            calculateTotal();
-        });
+            // Approve Sale Click
+            $('#btnApproveSale').on('click', function() {
+                if (!$('#customerType').val()) {
+                    if (window.Swal) Swal.fire({ icon: 'warning', title: 'Customer Type Required', text: 'Please select customer type.' });
+                    else alert('Please select customer type.');
+                    return;
+                }
+                $('#spotSaleStatus').val('approved');
+                $('#spotSaleCreateForm').submit();
+            });
 
-        /* ================= PRODUCT PRICE ================= */
-        $table.on('change', '.spot-product', function() {
-            const $row = $(this).closest('tr');
-            const productId = $(this).val();
-            if (!productId) {
-                $row.find('.spot-price-text').text('0.00');
-                calcRow($row);
-                return;
-            }
-            $.get(PRODUCT_PRICE_URL.replace(':id', productId), function(res) {
-                $row.find('.spot-price-text').text(parseFloat(res.price || 0).toFixed(2));
-                calcRow($row);
+            // AJAX Form Submit
+            $('#spotSaleCreateForm').on('submit', function(e) {
+                e.preventDefault();
+                const $form = $(this);
+                const $btnPending = $('#btnSavePending');
+                const $btnApprove = $('#btnApproveSale');
+
+                $form.find('.invalid-feedback').hide().text('');
+                $btnPending.prop('disabled', true);
+                $btnApprove.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1" role="status"></span> Processing...');
+
+                $.ajax({
+                    url: $form.attr('action'),
+                    type: 'POST',
+                    data: $form.serialize(),
+                    dataType: 'json',
+                    success: function(res) {
+                        if (res?.ok) {
+                            if (window.Swal) {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Success',
+                                    text: res.msg || 'Spot sale saved successfully',
+                                    timer: 1500,
+                                    showConfirmButton: false
+                                }).then(() => {
+                                    window.location.href = res.redirect || "{{ route('spot-sales.index') }}";
+                                });
+                            } else {
+                                alert(res.msg || 'Spot sale saved successfully');
+                                window.location.href = res.redirect || "{{ route('spot-sales.index') }}";
+                            }
+                        } else {
+                            $btnPending.prop('disabled', false);
+                            $btnApprove.prop('disabled', false).text('Approve Sale');
+                            if (window.Swal) {
+                                Swal.fire({ icon: 'error', title: 'Error', text: res?.msg || 'Something went wrong' });
+                            } else {
+                                alert(res?.msg || 'Something went wrong');
+                            }
+                        }
+                    },
+                    error: function(xhr) {
+                        $btnPending.prop('disabled', false);
+                        $btnApprove.prop('disabled', false).text('Approve Sale');
+                        if (xhr.status === 422 && xhr.responseJSON?.errors) {
+                            const errors = xhr.responseJSON.errors;
+                            let firstError = '';
+                            Object.keys(errors).forEach(key => {
+                                const msg = errors[key][0];
+                                if (!firstError) firstError = msg;
+                                const safeKey = key.replace(/\./g, '_');
+                                const $err = $form.find('.' + safeKey + '-error');
+                                if ($err.length) {
+                                    $err.text(msg).show();
+                                }
+                            });
+                            if (window.Swal) {
+                                Swal.fire({ icon: 'error', title: 'Validation Error', text: firstError || 'Please correct the highlighted errors.' });
+                            }
+                        } else {
+                            const errorMsg = xhr.responseJSON?.message || xhr.responseJSON?.msg || 'Failed to save spot sale.';
+                            if (window.Swal) {
+                                Swal.fire({ icon: 'error', title: 'Error', text: errorMsg });
+                            } else {
+                                alert(errorMsg);
+                            }
+                        }
+                    }
+                });
             });
         });
-
-        $table.on('input', '.spot-qty', function() {
-            calcRow($(this).closest('tr'));
-        });
-
-        function calcRow($row) {
-            const price = parseFloat($row.find('.spot-price-text').text() || 0);
-            const qty = parseFloat($row.find('.spot-qty').val() || 0);
-            $row.find('.spot-line-total-text').text((price * qty).toFixed(2));
-            calculateTotal();
-        }
-
-        function calculateTotal() {
-            let total = 0;
-            $('.spot-line-total-text').each(function() {
-                total += parseFloat($(this).text() || 0);
-            });
-            $('#spotSaleTotalText').text(total.toFixed(2));
-        }
-
-        $('#btnSavePending').on('click', function() {
-            if (!$('#customerType').val()) {
-                Swal && Swal.fire({ icon: 'warning', title: 'Select customer type' });
-                return;
-            }
-            $('#spotSaleStatus').val('pending');
-            $('#spotSaleCreateForm').submit();
-        });
-
-        $('#btnApproveSale').on('click', function() {
-            if (!$('#customerType').val()) {
-                Swal && Swal.fire({ icon: 'warning', title: 'Select customer type' });
-                return;
-            }
-            $('#spotSaleStatus').val('approved');
-            $('#spotSaleCreateForm').submit();
-        });
-
-        if (window.S2 && typeof window.S2.auto === 'function') {
-            window.S2.auto();
-        }
     })();
 </script>
+@endsection

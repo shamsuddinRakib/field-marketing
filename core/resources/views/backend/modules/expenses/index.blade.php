@@ -142,14 +142,14 @@
     const id = $(this).data('id');
     const btn = $(this);
 
-    const doToggle = () => {
+    const doToggle = (targetStatus) => {
       btn.prop('disabled', true).text('Processing...');
 
       $.ajax({
         url: url,
         type: 'POST',
         dataType: 'json',
-        data: { _token: '{{ csrf_token() }}' },
+        data: { _token: '{{ csrf_token() }}', status: targetStatus },
         success: function(res){
           // DataTable রিলোড
           $('.AjaxDataTable').DataTable().ajax.reload(null, false);
@@ -169,15 +169,25 @@
 
     if (window.Swal){
       Swal.fire({
-        icon: 'info',
-        title: 'Post Expense?',
-        text: 'This will create an accounting entry.',
+        icon: 'question',
+        title: 'Change Expense Status',
+        text: 'Post this expense (deducts fund) or cancel it?',
+        showDenyButton: true,
         showCancelButton: true,
-        confirmButtonText: 'Yes, Post',
-        confirmButtonColor: '#198754'
-      }).then(r => { if (r.isConfirmed) doToggle(); });
+        confirmButtonText: 'Post Expense',
+        confirmButtonColor: '#198754',
+        denyButtonText: 'Cancel Expense',
+        denyButtonColor: '#dc3545',
+        cancelButtonText: 'Close'
+      }).then(r => {
+        if (r.isConfirmed) {
+          doToggle('posted');
+        } else if (r.isDenied) {
+          doToggle('cancelled');
+        }
+      });
     } else {
-      if (confirm('Post this expense?')) doToggle();
+      if (confirm('Post this expense?')) doToggle('posted');
     }
   });
 

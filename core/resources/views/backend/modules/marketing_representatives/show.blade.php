@@ -38,7 +38,7 @@
                         </a>
                         <a href="#" class="btn btn-sm btn-primary AjaxModal d-inline-flex align-items-center"
                             data-ajax-modal="{{ route('marketing-representative.marketing-representatives.editModal', $representative->id) }}"
-                            data-size="lg" data-onload="MarketingRepresentativesIndex.onLoad"
+                            data-size="xl" data-onload="MarketingRepresentativesIndex.onLoad"
                             data-onsuccess="MarketingRepresentativesIndex.onSaved">
                             <iconify-icon icon="lucide:edit" class="me-1"></iconify-icon> Edit
                         </a>
@@ -65,9 +65,9 @@
                                 value="{{ $representative->user->email ?? 'N/A' }}">
                         </div>
                         <div class="col-md-6 mb-16">
-                            <label class="form-label text-sm mb-6">Organization</label>
+                            <label class="form-label text-sm mb-6">Designation</label>
                             <input class="form-control" type="text" disabled
-                                value="{{ $representative->organization ?? 'N/A' }}">
+                                value="{{ $representative->mrDesignation?->designation_name ?? $representative->designation?->designation_name ?? 'N/A' }}">
                         </div>
                         <div class="col-md-6 mb-16">
                             <label class="form-label text-sm mb-6">Status</label>
@@ -91,20 +91,31 @@
                 </div>
                 <div class="card-body">
                     <div class="row">
+                        @php
+                            if ($representative->territories && $representative->territories->isNotEmpty()) {
+                                $divDisplay = $representative->territories->map(fn($t) => $t->division?->name)->filter()->unique()->implode(', ');
+                                $distDisplay = $representative->territories->map(fn($t) => $t->district?->district_name)->filter()->unique()->implode(', ');
+                                $upzDisplay = $representative->territories->map(fn($t) => $t->upazila?->upazila_name)->filter()->unique()->implode(', ');
+                            } else {
+                                $divDisplay = $representative->division->name ?? 'N/A';
+                                $distDisplay = $representative->district->district_name ?? 'N/A';
+                                $upzDisplay = $representative->upazila->upazila_name ?? 'N/A';
+                            }
+                        @endphp
                         <div class="col-md-4 mb-16">
-                            <label class="form-label text-sm mb-6">Division</label>
+                            <label class="form-label text-sm mb-6">District(s)</label>
                             <input class="form-control" type="text" disabled
-                                value="{{ $representative->division->name ?? 'N/A' }}">
+                                value="{{ $distDisplay ?: 'N/A' }}">
                         </div>
                         <div class="col-md-4 mb-16">
-                            <label class="form-label text-sm mb-6">District</label>
+                            <label class="form-label text-sm mb-6">Upazila(s)</label>
                             <input class="form-control" type="text" disabled
-                                value="{{ $representative->district->district_name ?? 'N/A' }}">
+                                value="{{ $upzDisplay ?: 'N/A' }}">
                         </div>
                         <div class="col-md-4 mb-16">
-                            <label class="form-label text-sm mb-6">Upazila</label>
+                            <label class="form-label text-sm mb-6">Division(s)</label>
                             <input class="form-control" type="text" disabled
-                                value="{{ $representative->upazila->upazila_name ?? 'N/A' }}">
+                                value="{{ $divDisplay ?: 'N/A' }}">
                         </div>
                         <div class="col-md-6 mb-16">
                             <label class="form-label text-sm mb-6">Branch</label>

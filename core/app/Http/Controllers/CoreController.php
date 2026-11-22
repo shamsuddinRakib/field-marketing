@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers;
 
 use App\Models\backend\Expense;
@@ -14,7 +15,7 @@ class CoreController extends Controller
     public function home()
     {
 
-            $companySettings = WebsiteSetting::first();
+        $companySettings = WebsiteSetting::first();
 
         return view('backend.modules.dashboard.home', compact(
             'companySettings'

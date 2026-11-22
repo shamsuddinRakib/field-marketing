@@ -241,28 +241,31 @@ class SubCategoryController extends Controller
 
      public function select2(Request $r)
     {
-        
         $q = trim($r->input('q', ''));
-        $type = $r->type;
-        $base = SubCategory::query()->where('category_id',$type)->where('is_active', 1);
-      
+        $type = $r->input('category_id') ?? $r->input('type');
+
+        if (!$type) {
+            return response()->json(['results' => []]);
+        }
+
+        $base = SubCategory::query()->where('category_id', $type)->where('is_active', 1);
 
         if ($q !== '') {
-            $base->where(function($x) use ($q){
-                $x->where('name','like',"%{$q}%")
-                ;
+            $base->where(function ($x) use ($q) {
+                $x->where('name', 'like', "%{$q}%");
             });
         }
 
-        $items = $base->orderBy('id')->orderBy('name')
-                      ->limit(20)->get(['id','name']);
+        $limit = $r->filled('limit') ? min((int) $r->input('limit'), 200) : 50;
 
+        $items = $base->orderBy('id')->orderBy('name')
+            ->limit($limit)->get(['id', 'name']);
 
         return response()->json([
-            'results' => $items->map(fn($t)=>[
+            'results' => $items->map(fn($t) => [
                 'id'   => $t->id,
-                'text' => $t->name 
-            ])
+                'text' => $t->name,
+            ]),
         ]);
     }
 }

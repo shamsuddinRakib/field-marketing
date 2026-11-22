@@ -13,7 +13,7 @@ class Institution extends Model
         'institution_name',
         'code',
         'email',
-        'phone',
+        // 'phone', // Removed: Phone belongs to Teacher module
         'upazila_id',
         'district_id',
         'division_id',
@@ -38,5 +38,10 @@ class Institution extends Model
     public function division()
     {
         return $this->belongsTo(Division::class);
+    }
+
+    public function teachers()
+    {
+        return $this->hasMany(Teacher::class, 'institution_id');
     }
 }
