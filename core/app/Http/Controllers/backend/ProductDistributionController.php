@@ -97,7 +97,7 @@ class ProductDistributionController extends Controller
             $actions .= '<a href="#" class="w-32-px h-32-px rounded-circle d-inline-flex align-items-center justify-content-center bg-info-focus text-info-main AjaxModal" data-ajax-modal="' . route('product-distribution.show', $b->id) . '" data-size="lg" title="View Details"><iconify-icon icon="mdi:eye"></iconify-icon></a>';
 
             if ($b->status !== 'delivered') {
-                $actions .= '<a href="#" class="w-32-px h-32-px rounded-circle d-inline-flex align-items-center justify-content-center bg-success-focus text-success-main AjaxModal" data-ajax-modal="' . route('product-distribution.edit', $b->id) . '" data-size="xl" data-onsuccess="BranchesIndex.onSaved" title="Edit"><iconify-icon icon="lucide:edit"></iconify-icon></a>';
+                $actions .= '<a href="' . route('product-distribution.edit', $b->id) . '" class="w-32-px h-32-px rounded-circle d-inline-flex align-items-center justify-content-center bg-success-focus text-success-main" title="Edit"><iconify-icon icon="lucide:edit"></iconify-icon></a>';
                 $actions .= '<a href="#" class="w-32-px h-32-px rounded-circle d-inline-flex align-items-center justify-content-center bg-danger-focus text-danger-main btn-branch-delete" data-id="' . $b->id . '" data-url="' . route('product-distribution.destroy', $b->id) . '" title="Delete"><iconify-icon icon="mdi:delete"></iconify-icon></a>';
             }
 
@@ -122,9 +122,14 @@ class ProductDistributionController extends Controller
         ]);
     }
 
-    public function createModal()
+    public function create()
     {
         return view('backend.modules.product_distribution.create');
+    }
+
+    public function createModal()
+    {
+        return $this->create();
     }
 
     public function store(Request $req)
@@ -164,35 +169,53 @@ class ProductDistributionController extends Controller
 
             DB::commit();
 
-            return response()->json(['ok' => true, 'msg' => 'Products distributed successfully (pending)', 'data' => ['id' => $distribution->id]]);
+            if ($req->ajax() || $req->wantsJson()) {
+                return response()->json([
+                    'ok'       => true,
+                    'msg'      => 'Products distributed successfully (pending)',
+                    'redirect' => route('product-distribution.index'),
+                    'data'     => ['id' => $distribution->id]
+                ]);
+            }
+
+            return redirect()->route('product-distribution.index')->with('success', 'Products distributed successfully (pending)');
         } catch (\Throwable $e) {
             DB::rollBack();
 
-            return response()->json(['ok' => false, 'msg' => $e->getMessage()], 500);
+            if ($req->ajax() || $req->wantsJson()) {
+                return response()->json(['ok' => false, 'msg' => $e->getMessage()], 500);
+            }
+
+            return back()->withInput()->with('error', $e->getMessage());
         }
     }
 
     public function show(ProductDistribution $productDistribution)
     {
-        $productDistribution->load(['items.product:id,name', 'user:id,name']);
+        $productDistribution->load(['items.product:id,name,thumbnail_image', 'user:id,name']);
 
         return view('backend.modules.product_distribution.show', compact('productDistribution'));
     }
 
-    public function editModal(ProductDistribution $productDistribution)
+    public function edit(ProductDistribution $productDistribution)
     {
         if ($productDistribution->status === 'delivered') {
             abort(403, 'Delivered record cannot be edited');
         }
 
         $productDistribution->load([
-            'items.product:id,name,category_id,subcategory_id',
+            'items.product:id,name,category_id,subcategory_id,thumbnail_image',
             'items.product.category:id,name',
             'items.product.subcategory:id,name',
             'user:id,name'
         ]);
 
         return view('backend.modules.product_distribution.edit', compact('productDistribution'));
+    }
+
+    public function editModal(ProductDistribution $productDistribution)
+    {
+        return $this->edit($productDistribution);
     }
 
     public function update(ProductDistribution $productDistribution, Request $req)
@@ -233,11 +256,23 @@ class ProductDistributionController extends Controller
 
             DB::commit();
 
-            return response()->json(['ok' => true, 'msg' => 'Updated Successfully']);
+            if ($req->ajax() || $req->wantsJson()) {
+                return response()->json([
+                    'ok'       => true,
+                    'msg'      => 'Updated Successfully',
+                    'redirect' => route('product-distribution.index')
+                ]);
+            }
+
+            return redirect()->route('product-distribution.index')->with('success', 'Updated Successfully');
         } catch (\Throwable $e) {
             DB::rollBack();
 
-            return response()->json(['ok' => false, 'msg' => $e->getMessage()], 500);
+            if ($req->ajax() || $req->wantsJson()) {
+                return response()->json(['ok' => false, 'msg' => $e->getMessage()], 500);
+            }
+
+            return back()->withInput()->with('error', $e->getMessage());
         }
     }
 

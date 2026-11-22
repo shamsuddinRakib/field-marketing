@@ -35,14 +35,10 @@
         </ul>
 
         @perm('assign-specimen.store')
-            <button
-                class="d-flex btn btn-primary btn-sm px-12 py-8 radius-8 AjaxModal"
-                data-ajax-modal="{{ route('assign-specimen.create') }}"
-                data-size="xl"
-                data-onload="AssignSpecimenIndex.onLoad"
-                data-onsuccess="BranchesIndex.onSaved">
+            <a href="{{ route('assign-specimen.create') }}"
+                class="d-flex btn btn-primary btn-sm px-12 py-8 radius-8 align-items-center gap-2">
                 <iconify-icon icon="ic:baseline-plus" class="text-xl"></iconify-icon>Assign Specimen
-        </button>
+            </a>
         @endperm
       </div>
     </div>

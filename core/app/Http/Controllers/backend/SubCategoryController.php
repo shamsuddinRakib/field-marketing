@@ -256,8 +256,10 @@ class SubCategoryController extends Controller
             });
         }
 
+        $limit = $r->filled('limit') ? min((int) $r->input('limit'), 200) : 50;
+
         $items = $base->orderBy('id')->orderBy('name')
-            ->limit(20)->get(['id', 'name']);
+            ->limit($limit)->get(['id', 'name']);
 
         return response()->json([
             'results' => $items->map(fn($t) => [

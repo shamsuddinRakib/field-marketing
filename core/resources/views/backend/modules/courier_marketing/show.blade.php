@@ -344,12 +344,12 @@
       <span class="text-secondary text-sm">
         Showing <strong>{{ $itemsCount }}</strong> product items for dispatch <strong>#CM-{{ $courierMarketing->id }}</strong>
       </span>
-      <div class="d-flex align-items-center gap-2">
+      {{-- <div class="d-flex align-items-center gap-2">
         <a href="{{ route('courier-marketings.index') }}" class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1 radius-8 px-16">
           <iconify-icon icon="solar:arrow-left-linear"></iconify-icon>
           <span>Back to Courier List</span>
         </a>
-      </div>
+      </div> --}}
     </div>
   </div>
 @endsection

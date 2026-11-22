@@ -1169,13 +1169,17 @@ class ProductController extends Controller
             });
         }
 
+        $limit = $r->filled('limit') ? min((int) $r->input('limit'), 200) : 20;
+
         $items = $base->orderBy('id', 'desc')->orderBy('name')
-            ->limit(20)->get(['id', 'name']);
+            ->limit($limit)->get(['id', 'name', 'thumbnail_image', 'price']);
 
         return response()->json([
             'results' => $items->map(fn($t) => [
-                'id'   => $t->id,
-                'text' => $t->name,
+                'id'    => $t->id,
+                'text'  => $t->name,
+                'image' => image($t->thumbnail_image),
+                'price' => (float) ($t->price ?? 0),
             ]),
         ]);
     }

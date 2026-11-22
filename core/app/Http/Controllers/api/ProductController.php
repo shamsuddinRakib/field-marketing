@@ -121,7 +121,7 @@ class ProductController extends Controller
         $query = Product::query()
             ->whereNull('parent_id')
             ->where('is_active', 1)
-            ->with(['category:id,name', 'brand:id,name']);
+            ->with(['category:id,name', 'subcategory:id,name', 'brand:id,name']);
 
         if ($request->filled('search')) {
             $search = trim($request->search);
@@ -136,6 +136,10 @@ class ProductController extends Controller
 
         if ($request->filled('category_id')) {
             $query->where('category_id', $request->category_id);
+        }
+
+        if ($request->filled('subcategory_id')) {
+            $query->where('subcategory_id', $request->subcategory_id);
         }
 
         $products = $query->orderBy('name')->paginate(50);

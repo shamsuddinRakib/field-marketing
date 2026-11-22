@@ -37,6 +37,22 @@ class AssignSpecimenItemResource extends JsonResource
                     'thumbnail_image' => $this->product->thumbnail_image,
                     'thumbnail_url'   => $this->product->thumbnail_image ? image($this->product->thumbnail_image) : null,
                     'brand_id'        => $this->product->brand_id ? (int) $this->product->brand_id : null,
+                    'brand'           => $this->product->relationLoaded('brand') && $this->product->brand ? [
+                        'id'   => $this->product->brand->id,
+                        'name' => $this->product->brand->name,
+                    ] : null,
+                    'category_id'     => $this->product->category_id ? (int) $this->product->category_id : null,
+                    'category'        => $this->product->relationLoaded('category') && $this->product->category ? [
+                        'id'   => $this->product->category->id,
+                        'name' => $this->product->category->name,
+                        'slug' => $this->product->category->slug,
+                    ] : null,
+                    'subcategory_id'  => $this->product->subcategory_id ? (int) $this->product->subcategory_id : null,
+                    'subcategory'     => $this->product->relationLoaded('subcategory') && $this->product->subcategory ? [
+                        'id'   => $this->product->subcategory->id,
+                        'name' => $this->product->subcategory->name,
+                        'slug' => $this->product->subcategory->slug,
+                    ] : null,
                 ];
             }),
         ];

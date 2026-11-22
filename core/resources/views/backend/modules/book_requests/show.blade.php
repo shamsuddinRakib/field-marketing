@@ -44,7 +44,7 @@
             <tr>
                 <th>#</th>
                 <th>Product</th>
-                <th>SKU</th>
+                <th>Product Code</th>
                 <th class="text-end">Qty</th>
             </tr>
         </thead>
@@ -53,7 +53,7 @@
                 <tr>
                     <td>{{ $index + 1 }}</td>
                     <td>{{ $requestItem->product?->name ?? ('#' . $requestItem->product_id) }}</td>
-                    <td>{{ $requestItem->product?->sku ?? '—' }}</td>
+                    <td>{{ $requestItem->product?->product_code ?? '—' }}</td>
                     <td class="text-end">{{ number_format((int) $requestItem->quantity) }}</td>
                 </tr>
             @empty

@@ -1,336 +1,161 @@
-{{-- MODAL HEADER --}}
-<div class="modal-header py-16 px-24">
-    <h5 class="modal-title fw-semibold">Assign Products</h5>
-    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-</div>
+@extends('backend.layouts.master')
 
-{{-- MODAL BODY --}}
-<div class="modal-body px-24 py-16">
+@section('meta')
+    <title>Assign Products Distribution</title>
+@endsection
 
-    <form id="productDistCreateForm" action="{{ route('product-distribution.store') }}" method="POST" data-ajax="true">
+@section('content')
+    {{-- Breadcrumb & Title --}}
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-24">
+        <div>
+            <h6 class="fw-semibold mb-0">Product Distribution</h6>
+            <p class="fw-semibold mb-0">Assign Products</p>
+        </div>
 
+        <ul class="d-flex align-items-center gap-2 mb-0">
+            <li class="fw-medium">
+                <a href="{{ route('backend.dashboard') }}" class="d-flex align-items-center gap-1 hover-text-primary">
+                    <iconify-icon icon="solar:home-smile-angle-outline" class="icon text-lg"></iconify-icon> Dashboard
+                </a>
+            </li>
+            <li>-</li>
+            <li class="fw-medium">
+                <a href="{{ route('product-distribution.index') }}" class="hover-text-primary">Product Distribution</a>
+            </li>
+            <li>-</li>
+            <li class="fw-medium">Assign Products</li>
+        </ul>
+
+        {{-- Button on a new line (right aligned) --}}
+        <div class="text-end w-100">
+            <a href="{{ route('product-distribution.index') }}" class="btn btn-secondary bg-dark">
+                <i data-feather="arrow-left" class="me-2"></i>Back to Distribution
+            </a>
+        </div>
+    </div>
+
+    {{-- Form --}}
+    <form id="productDistCreateForm" action="{{ route('product-distribution.store') }}" method="POST">
         @csrf
 
-        {{-- DISTRIBUTION INFO --}}
+        {{-- 1. DISTRIBUTION INFORMATION --}}
         <div class="card mb-16">
             <div class="card-body">
-
                 <h6 class="mb-12 fw-semibold">Distribution Information</h6>
 
                 <div class="row g-3">
                     <div class="col-md-6 mb-12">
                         <label class="form-label text-sm mb-8">Marketing Representative <span class="text-danger">*</span></label>
-                        <select class="form-control form-control-sm js-s2-ajax" name="user_id"
+                        @php
+                            $userRep = auth()->user()->representative ?? \App\Models\backend\MarketingRepresentative::where('user_id', auth()->id())->first();
+                        @endphp
+                        <select class="form-control form-control-sm js-s2-ajax" name="user_id" id="distRepSelect"
                             data-url="{{ route('marketing-representative.marketing-representatives.select2') }}"
                             data-placeholder="Select Marketing Representative" required>
+                            @if ($userRep)
+                                <option value="{{ $userRep->user_id ?? auth()->id() }}" selected>{{ $userRep->user?->name ?? auth()->user()->name }} ({{ $userRep->employee_id }})</option>
+                            @endif
                         </select>
                     </div>
 
                     <div class="col-md-6 mb-12">
                         <label class="form-label text-sm mb-8">Note</label>
-                        <input type="text" name="note" class="form-control form-control-sm radius-8"
-                            placeholder="Optional note">
-                    </div>
-                </div>
-
-            </div>
-        </div>
-
-        {{-- CATEGORY & SUBCATEGORY SELECTION --}}
-        <div class="card mb-16">
-            <div class="card-body">
-                <h6 class="mb-12 fw-semibold">Product Filter (Category & Subcategory)</h6>
-                <div class="row g-3">
-                    <div class="col-md-6 mb-12">
-                        <label class="form-label text-sm mb-8">Category <span class="text-danger">*</span></label>
-                        <select id="distCategorySelect" class="form-control form-control-sm js-s2-ajax"
-                            data-url="{{ route('category.cat.select2') }}"
-                            data-placeholder="Select Category">
-                        </select>
-                    </div>
-
-                    <div class="col-md-6 mb-12">
-                        <label class="form-label text-sm mb-8">Subcategory <span class="text-danger">*</span></label>
-                        <select id="distSubcategorySelect" class="form-control form-control-sm"
-                            data-placeholder="Select Subcategory" disabled>
-                        </select>
+                        <input type="text" name="note" class="form-control form-control-sm radius-8" placeholder="Optional note">
                     </div>
                 </div>
             </div>
         </div>
 
-        {{-- DISTRIBUTION ITEMS --}}
-        <div class="card mb-16">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center mb-12">
-                    <h6 class="mb-0 fw-semibold">Products</h6>
-                    <span class="text-xs text-muted" id="distSelectionHint">Please select a Category and Subcategory above to enable products</span>
-                </div>
+        {{-- 2. REUSABLE POS PRODUCT PICKER COMPONENT --}}
+        @include('backend.modules.products.partial.product_item_picker')
 
-                <div class="table-responsive">
-                    <table class="table table-sm align-middle items-table-fixed" id="productDistItemsTable">
-                        <thead class="table-light">
-                            <tr>
-                                <th style="width:70%">Product</th>
-                                <th class="text-end" style="width:140px">Qty</th>
-                                <th style="width:40px"></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr class="product-dist-item-row">
-                                <td>
-                                    <select name="items[0][product_id]" class="form-control form-control-sm dist-product"
-                                        data-placeholder="Select Product" disabled required></select>
-                                </td>
-                                <td>
-                                    <input type="number" step="1" min="1" value="1" name="items[0][quantity]"
-                                        class="form-control form-control-sm text-end dist-qty" required>
-                                </td>
-                                <td class="text-center">
-                                    <button type="button" class="btn btn-sm btn-outline-danger btnRemoveRow">✕</button>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class="d-flex justify-content-end mt-12">
-                    <button type="button" id="btnAddDistItem" class="btn btn-sm btn-outline-primary" disabled>+ Add Item</button>
-                </div>
-            </div>
+        {{-- 3. ACTIONS --}}
+        <div class="d-flex justify-content-end gap-2 mt-24 mb-32">
+            <a href="{{ route('product-distribution.index') }}" class="btn btn-sm btn-outline-secondary">Cancel</a>
+            <button type="submit" class="btn btn-sm btn-primary" id="btnSubmitDist">Save as Pending</button>
         </div>
-
-        {{-- SUMMARY --}}
-        <div class="card mb-16">
-            <div class="card-body d-flex justify-content-between align-items-center">
-                <h6 class="mb-0">Total Quantity</h6>
-                <h5 class="mb-0 fw-bold"><span id="distTotalText">1</span></h5>
-            </div>
-        </div>
-
-        {{-- ACTION --}}
-        <div class="d-flex justify-content-end gap-2">
-            <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-            <button type="submit" class="btn btn-sm btn-primary">Save as Pending</button>
-        </div>
-
     </form>
-</div>
+@endsection
 
-{{-- JS --}}
+@section('script')
+
 <script>
-    window.ProductDistIndex = window.ProductDistIndex || { onLoad: function () {} };
-
-    (function () {
-        const $modal = $('#AjaxModal');
-        const $table = $('#productDistItemsTable tbody');
-        const $categorySelect = $('#distCategorySelect');
-        const $subcategorySelect = $('#distSubcategorySelect');
-        const $btnAddItem = $('#btnAddDistItem');
-        const $hint = $('#distSelectionHint');
-        let rowIndex = 1;
-
-        const subcategoryUrl = "{{ route('subcategory.select2') }}";
-        const productUrl = "{{ route('product.select2') }}";
-
-        function parentModal() {
-            return $modal.length ? $modal : $(document.body);
+    (function checkDeps() {
+        if (typeof jQuery === 'undefined' || typeof jQuery.fn.select2 === 'undefined') {
+            setTimeout(checkDeps, 30);
+            return;
         }
 
-        function initSubcategorySelect2() {
-            if ($subcategorySelect.hasClass('select2-hidden-accessible')) {
-                $subcategorySelect.select2('destroy');
-            }
-
-            $subcategorySelect.empty().append(new Option('', '', true, true));
-            $subcategorySelect.prop('disabled', false).select2({
-                dropdownParent: parentModal(),
+        jQuery(function($) {
+            // Initialize Representative Select2
+            $('#distRepSelect').select2({
                 width: '100%',
-                placeholder: 'Select Subcategory',
+                placeholder: 'Select Marketing Representative',
                 allowClear: true,
                 ajax: {
-                    url: subcategoryUrl,
+                    url: "{{ route('marketing-representative.marketing-representatives.select2') }}",
                     dataType: 'json',
-                    delay: 250,
-                    data: function (params) {
-                        return {
-                            q: params.term || '',
-                            category_id: $categorySelect.val(),
-                            type: $categorySelect.val()
-                        };
+                    delay: 200,
+                    data: function(params) {
+                        return { q: params.term || '' };
                     },
-                    processResults: function (data) {
+                    processResults: function(data) {
                         return { results: Array.isArray(data?.results) ? data.results : [] };
                     }
                 }
             });
-        }
 
-        function initProductSelect2($select) {
-            if ($select.hasClass('select2-hidden-accessible')) {
-                $select.select2('destroy');
-            }
+            // AJAX Form Submit with redirect
+            $('#productDistCreateForm').on('submit', function(e) {
+                e.preventDefault();
+                const $form = $(this);
+                const $btn = $('#btnSubmitDist');
 
-            const currentSubcategory = $subcategorySelect.val();
-            const currentCategory = $categorySelect.val();
+                $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1" role="status"></span> Saving...');
 
-            if (!currentSubcategory) {
-                $select.prop('disabled', true).empty();
-                return;
-            }
-
-            $select.prop('disabled', false).select2({
-                dropdownParent: parentModal(),
-                width: '100%',
-                placeholder: 'Select Product',
-                allowClear: true,
-                ajax: {
-                    url: productUrl,
+                $.ajax({
+                    url: $form.attr('action'),
+                    type: 'POST',
+                    data: $form.serialize(),
                     dataType: 'json',
-                    delay: 250,
-                    data: function (params) {
-                        return {
-                            q: params.term || '',
-                            category_id: $categorySelect.val(),
-                            subcategory_id: $subcategorySelect.val()
-                        };
+                    success: function(res) {
+                        if (res?.ok) {
+                            if (window.Swal) {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Success',
+                                    text: res.msg || 'Products distributed successfully',
+                                    timer: 1500,
+                                    showConfirmButton: false
+                                }).then(() => {
+                                    window.location.href = res.redirect || "{{ route('product-distribution.index') }}";
+                                });
+                            } else {
+                                alert(res.msg || 'Products distributed successfully');
+                                window.location.href = res.redirect || "{{ route('product-distribution.index') }}";
+                            }
+                        } else {
+                            $btn.prop('disabled', false).text('Save as Pending');
+                            if (window.Swal) {
+                                Swal.fire({ icon: 'error', title: 'Error', text: res?.msg || 'Something went wrong' });
+                            } else {
+                                alert(res?.msg || 'Something went wrong');
+                            }
+                        }
                     },
-                    processResults: function (data) {
-                        return { results: Array.isArray(data?.results) ? data.results : [] };
+                    error: function(xhr) {
+                        $btn.prop('disabled', false).text('Save as Pending');
+                        const errorMsg = xhr.responseJSON?.message || xhr.responseJSON?.msg || 'Failed to save product distribution.';
+                        if (window.Swal) {
+                            Swal.fire({ icon: 'error', title: 'Validation Error', text: errorMsg });
+                        } else {
+                            alert(errorMsg);
+                        }
                     }
-                }
-            });
-        }
-
-        function updateAllProductSelects() {
-            const hasSubcategory = !!$subcategorySelect.val();
-            if (hasSubcategory) {
-                $btnAddItem.prop('disabled', false);
-                $hint.text('Showing products for selected subcategory').removeClass('text-muted').addClass('text-success');
-                $table.find('.dist-product').each(function () {
-                    initProductSelect2($(this));
                 });
-            } else {
-                $btnAddItem.prop('disabled', true);
-                $hint.text('Please select a Category and Subcategory above to enable products').removeClass('text-success').addClass('text-muted');
-                $table.find('.dist-product').each(function () {
-                    if ($(this).hasClass('select2-hidden-accessible')) {
-                        $(this).select2('destroy');
-                    }
-                    $(this).empty().prop('disabled', true);
-                });
-            }
-        }
-
-        // On Category change -> reset Subcategory & Products
-        $categorySelect.on('change', function () {
-            const catId = $(this).val();
-
-            if ($subcategorySelect.hasClass('select2-hidden-accessible')) {
-                $subcategorySelect.select2('destroy');
-            }
-            $subcategorySelect.empty().prop('disabled', true);
-
-            // Reset table to single row
-            $table.find('tr:gt(0)').remove();
-            const $firstRowProduct = $table.find('tr:first .dist-product');
-            if ($firstRowProduct.hasClass('select2-hidden-accessible')) {
-                $firstRowProduct.select2('destroy');
-            }
-            $firstRowProduct.empty().prop('disabled', true);
-            $table.find('tr:first .dist-qty').val(1);
-            calculateTotal();
-
-            if (catId) {
-                initSubcategorySelect2();
-            } else {
-                updateAllProductSelects();
-            }
-        });
-
-        // On Subcategory change -> reload product selects
-        $subcategorySelect.on('change', function () {
-            // When subcategory changes, reset product selections in rows
-            $table.find('tr:gt(0)').remove();
-            const $firstRowProduct = $table.find('tr:first .dist-product');
-            if ($firstRowProduct.hasClass('select2-hidden-accessible')) {
-                $firstRowProduct.select2('destroy');
-            }
-            $firstRowProduct.empty();
-            $table.find('tr:first .dist-qty').val(1);
-            calculateTotal();
-
-            updateAllProductSelects();
-        });
-
-        // Add Item row
-        $('#btnAddDistItem').on('click', function () {
-            if (!$subcategorySelect.val()) {
-                if (window.Swal) {
-                    Swal.fire({
-                        icon: 'info',
-                        title: 'Select Subcategory',
-                        text: 'Please select a Subcategory first to add products.'
-                    });
-                }
-                return;
-            }
-
-            const newRowHtml = `
-                <tr class="product-dist-item-row">
-                    <td>
-                        <select name="items[${rowIndex}][product_id]" class="form-control form-control-sm dist-product"
-                            data-placeholder="Select Product" required></select>
-                    </td>
-                    <td>
-                        <input type="number" step="1" min="1" value="1" name="items[${rowIndex}][quantity]"
-                            class="form-control form-control-sm text-end dist-qty" required>
-                    </td>
-                    <td class="text-center">
-                        <button type="button" class="btn btn-sm btn-outline-danger btnRemoveRow">✕</button>
-                    </td>
-                </tr>
-            `;
-
-            const $newRow = $(newRowHtml);
-            $table.append($newRow);
-            initProductSelect2($newRow.find('.dist-product'));
-
-            rowIndex++;
-            calculateTotal();
-        });
-
-        // Remove row
-        $table.on('click', '.btnRemoveRow', function () {
-            if ($table.find('tr').length === 1) {
-                // If only 1 row remains, reset it rather than deleting
-                const $firstRowProduct = $table.find('tr:first .dist-product');
-                $firstRowProduct.val(null).trigger('change');
-                $table.find('tr:first .dist-qty').val(1);
-            } else {
-                $(this).closest('tr').remove();
-            }
-            calculateTotal();
-        });
-
-        // Quantity input
-        $table.on('input', '.dist-qty', function () {
-            calculateTotal();
-        });
-
-        function calculateTotal() {
-            let total = 0;
-            $('.dist-qty').each(function () {
-                total += parseInt($(this).val() || 0, 10);
             });
-            $('#distTotalText').text(total);
-        }
-
-        calculateTotal();
-
-        // Auto initialize normal S2 components (like MR dropdown and Category dropdown)
-        if (window.S2 && typeof window.S2.auto === 'function') {
-            window.S2.auto($modal.length ? $modal : undefined);
-        }
+        });
     })();
 </script>
+
+@endsection

@@ -165,7 +165,7 @@ class AssignSpecimenController extends Controller
             $actions .= '<a href="#" class="w-32-px h-32-px rounded-circle d-inline-flex align-items-center justify-content-center bg-info-focus text-info-main AjaxModal" data-ajax-modal="' . route('assign-specimen.show', $b->id) . '" data-size="lg" title="View Details"><iconify-icon icon="mdi:eye"></iconify-icon></a>';
 
             if ($b->status !== 'approved') {
-                $actions .= '<a href="#" class="w-32-px h-32-px rounded-circle d-inline-flex align-items-center justify-content-center bg-success-focus text-success-main AjaxModal" data-ajax-modal="' . route('assign-specimen.edit', $b->id) . '" data-size="xl" data-onsuccess="BranchesIndex.onSaved" title="Edit"><iconify-icon icon="lucide:edit"></iconify-icon></a>';
+                $actions .= '<a href="' . route('assign-specimen.edit', $b->id) . '" class="w-32-px h-32-px rounded-circle d-inline-flex align-items-center justify-content-center bg-success-focus text-success-main" title="Edit"><iconify-icon icon="lucide:edit"></iconify-icon></a>';
                 $actions .= '<a href="#" class="w-32-px h-32-px rounded-circle d-inline-flex align-items-center justify-content-center bg-danger-focus text-danger-main btn-branch-delete" data-id="' . $b->id . '" data-url="' . route('assign-specimen.destroy', $b->id) . '" title="Delete"><iconify-icon icon="mdi:delete"></iconify-icon></a>';
             }
 
@@ -192,9 +192,14 @@ class AssignSpecimenController extends Controller
         ]);
     }
 
-    public function createModal()
+    public function create()
     {
         return view('backend.modules.assign_specimen.create');
+    }
+
+    public function createModal()
+    {
+        return $this->create();
     }
 
     public function store(Request $req)
@@ -246,18 +251,31 @@ class AssignSpecimenController extends Controller
 
             DB::commit();
 
-            return response()->json(['ok' => true, 'msg' => 'Specimen assigned successfully (pending)', 'data' => ['id' => $specimen->id]]);
+            if ($req->ajax() || $req->wantsJson()) {
+                return response()->json([
+                    'ok'       => true,
+                    'msg'      => 'Specimen assigned successfully (pending)',
+                    'redirect' => route('assign-specimen.index'),
+                    'data'     => ['id' => $specimen->id]
+                ]);
+            }
+
+            return redirect()->route('assign-specimen.index')->with('success', 'Specimen assigned successfully (pending)');
         } catch (\Throwable $e) {
             DB::rollBack();
 
-            return response()->json(['ok' => false, 'msg' => $e->getMessage()], 500);
+            if ($req->ajax() || $req->wantsJson()) {
+                return response()->json(['ok' => false, 'msg' => $e->getMessage()], 500);
+            }
+
+            return back()->withInput()->with('error', $e->getMessage());
         }
     }
 
     public function show(AssignSpecimen $assignSpecimen)
     {
         $assignSpecimen->load([
-            'items.product:id,name',
+            'items.product:id,name,thumbnail_image',
             'user:id,name,phone',
             'teacher.institution.upazila',
             'teacher.institution.district',
@@ -273,14 +291,14 @@ class AssignSpecimenController extends Controller
         return view('backend.modules.assign_specimen.show', compact('assignSpecimen'));
     }
 
-    public function editModal(AssignSpecimen $assignSpecimen)
+    public function edit(AssignSpecimen $assignSpecimen)
     {
         if ($assignSpecimen->status === 'approved') {
             abort(403, 'Approved record cannot be edited');
         }
 
         $assignSpecimen->load([
-            'items.product:id,name,category_id,subcategory_id',
+            'items.product:id,name,category_id,subcategory_id,thumbnail_image',
             'items.product.category:id,name',
             'items.product.subcategory:id,name',
             'user:id,name',
@@ -298,10 +316,18 @@ class AssignSpecimenController extends Controller
         return view('backend.modules.assign_specimen.edit', compact('assignSpecimen'));
     }
 
+    public function editModal(AssignSpecimen $assignSpecimen)
+    {
+        return $this->edit($assignSpecimen);
+    }
+
     public function update(AssignSpecimen $assignSpecimen, Request $req)
     {
         if ($assignSpecimen->status === 'approved') {
-            return response()->json(['ok' => false, 'msg' => 'Approved record cannot be updated'], 422);
+            if ($req->ajax() || $req->wantsJson()) {
+                return response()->json(['ok' => false, 'msg' => 'Approved record cannot be updated'], 422);
+            }
+            return back()->with('error', 'Approved record cannot be updated');
         }
 
         $data = $req->validate([
@@ -351,17 +377,26 @@ class AssignSpecimenController extends Controller
 
             DB::commit();
 
-            return response()->json(['ok' => true, 'msg' => 'Updated Successfully']);
+            if ($req->ajax() || $req->wantsJson()) {
+                return response()->json([
+                    'ok'       => true,
+                    'msg'      => 'Assignment updated successfully',
+                    'redirect' => route('assign-specimen.index')
+                ]);
+            }
+
+            return redirect()->route('assign-specimen.index')->with('success', 'Assignment updated successfully');
         } catch (\Throwable $e) {
             DB::rollBack();
 
-            return response()->json(['ok' => false, 'msg' => $e->getMessage()], 500);
+            if ($req->ajax() || $req->wantsJson()) {
+                return response()->json(['ok' => false, 'msg' => $e->getMessage()], 500);
+            }
+
+            return back()->withInput()->with('error', $e->getMessage());
         }
     }
 
-    /**
-     * Select2: Upazilas (filtered by Marketing Representative's assigned territories)
-     */
     public function upazilasSelect2(Request $request)
     {
         $term   = trim($request->input('q', ''));

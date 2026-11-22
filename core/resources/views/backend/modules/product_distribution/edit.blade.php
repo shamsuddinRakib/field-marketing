@@ -1,33 +1,53 @@
-{{-- ================= MODAL HEADER ================= --}}
-<div class="modal-header py-16 px-24">
-    <h5 class="modal-title fw-semibold">Edit Distribution #{{ $productDistribution->id }}</h5>
-    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-</div>
+@extends('backend.layouts.master')
 
-@php
-    $firstItem = $productDistribution->items->first();
-    $currentCategory = $firstItem?->product?->category;
-    $currentSubcategory = $firstItem?->product?->subcategory;
-@endphp
+@section('meta')
+    <title>Edit Distribution #{{ $productDistribution->id }}</title>
+@endsection
 
-{{-- ================= MODAL BODY ================= --}}
-<div class="modal-body px-24 py-16">
+@section('content')
+    {{-- Breadcrumb & Title --}}
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-24">
+        <div>
+            <h6 class="fw-semibold mb-0">Product Distribution</h6>
+            <p class="fw-semibold mb-0">Edit Distribution #{{ $productDistribution->id }}</p>
+        </div>
 
-    <form id="productDistEditForm" action="{{ route('product-distribution.update', $productDistribution->id) }}" method="POST" data-ajax="true">
+        <ul class="d-flex align-items-center gap-2 mb-0">
+            <li class="fw-medium">
+                <a href="{{ route('backend.dashboard') }}" class="d-flex align-items-center gap-1 hover-text-primary">
+                    <iconify-icon icon="solar:home-smile-angle-outline" class="icon text-lg"></iconify-icon> Dashboard
+                </a>
+            </li>
+            <li>-</li>
+            <li class="fw-medium">
+                <a href="{{ route('product-distribution.index') }}" class="hover-text-primary">Product Distribution</a>
+            </li>
+            <li>-</li>
+            <li class="fw-medium">Edit #{{ $productDistribution->id }}</li>
+        </ul>
 
+        {{-- Button on a new line (right aligned) --}}
+        <div class="text-end w-100">
+            <a href="{{ route('product-distribution.index') }}" class="btn btn-secondary bg-dark">
+                <i data-feather="arrow-left" class="me-2"></i>Back to Distribution
+            </a>
+        </div>
+    </div>
+
+    {{-- Form --}}
+    <form id="productDistEditForm" action="{{ route('product-distribution.update', $productDistribution->id) }}" method="POST">
         @csrf
         @method('PUT')
 
-        {{-- ================= DISTRIBUTION INFO ================= --}}
+        {{-- 1. DISTRIBUTION INFORMATION --}}
         <div class="card mb-16">
             <div class="card-body">
-
                 <h6 class="mb-12 fw-semibold">Distribution Information</h6>
 
                 <div class="row g-3">
                     <div class="col-md-6 mb-12">
                         <label class="form-label text-sm mb-8">Marketing Representative <span class="text-danger">*</span></label>
-                        <select class="form-control form-control-sm js-s2-ajax" name="user_id"
+                        <select class="form-control form-control-sm js-s2-ajax" name="user_id" id="distRepSelect"
                             data-url="{{ route('marketing-representative.marketing-representatives.select2') }}"
                             data-placeholder="Select Marketing Representative" required>
                             @if ($productDistribution->user)
@@ -42,339 +62,99 @@
                             value="{{ $productDistribution->note }}" placeholder="Optional note">
                     </div>
                 </div>
-
             </div>
         </div>
 
-        {{-- ================= CATEGORY & SUBCATEGORY SELECTION ================= --}}
-        <div class="card mb-16">
-            <div class="card-body">
-                <h6 class="mb-12 fw-semibold">Product Filter (Category & Subcategory)</h6>
-                <div class="row g-3">
-                    <div class="col-md-6 mb-12">
-                        <label class="form-label text-sm mb-8">Category <span class="text-danger">*</span></label>
-                        <select id="distCategorySelect" class="form-control form-control-sm js-s2-ajax"
-                            data-url="{{ route('category.cat.select2') }}"
-                            data-placeholder="Select Category">
-                            @if ($currentCategory)
-                                <option value="{{ $currentCategory->id }}" selected>{{ $currentCategory->name }}</option>
-                            @endif
-                        </select>
-                    </div>
+        {{-- 2. REUSABLE POS PRODUCT PICKER COMPONENT (Pre-populated with existing items) --}}
+        @include('backend.modules.products.partial.product_item_picker', [
+            'items' => $productDistribution->items
+        ])
 
-                    <div class="col-md-6 mb-12">
-                        <label class="form-label text-sm mb-8">Subcategory <span class="text-danger">*</span></label>
-                        <select id="distSubcategorySelect" class="form-control form-control-sm"
-                            data-placeholder="Select Subcategory" {{ $currentCategory ? '' : 'disabled' }}>
-                            @if ($currentSubcategory)
-                                <option value="{{ $currentSubcategory->id }}" selected>{{ $currentSubcategory->name }}</option>
-                            @endif
-                        </select>
-                    </div>
-                </div>
-            </div>
+        {{-- 3. ACTIONS --}}
+        <div class="d-flex justify-content-end gap-2 mt-24 mb-32">
+            <a href="{{ route('product-distribution.index') }}" class="btn btn-sm btn-outline-secondary">Cancel</a>
+            <button type="submit" class="btn btn-sm btn-primary" id="btnSubmitDist">Update Distribution</button>
         </div>
-
-        {{-- ================= DISTRIBUTION ITEMS ================= --}}
-        <div class="card mb-16">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center mb-12">
-                    <h6 class="mb-0 fw-semibold">Products</h6>
-                    <span class="text-xs {{ $currentSubcategory ? 'text-success' : 'text-muted' }}" id="distSelectionHint">
-                        {{ $currentSubcategory ? 'Showing products for selected subcategory' : 'Please select a Category and Subcategory above to enable products' }}
-                    </span>
-                </div>
-
-                <div class="table-responsive">
-                    <table class="table table-sm align-middle items-table-fixed" id="productDistItemsTable">
-                        <thead class="table-light">
-                            <tr>
-                                <th style="width:70%">Product</th>
-                                <th class="text-end" style="width:140px">Qty</th>
-                                <th style="width:40px"></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse ($productDistribution->items as $i => $item)
-                                <tr class="product-dist-item-row">
-                                    <td>
-                                        <select name="items[{{ $i }}][product_id]"
-                                            class="form-control form-control-sm dist-product"
-                                            data-placeholder="Select Product" required>
-                                            @if ($item->product)
-                                                <option value="{{ $item->product->id }}" selected>{{ $item->product->name }}</option>
-                                            @endif
-                                        </select>
-                                    </td>
-                                    <td>
-                                        <input type="number" step="1" min="1" name="items[{{ $i }}][quantity]"
-                                            class="form-control form-control-sm text-end dist-qty"
-                                            value="{{ $item->quantity }}" required>
-                                    </td>
-                                    <td class="text-center">
-                                        <button type="button" class="btn btn-sm btn-outline-danger btnRemoveRow">✕</button>
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr class="product-dist-item-row">
-                                    <td>
-                                        <select name="items[0][product_id]" class="form-control form-control-sm dist-product"
-                                            data-placeholder="Select Product" disabled required></select>
-                                    </td>
-                                    <td>
-                                        <input type="number" step="1" min="1" value="1" name="items[0][quantity]"
-                                            class="form-control form-control-sm text-end dist-qty" required>
-                                    </td>
-                                    <td class="text-center">
-                                        <button type="button" class="btn btn-sm btn-outline-danger btnRemoveRow">✕</button>
-                                    </td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class="d-flex justify-content-end mt-12">
-                    <button type="button" id="btnAddDistItem" class="btn btn-sm btn-outline-primary" {{ $currentSubcategory ? '' : 'disabled' }}>+ Add Item</button>
-                </div>
-            </div>
-        </div>
-
-        {{-- ================= SUMMARY ================= --}}
-        <div class="card mb-16">
-            <div class="card-body d-flex justify-content-between align-items-center">
-                <h6 class="mb-0">Total Quantity</h6>
-                <h5 class="mb-0 fw-bold"><span id="distTotalText">{{ $productDistribution->items->sum('quantity') }}</span></h5>
-            </div>
-        </div>
-
-        {{-- ================= ACTION ================= --}}
-        <div class="d-flex justify-content-end gap-2">
-            <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-            <button type="submit" class="btn btn-sm btn-primary">Update Pending</button>
-        </div>
-
     </form>
-</div>
+@endsection
 
-{{-- ================= JS ================= --}}
+@section('script')
 <script>
-    window.ProductDistIndex = window.ProductDistIndex || { onLoad: function () {} };
-
-    (function () {
-        const $modal = $('#AjaxModal');
-        const $table = $('#productDistItemsTable tbody');
-        const $categorySelect = $('#distCategorySelect');
-        const $subcategorySelect = $('#distSubcategorySelect');
-        const $btnAddItem = $('#btnAddDistItem');
-        const $hint = $('#distSelectionHint');
-        let rowIndex = {{ max($productDistribution->items->count(), 1) }};
-
-        const subcategoryUrl = "{{ route('subcategory.select2') }}";
-        const productUrl = "{{ route('product.select2') }}";
-
-        function parentModal() {
-            return $modal.length ? $modal : $(document.body);
+    (function checkDeps() {
+        if (typeof jQuery === 'undefined' || typeof jQuery.fn.select2 === 'undefined') {
+            setTimeout(checkDeps, 30);
+            return;
         }
 
-        function initSubcategorySelect2() {
-            if ($subcategorySelect.hasClass('select2-hidden-accessible')) {
-                $subcategorySelect.select2('destroy');
-            }
-
-            $subcategorySelect.prop('disabled', false).select2({
-                dropdownParent: parentModal(),
+        jQuery(function($) {
+            // Initialize Representative Select2
+            $('#distRepSelect').select2({
                 width: '100%',
-                placeholder: 'Select Subcategory',
+                placeholder: 'Select Marketing Representative',
                 allowClear: true,
                 ajax: {
-                    url: subcategoryUrl,
+                    url: "{{ route('marketing-representative.marketing-representatives.select2') }}",
                     dataType: 'json',
-                    delay: 250,
-                    data: function (params) {
-                        return {
-                            q: params.term || '',
-                            category_id: $categorySelect.val(),
-                            type: $categorySelect.val()
-                        };
+                    delay: 200,
+                    data: function(params) {
+                        return { q: params.term || '' };
                     },
-                    processResults: function (data) {
+                    processResults: function(data) {
                         return { results: Array.isArray(data?.results) ? data.results : [] };
                     }
                 }
             });
-        }
 
-        function initProductSelect2($select) {
-            if ($select.hasClass('select2-hidden-accessible')) {
-                $select.select2('destroy');
-            }
+            // AJAX Form Submit with redirect
+            $('#productDistEditForm').on('submit', function(e) {
+                e.preventDefault();
+                const $form = $(this);
+                const $btn = $('#btnSubmitDist');
 
-            const currentSubcategory = $subcategorySelect.val();
+                $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1" role="status"></span> Updating...');
 
-            if (!currentSubcategory && !$select.val()) {
-                $select.prop('disabled', true).empty();
-                return;
-            }
-
-            $select.prop('disabled', false).select2({
-                dropdownParent: parentModal(),
-                width: '100%',
-                placeholder: 'Select Product',
-                allowClear: true,
-                ajax: {
-                    url: productUrl,
+                $.ajax({
+                    url: $form.attr('action'),
+                    type: 'POST',
+                    data: $form.serialize(),
                     dataType: 'json',
-                    delay: 250,
-                    data: function (params) {
-                        return {
-                            q: params.term || '',
-                            category_id: $categorySelect.val(),
-                            subcategory_id: $subcategorySelect.val()
-                        };
+                    success: function(res) {
+                        if (res?.ok) {
+                            if (window.Swal) {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Success',
+                                    text: res.msg || 'Updated Successfully',
+                                    timer: 1500,
+                                    showConfirmButton: false
+                                }).then(() => {
+                                    window.location.href = res.redirect || "{{ route('product-distribution.index') }}";
+                                });
+                            } else {
+                                alert(res.msg || 'Updated Successfully');
+                                window.location.href = res.redirect || "{{ route('product-distribution.index') }}";
+                            }
+                        } else {
+                            $btn.prop('disabled', false).text('Update Distribution');
+                            if (window.Swal) {
+                                Swal.fire({ icon: 'error', title: 'Error', text: res?.msg || 'Something went wrong' });
+                            } else {
+                                alert(res?.msg || 'Something went wrong');
+                            }
+                        }
                     },
-                    processResults: function (data) {
-                        return { results: Array.isArray(data?.results) ? data.results : [] };
+                    error: function(xhr) {
+                        $btn.prop('disabled', false).text('Update Distribution');
+                        const errorMsg = xhr.responseJSON?.message || xhr.responseJSON?.msg || 'Failed to update distribution.';
+                        if (window.Swal) {
+                            Swal.fire({ icon: 'error', title: 'Validation Error', text: errorMsg });
+                        } else {
+                            alert(errorMsg);
+                        }
                     }
-                }
-            });
-        }
-
-        function updateAllProductSelects() {
-            const hasSubcategory = !!$subcategorySelect.val();
-            if (hasSubcategory) {
-                $btnAddItem.prop('disabled', false);
-                $hint.text('Showing products for selected subcategory').removeClass('text-muted').addClass('text-success');
-                $table.find('.dist-product').each(function () {
-                    initProductSelect2($(this));
                 });
-            } else {
-                $btnAddItem.prop('disabled', true);
-                $hint.text('Please select a Category and Subcategory above to enable products').removeClass('text-success').addClass('text-muted');
-                $table.find('.dist-product').each(function () {
-                    if ($(this).hasClass('select2-hidden-accessible')) {
-                        $(this).select2('destroy');
-                    }
-                    $(this).empty().prop('disabled', true);
-                });
-            }
-        }
-
-        // Initialize existing subcategory & products if loaded
-        if ($categorySelect.val()) {
-            initSubcategorySelect2();
-        }
-        $table.find('.dist-product').each(function () {
-            initProductSelect2($(this));
-        });
-
-        // On Category change -> reset Subcategory & Products
-        $categorySelect.on('change', function () {
-            const catId = $(this).val();
-
-            if ($subcategorySelect.hasClass('select2-hidden-accessible')) {
-                $subcategorySelect.select2('destroy');
-            }
-            $subcategorySelect.empty().prop('disabled', true);
-
-            // Reset table rows
-            $table.find('tr:gt(0)').remove();
-            const $firstRowProduct = $table.find('tr:first .dist-product');
-            if ($firstRowProduct.hasClass('select2-hidden-accessible')) {
-                $firstRowProduct.select2('destroy');
-            }
-            $firstRowProduct.empty().prop('disabled', true);
-            $table.find('tr:first .dist-qty').val(1);
-            calculateTotal();
-
-            if (catId) {
-                initSubcategorySelect2();
-            } else {
-                updateAllProductSelects();
-            }
-        });
-
-        // On Subcategory change -> reload product selects
-        $subcategorySelect.on('change', function () {
-            $table.find('tr:gt(0)').remove();
-            const $firstRowProduct = $table.find('tr:first .dist-product');
-            if ($firstRowProduct.hasClass('select2-hidden-accessible')) {
-                $firstRowProduct.select2('destroy');
-            }
-            $firstRowProduct.empty();
-            $table.find('tr:first .dist-qty').val(1);
-            calculateTotal();
-
-            updateAllProductSelects();
-        });
-
-        // Add Item row
-        $('#btnAddDistItem').on('click', function () {
-            if (!$subcategorySelect.val()) {
-                if (window.Swal) {
-                    Swal.fire({
-                        icon: 'info',
-                        title: 'Select Subcategory',
-                        text: 'Please select a Subcategory first to add products.'
-                    });
-                }
-                return;
-            }
-
-            const newRowHtml = `
-                <tr class="product-dist-item-row">
-                    <td>
-                        <select name="items[${rowIndex}][product_id]" class="form-control form-control-sm dist-product"
-                            data-placeholder="Select Product" required></select>
-                    </td>
-                    <td>
-                        <input type="number" step="1" min="1" value="1" name="items[${rowIndex}][quantity]"
-                            class="form-control form-control-sm text-end dist-qty" required>
-                    </td>
-                    <td class="text-center">
-                        <button type="button" class="btn btn-sm btn-outline-danger btnRemoveRow">✕</button>
-                    </td>
-                </tr>
-            `;
-
-            const $newRow = $(newRowHtml);
-            $table.append($newRow);
-            initProductSelect2($newRow.find('.dist-product'));
-
-            rowIndex++;
-            calculateTotal();
-        });
-
-        // Remove row
-        $table.on('click', '.btnRemoveRow', function () {
-            if ($table.find('tr').length === 1) {
-                const $firstRowProduct = $table.find('tr:first .dist-product');
-                $firstRowProduct.val(null).trigger('change');
-                $table.find('tr:first .dist-qty').val(1);
-            } else {
-                $(this).closest('tr').remove();
-            }
-            calculateTotal();
-        });
-
-        // Quantity input
-        $table.on('input', '.dist-qty', function () {
-            calculateTotal();
-        });
-
-        function calculateTotal() {
-            let total = 0;
-            $('.dist-qty').each(function () {
-                total += parseInt($(this).val() || 0, 10);
             });
-            $('#distTotalText').text(total);
-        }
-
-        calculateTotal();
-
-        // Auto initialize normal S2 components
-        if (window.S2 && typeof window.S2.auto === 'function') {
-            window.S2.auto($modal.length ? $modal : undefined);
-        }
+        });
     })();
 </script>
+@endsection

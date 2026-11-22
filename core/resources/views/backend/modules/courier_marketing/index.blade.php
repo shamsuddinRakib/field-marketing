@@ -184,12 +184,10 @@
                     @include('backend.include.buttons')
                 </ul>
                 @if (auth()->user()->canDo('courier-marketings.store') || auth()->user()->isSuper())
-                    <button type="button"
-                        class="btn btn-primary btn-sm px-12 py-8 radius-8 d-flex align-items-center gap-2 AjaxModal"
-                        data-ajax-modal="{{ route('courier-marketings.createModal') }}" data-size="xl"
-                        data-onload="CourierMarketingIndex.onLoad" data-onsuccess="CourierMarketingIndex.onSaved">
+                    <a href="{{ route('courier-marketings.create') }}"
+                        class="btn btn-primary btn-sm px-12 py-8 radius-8 d-flex align-items-center gap-2">
                         <iconify-icon icon="ic:baseline-plus" class="text-xl"></iconify-icon>Add Courier Dispatch
-                    </button>
+                    </a>
                 @endif
             </div>
         </div>

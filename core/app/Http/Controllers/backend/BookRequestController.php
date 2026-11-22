@@ -19,20 +19,38 @@ class BookRequestController extends Controller
         return view('backend.modules.book_requests.index');
     }
 
+    public function create()
+    {
+        return view('backend.modules.book_requests.create');
+    }
+
     public function createModal()
     {
         return view('backend.modules.book_requests.create_modal');
     }
 
-    public function editModal(BookRequest $bookRequest)
+    public function edit(BookRequest $bookRequest)
     {
         $bookRequest->load('representative.user');
         $bookRequests = $bookRequest->request_group_id
-            ? BookRequest::with(['items.product.category:id,name', 'items.product.subcategory:id,name'])->where('request_group_id', $bookRequest->request_group_id)->get()
+            ? BookRequest::with([
+                'items.product:id,name,category_id,subcategory_id,thumbnail_image',
+                'items.product.category:id,name',
+                'items.product.subcategory:id,name'
+            ])->where('request_group_id', $bookRequest->request_group_id)->get()
                 ->flatMap(fn (BookRequest $request) => $request->items)->values()
-            : $bookRequest->items()->with(['product.category:id,name', 'product.subcategory:id,name'])->get();
+            : $bookRequest->items()->with([
+                'product:id,name,category_id,subcategory_id,thumbnail_image',
+                'product.category:id,name',
+                'product.subcategory:id,name'
+            ])->get();
 
-        return view('backend.modules.book_requests.edit_modal', compact('bookRequest', 'bookRequests'));
+        return view('backend.modules.book_requests.edit', compact('bookRequest', 'bookRequests'));
+    }
+
+    public function editModal(BookRequest $bookRequest)
+    {
+        return $this->edit($bookRequest);
     }
 
     public function show(BookRequest $bookRequest)
@@ -113,12 +131,12 @@ class BookRequestController extends Controller
             };
 
             $showUrl = route('book-request.book-requests.show', $bookRequest->id);
-            $editUrl = route('book-request.book-requests.editModal', $bookRequest->id);
+            $editUrl = route('book-request.book-requests.edit', $bookRequest->id);
             $deleteUrl = route('book-request.book-requests.destroy', $bookRequest->id);
 
             $actions = '<div class="d-inline-flex align-items-center justify-content-end gap-1 w-100">'
                 . '<a href="#" data-ajax-modal="' . $showUrl . '" data-size="lg" class="w-32-px h-32-px rounded-circle d-inline-flex align-items-center justify-content-center bg-info-focus text-info-main AjaxModal" title="View"><iconify-icon icon="lucide:eye"></iconify-icon></a>'
-                . '<a href="#" class="w-32-px h-32-px rounded-circle d-inline-flex align-items-center justify-content-center bg-success-focus text-success-main AjaxModal" data-ajax-modal="' . $editUrl . '" data-size="xl" data-onload="BookRequestsIndex.onLoad" data-onsuccess="BookRequestsIndex.onSaved" title="Edit"><iconify-icon icon="lucide:edit"></iconify-icon></a>'
+                . '<a href="' . $editUrl . '" class="w-32-px h-32-px rounded-circle d-inline-flex align-items-center justify-content-center bg-success-focus text-success-main" title="Edit"><iconify-icon icon="lucide:edit"></iconify-icon></a>'
                 . '<a href="#" class="w-32-px h-32-px rounded-circle d-inline-flex align-items-center justify-content-center bg-danger-focus text-danger-main btn-book-request-delete" data-url="' . $deleteUrl . '" title="Delete"><iconify-icon icon="mdi:delete"></iconify-icon></a>'
                 . '</div>';
 
@@ -154,6 +172,10 @@ class BookRequestController extends Controller
 
     public function store(Request $request)
     {
+        if (!$request->has('product_items') && $request->has('items')) {
+            $request->merge(['product_items' => $request->input('items')]);
+        }
+
         [$data, $products] = $this->validated($request);
         $groupId = (string) Str::uuid();
 
@@ -168,11 +190,16 @@ class BookRequestController extends Controller
             'ok' => true,
             'id' => $bookRequest?->id,
             'msg' => 'Book request created.',
+            'redirect' => route('book-request.book-requests.index'),
         ]);
     }
 
     public function update(Request $request, BookRequest $bookRequest)
     {
+        if (!$request->has('product_items') && $request->has('items')) {
+            $request->merge(['product_items' => $request->input('items')]);
+        }
+
         [$data, $products] = $this->validated(
             $request,
             $bookRequest->request_group_id,
@@ -211,6 +238,7 @@ class BookRequestController extends Controller
         return response()->json([
             'ok' => true,
             'msg' => 'Book request updated.',
+            'redirect' => route('book-request.book-requests.index'),
         ]);
     }
 

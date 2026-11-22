@@ -324,11 +324,13 @@ Route::middleware(['web', 'auth', 'perm', 'branchscope'])->group(function () {
     Route::prefix('product-distributions')->name('product-distribution.')->group(function () {
         Route::get('/', [ProductDistributionController::class, 'index'])->name('index');
         Route::post('/list-ajax', [ProductDistributionController::class, 'listAjax'])->name('listAjax');
-        Route::get('/create', [ProductDistributionController::class, 'createModal'])->name('create');
+        Route::get('/create', [ProductDistributionController::class, 'create'])->name('create');
+        Route::get('/create-modal', [ProductDistributionController::class, 'createModal'])->name('createModal');
         Route::post('/store', [ProductDistributionController::class, 'store'])->name('store');
         Route::get('/products-select2', [ProductDistributionController::class, 'productsSelect2'])->name('products.select2');
         Route::get('/distributions-select2', [ProductDistributionController::class, 'distributionsSelect2'])->name('distributions.select2');
-        Route::get('/edit/{productDistribution}', [ProductDistributionController::class, 'editModal'])->whereNumber('productDistribution')->name('edit');
+        Route::get('/edit/{productDistribution}', [ProductDistributionController::class, 'edit'])->whereNumber('productDistribution')->name('edit');
+        Route::get('/edit-modal/{productDistribution}', [ProductDistributionController::class, 'editModal'])->whereNumber('productDistribution')->name('editModal');
         Route::put('/update/{productDistribution}', [ProductDistributionController::class, 'update'])->name('update');
         Route::get('/{productDistribution}', [ProductDistributionController::class, 'show'])->whereNumber('productDistribution')->name('show');
         Route::delete('/{productDistribution}', [ProductDistributionController::class, 'destroy'])->name('destroy');
@@ -408,10 +410,12 @@ Route::middleware(['web', 'auth', 'perm', 'branchscope'])->group(function () {
     Route::prefix('book-request')->name('book-request.')->group(function () {
         Route::get('book-requests', [BookRequestController::class, 'index'])->name('book-requests.index');
         Route::post('book-requests/list', [BookRequestController::class, 'listAjax'])->name('book-requests.list.ajax');
+        Route::get('book-requests/create', [BookRequestController::class, 'create'])->name('book-requests.create');
         Route::get('book-requests/create-modal', [BookRequestController::class, 'createModal'])->name('book-requests.createModal');
         Route::get('book-requests/representatives-select2', [BookRequestController::class, 'representativesSelect2'])->name('book-requests.representatives.select2');
         Route::post('book-requests', [BookRequestController::class, 'store'])->name('book-requests.store');
         Route::get('book-requests/{bookRequest}', [BookRequestController::class, 'show'])->whereNumber('bookRequest')->name('book-requests.show');
+        Route::get('book-requests/{bookRequest}/edit', [BookRequestController::class, 'edit'])->whereNumber('bookRequest')->name('book-requests.edit');
         Route::get('book-requests/{bookRequest}/edit-modal', [BookRequestController::class, 'editModal'])->whereNumber('bookRequest')->name('book-requests.editModal');
         Route::put('book-requests/{bookRequest}', [BookRequestController::class, 'update'])->whereNumber('bookRequest')->name('book-requests.update');
         Route::delete('book-requests/{bookRequest}', [BookRequestController::class, 'destroy'])->whereNumber('bookRequest')->name('book-requests.destroy');
@@ -610,9 +614,11 @@ Route::middleware(['web', 'auth', 'perm', 'branchscope'])->group(function () {
     Route::prefix('spot-sales')->name('spot-sales.')->group(function () {
 
         Route::get('spot-sale', [SpotSaleController::class, 'index'])->name('index');
-        Route::get('spot-sale/create', [SpotSaleController::class, 'createModal'])->name('createModal');
+        Route::get('spot-sale/create', [SpotSaleController::class, 'create'])->name('create');
+        Route::get('spot-sale/create-modal', [SpotSaleController::class, 'createModal'])->name('createModal');
         Route::post('spot-sale/list', [SpotSaleController::class, 'listAjax'])->name('list.ajax');
         Route::post('spot-sale', [SpotSaleController::class, 'store'])->name('store');
+        Route::get('spot-sale/{spotSale}/edit', [SpotSaleController::class, 'edit'])->whereNumber('spotSale')->name('edit');
         Route::get('spot-sale/edit/{spotSale}', [SpotSaleController::class, 'editModal'])->whereNumber('spotSale')->name('editModal');
         Route::put('spot-sale/{spotSale}', [SpotSaleController::class, 'update'])->whereNumber('spotSale')->name('update');
         Route::post('spot-sale/{spotSale}/toggle-status', [SpotSaleController::class, 'toggleStatus'])->whereNumber('spotSale')->name('toggleStatus');
@@ -625,27 +631,17 @@ Route::middleware(['web', 'auth', 'perm', 'branchscope'])->group(function () {
     Route::post('/cost-per-result', [CostPerResultController::class, 'costPerResult'])->name('cost-per-result.submit');
 
     // Courier Marketing Management
-    // Route::prefix('courier-marketing')->name('courier-marketings.')->group(function () {
-    //     Route::get('courier-marketing', [CourierMarketingController::class, 'index'])->name('index');
-    //     Route::post('courier-marketing/list', [CourierMarketingController::class, 'listAjax'])->name('list.ajax');
-    //     Route::get('courier-marketing/create-modal', [CourierMarketingController::class, 'createModal'])->name('createModal');
-    //     Route::get('courier-marketing/representatives-select2', [CourierMarketingController::class, 'representativesSelect2'])->name('representatives.select2');
-    //     Route::post('courier-marketing', [CourierMarketingController::class, 'store'])->name('store');
-    //     Route::get('courier-marketing/{courierMarketing}', [CourierMarketingController::class, 'show'])->whereNumber('courierMarketing')->name('show');
-    //     Route::get('courier-marketing/{courierMarketing}/edit-modal', [CourierMarketingController::class, 'editModal'])->whereNumber('courierMarketing')->name('editModal');
-    //     Route::put('courier-marketing/{courierMarketing}', [CourierMarketingController::class, 'update'])->whereNumber('courierMarketing')->name('update');
-    //     Route::delete('courier-marketing/{courierMarketing}', [CourierMarketingController::class, 'destroy'])->whereNumber('courierMarketing')->name('destroy');
-    // });
-
     Route::prefix('courier-marketing')->name('courier-marketings.')->group(function () {
         Route::get('/', [CourierMarketingController::class, 'index'])->name('index');
         Route::post('list', [CourierMarketingController::class, 'listAjax'])->name('list.ajax');
+        Route::get('create', [CourierMarketingController::class, 'create'])->name('create');
         Route::get('create-modal', [CourierMarketingController::class, 'createModal'])->name('createModal');
         Route::get('upazilas-select2', [CourierMarketingController::class, 'upazilasSelect2'])->name('upazilas.select2');
         Route::get('institutions-select2', [CourierMarketingController::class, 'institutionsSelect2'])->name('institutions.select2');
         Route::get('teachers-by-phone-select2', [CourierMarketingController::class, 'teachersByPhoneSelect2'])->name('teachersByPhone.select2');
         Route::post('/', [CourierMarketingController::class, 'store'])->name('store');
         Route::get('{courierMarketing}', [CourierMarketingController::class, 'show'])->whereNumber('courierMarketing')->name('show');
+        Route::get('{courierMarketing}/edit', [CourierMarketingController::class, 'edit'])->whereNumber('courierMarketing')->name('edit');
         Route::get('{courierMarketing}/edit-modal', [CourierMarketingController::class, 'editModal'])->whereNumber('courierMarketing')->name('editModal');
         Route::get('{courierMarketing}/status-modal', [CourierMarketingController::class, 'statusModal'])->whereNumber('courierMarketing')->name('statusModal');
         Route::put('{courierMarketing}', [CourierMarketingController::class, 'update'])->whereNumber('courierMarketing')->name('update');

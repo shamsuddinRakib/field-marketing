@@ -32,13 +32,10 @@
                     @include('backend.include.buttons')
                 </ul>
                 @if (auth()->user()->canDo('book-request.book-requests.store'))
-                    <button type="button"
-                        class="btn btn-primary btn-sm px-12 py-8 radius-8 d-flex align-items-center gap-2 AjaxModal"
-                        data-ajax-modal="{{ route('book-request.book-requests.createModal') }}"
-                        data-size="xl" data-onload="BookRequestsIndex.onLoad"
-                        data-onsuccess="BookRequestsIndex.onSaved">
+                    <a href="{{ route('book-request.book-requests.create') }}"
+                        class="btn btn-primary btn-sm px-12 py-8 radius-8 d-flex align-items-center gap-2">
                         <iconify-icon icon="ic:baseline-plus" class="text-xl"></iconify-icon>Add book request
-                    </button>
+                    </a>
                 @endif
             </div>
         </div>

@@ -20,6 +20,8 @@ class AssignSpecimenResource extends JsonResource
             ? (int) $this->items->sum('quantity')
             : ($this->quantity !== null ? (int) $this->quantity : 0);
 
+        $firstItemProduct = $this->relationLoaded('items') ? $this->items->first()?->product : null;
+
         return [
             'id'               => $this->id,
             'user_id'          => $this->user_id ? (int) $this->user_id : null,
@@ -29,6 +31,8 @@ class AssignSpecimenResource extends JsonResource
             'library_id'       => $this->library_id ? (int) $this->library_id : null,
             'institution_id'   => isset($this->institution_id) && $this->institution_id ? (int) $this->institution_id : null,
             'assign_inst_type' => $this->assign_inst_type,
+            'category_id'      => $firstItemProduct?->category_id ? (int) $firstItemProduct->category_id : null,
+            'subcategory_id'   => $firstItemProduct?->subcategory_id ? (int) $firstItemProduct->subcategory_id : null,
             'total_quantity'   => $totalQuantity,
             'address'          => $this->address,
             'upazila_id'       => $this->upazila_id ? (int) $this->upazila_id : null,

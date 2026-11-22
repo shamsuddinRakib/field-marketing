@@ -104,13 +104,9 @@ class SpotSaleController extends Controller
 
             if ($b->status !== 'approved') {
                 $actions .= '
-            <a href="#"
+            <a href="' . route('spot-sales.edit', $b->id) . '"
                class="w-32-px h-32-px rounded-circle d-inline-flex align-items-center justify-content-center
-                      bg-success-focus text-success-main AjaxModal"
-               data-ajax-modal="' . route('spot-sales.editModal', $b->id) . '"
-               data-size="xl"
-               data-onload="SpotSaleIndex.onLoad"
-               data-onsuccess="SpotSaleIndex.onSaved"
+                      bg-success-focus text-success-main"
                title="Edit Spot Sale">
                 <iconify-icon icon="lucide:edit"></iconify-icon>
             </a>
@@ -150,13 +146,18 @@ class SpotSaleController extends Controller
         ]);
     }
 
-    public function createModal()
+    public function create()
     {
         $classes = CourseClass::where('is_active', 1)
             ->orderBy('name')
             ->get(['id', 'name']);
 
         return view('backend.modules.spot_sale.create', compact('classes'));
+    }
+
+    public function createModal()
+    {
+        return $this->create();
     }
 
     public function store(Request $req)
@@ -236,9 +237,10 @@ class SpotSaleController extends Controller
             DB::commit();
 
             return response()->json([
-                'ok'   => true,
-                'msg'  => 'Spot sale saved successfully',
-                'data' => ['id' => $spotSale->id, 'status' => $spotSale->status],
+                'ok'       => true,
+                'msg'      => 'Spot sale saved successfully',
+                'data'     => ['id' => $spotSale->id, 'status' => $spotSale->status],
+                'redirect' => route('spot-sales.index'),
             ]);
         } catch (\Throwable $e) {
             DB::rollBack();
@@ -247,14 +249,14 @@ class SpotSaleController extends Controller
         }
     }
 
-    public function editModal(SpotSale $spotSale)
+    public function edit(SpotSale $spotSale)
     {
         if ($spotSale->status === 'approved') {
             abort(403, 'Approved spot sale cannot be edited');
         }
 
         $spotSale->load([
-            'items.product:id,name,price,category_id,subcategory_id',
+            'items.product:id,name,price,thumbnail_image,category_id,subcategory_id',
             'items.product.category:id,name',
             'items.product.subcategory:id,name',
             'user:id,name',
@@ -271,6 +273,11 @@ class SpotSaleController extends Controller
             ->get(['id', 'name']);
 
         return view('backend.modules.spot_sale.edit', compact('spotSale', 'classes'));
+    }
+
+    public function editModal(SpotSale $spotSale)
+    {
+        return $this->edit($spotSale);
     }
 
     public function show(SpotSale $spotSale)
@@ -385,7 +392,12 @@ class SpotSaleController extends Controller
 
             DB::commit();
 
-            return response()->json(['ok' => true, 'msg' => 'Spot sale updated successfully', 'id' => $spotSale->id]);
+            return response()->json([
+                'ok'       => true,
+                'msg'      => 'Spot sale updated successfully',
+                'id'       => $spotSale->id,
+                'redirect' => route('spot-sales.index'),
+            ]);
         } catch (\Throwable $e) {
             DB::rollBack();
 

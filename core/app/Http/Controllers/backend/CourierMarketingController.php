@@ -24,6 +24,11 @@ class CourierMarketingController extends Controller
         return view('backend.modules.courier_marketing.index', compact('statuses'));
     }
 
+    public function create()
+    {
+        return view('backend.modules.courier_marketing.create');
+    }
+
     public function createModal()
     {
         return view('backend.modules.courier_marketing.create_modal');
@@ -115,9 +120,10 @@ class CourierMarketingController extends Controller
         });
 
         return response()->json([
-            'ok'  => true,
-            'id'  => $courierMarketing->id,
-            'msg' => 'Courier dispatch saved successfully.',
+            'ok'       => true,
+            'id'       => $courierMarketing->id,
+            'msg'      => 'Courier dispatch saved successfully.',
+            'redirect' => route('courier-marketings.index'),
         ]);
     }
 
@@ -137,6 +143,20 @@ class CourierMarketingController extends Controller
         return view('backend.modules.courier_marketing.show', compact('courierMarketing'));
     }
 
+    public function edit(CourierMarketing $courierMarketing)
+    {
+        $courierMarketing->load([
+            'representative.user',
+            'teacher.institution',
+            'institution',
+            'items.product:id,name,category_id,subcategory_id,thumbnail_image',
+            'items.product.category:id,name',
+            'items.product.subcategory:id,name',
+        ]);
+
+        return view('backend.modules.courier_marketing.edit', compact('courierMarketing'));
+    }
+
     public function editModal(CourierMarketing $courierMarketing)
     {
         $courierMarketing->load([
@@ -151,19 +171,62 @@ class CourierMarketingController extends Controller
 
     public function update(Request $request, CourierMarketing $courierMarketing)
     {
+        if (!$request->has('product_items') && $request->has('items')) {
+            $request->merge(['product_items' => $request->input('items')]);
+        }
+
         $data = $request->validate([
             'marketing_representative_id' => ['nullable', 'integer', Rule::exists('marketing_representatives', 'id')],
             'courier_company' => ['nullable','string','max:150'],
             'dispatch_date' => ['required','date'],
             'delivery_date' => ['nullable','date'],
             'note' => ['nullable','string', 'max:1000'],
+            'product_items' => ['nullable','array'],
+            'product_items.*.product_id' => ['required_with:product_items', 'integer', Rule::exists('products', 'id')],
+            'product_items.*.quantity' => ['required_with:product_items', 'integer', 'min:1'],
         ]);
 
-        $courierMarketing->update($data);
+        DB::transaction(function () use ($courierMarketing, $data, $request) {
+            $updatePayload = [
+                'courier_company' => $data['courier_company'] ?? null,
+                'dispatch_date'   => Carbon::parse($data['dispatch_date'])->toDateString(),
+                'delivery_date'   => !empty($data['delivery_date']) ? Carbon::parse($data['delivery_date'])->toDateString() : null,
+                'note'            => $data['note'] ?? null,
+            ];
+
+            if (!empty($data['marketing_representative_id'])) {
+                $updatePayload['marketing_representative_id'] = $data['marketing_representative_id'];
+            }
+
+            if ($request->has('product_items') && is_array($data['product_items'])) {
+                $mergedItems = [];
+                foreach ($data['product_items'] as $item) {
+                    $pid = (int) $item['product_id'];
+                    $mergedItems[$pid] = ($mergedItems[$pid] ?? 0) + (int) $item['quantity'];
+                }
+
+                $courierMarketing->items()->delete();
+                foreach ($mergedItems as $productId => $qty) {
+                    CourierMarketingItem::create([
+                        'courier_marketing_id' => $courierMarketing->id,
+                        'product_id'           => (int) $productId,
+                        'quantity'             => (int) $qty,
+                    ]);
+                }
+
+                $totalQty = max(1, (int) array_sum($mergedItems));
+                if (Schema::hasColumn('courier_marketings', 'quantity')) {
+                    $updatePayload['quantity'] = $totalQty;
+                }
+            }
+
+            $courierMarketing->update($updatePayload);
+        });
 
         return response()->json([
-            'ok'  => true,
-            'msg' => 'Courier entry updated successfully.',
+            'ok'       => true,
+            'msg'      => 'Courier entry updated successfully.',
+            'redirect' => route('courier-marketings.index'),
         ]);
     }
 
@@ -342,14 +405,14 @@ class CourierMarketingController extends Controller
                 . '</span>';
 
             $showUrl = route('courier-marketings.show', $item->id);
-            $editUrl = route('courier-marketings.editModal', $item->id);
+            $editUrl = route('courier-marketings.edit', $item->id);
             $statusUrl = route('courier-marketings.statusModal', $item->id);
             $deleteUrl = route('courier-marketings.destroy', $item->id);
 
             $actions = '<div class="d-inline-flex align-items-center justify-content-center gap-1 w-100">'
                 . '<a href="#" data-ajax-modal="' . $statusUrl . '" data-size="lg" class="w-32-px h-32-px rounded-circle d-inline-flex align-items-center justify-content-center bg-warning-focus text-warning-main AjaxModal" data-onsuccess="CourierMarketingIndex.onSaved" title="Call Verification / Status"><iconify-icon icon="lucide:phone-call"></iconify-icon></a>'
                 . '<a href="' . $showUrl . '" class="w-32-px h-32-px rounded-circle d-inline-flex align-items-center justify-content-center bg-info-focus text-info-main" title="View Details"><iconify-icon icon="lucide:eye"></iconify-icon></a>'
-                . '<a href="#" data-ajax-modal="' . $editUrl . '" data-size="lg" class="w-32-px h-32-px rounded-circle d-inline-flex align-items-center justify-content-center bg-success-focus text-success-main AjaxModal" data-onsuccess="CourierMarketingIndex.onSaved" title="Edit"><iconify-icon icon="lucide:edit"></iconify-icon></a>'
+                . '<a href="' . $editUrl . '" class="w-32-px h-32-px rounded-circle d-inline-flex align-items-center justify-content-center bg-success-focus text-success-main" title="Edit"><iconify-icon icon="lucide:edit"></iconify-icon></a>'
                 . '<a href="#" class="w-32-px h-32-px rounded-circle d-inline-flex align-items-center justify-content-center bg-danger-focus text-danger-main btn-courier-marketing-delete" data-url="' . $deleteUrl . '" title="Delete"><iconify-icon icon="mdi:delete"></iconify-icon></a>'
                 . '</div>';
 

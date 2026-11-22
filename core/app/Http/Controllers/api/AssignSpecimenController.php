@@ -72,6 +72,18 @@ class AssignSpecimenController extends Controller
             $query->where('division_id', $request->division_id);
         }
 
+        if ($request->filled('category_id')) {
+            $query->whereHas('items.product', function ($pq) use ($request) {
+                $pq->where('category_id', $request->category_id);
+            });
+        }
+
+        if ($request->filled('subcategory_id')) {
+            $query->whereHas('items.product', function ($pq) use ($request) {
+                $pq->where('subcategory_id', $request->subcategory_id);
+            });
+        }
+
         if ($request->filled('search')) {
             $search = trim($request->input('search'));
 
@@ -80,7 +92,8 @@ class AssignSpecimenController extends Controller
                     ->orWhere('id', $search)
                     ->orWhereHas('items.product', function ($pq) use ($search) {
                         $pq->where('name', 'like', "%{$search}%")
-                            ->orWhere('sku', 'like', "%{$search}%");
+                            ->orWhere('product_code', 'like', "%{$search}%")
+                            ->orWhere('edition', 'like', "%{$search}%");
                     })
                     ->orWhereHas('teacher', function ($tq) use ($search) {
                         $tq->where('teacher_name', 'like', "%{$search}%")
@@ -489,7 +502,10 @@ class AssignSpecimenController extends Controller
     private function relations(): array
     {
         $relations = [
-            'items.product:id,name,slug,sku,product_code,edition,price,thumbnail_image,brand_id',
+            'items.product:id,name,slug,product_code,edition,price,thumbnail_image,brand_id,category_id,subcategory_id',
+            'items.product.category:id,name,slug',
+            'items.product.subcategory:id,name,slug',
+            'items.product.brand:id,name',
             'teacher.institution',
             'teacher.institution.upazila',
             'teacher.institution.district',
