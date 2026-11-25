@@ -5,8 +5,21 @@
 @endsection
 
 @php
-    $customerType = $spotSale->teacher_id ? 'teacher' : ($spotSale->library_id ? 'library' : ($spotSale->student_id ? 'student' : ''));
-    $student = $spotSale->student;
+    $customer = $spotSale->customer;
+    $customerType = $spotSale->customerType() ?? '';
+
+    $teacherName = $customer && $customer->customer_type === 'teacher' ? $customer->name : ($spotSale->teacher?->teacher_name ?? '');
+    $teacherPhone = $customer && $customer->customer_type === 'teacher' ? $customer->phone : ($spotSale->teacher?->phone ?? '');
+    $teacherInstitution = $customer && $customer->customer_type === 'teacher' ? $customer->institution : ($spotSale->teacher?->institution ?? null);
+
+    $libraryName = $customer && $customer->customer_type === 'library' ? $customer->name : ($spotSale->library?->library_name ?? ($spotSale->library?->name ?? ''));
+    $libraryPhone = $customer && $customer->customer_type === 'library' ? $customer->phone : ($spotSale->library?->phone ?? '');
+    $libraryAddress = $customer && $customer->customer_type === 'library' ? $customer->address : ($spotSale->library?->address ?? '');
+
+    $studentName = $customer && $customer->customer_type === 'student' ? $customer->name : ($spotSale->student?->student_name ?? '');
+    $studentPhone = $customer && $customer->customer_type === 'student' ? $customer->phone : '';
+    $studentCourseClassId = $customer && $customer->customer_type === 'student' ? $customer->course_class_id : ($spotSale->student?->course_class_id ?? null);
+    $studentInstitution = $customer && $customer->customer_type === 'student' ? $customer->institution : ($spotSale->student?->institution ?? null);
 @endphp
 
 @section('content')
@@ -78,57 +91,91 @@
                     </div>
 
                     {{-- Teacher Wrap --}}
-                    <div class="col-md-12 mb-12" id="teacherWrap" style="{{ $customerType === 'teacher' ? '' : 'display:none;' }}">
-                        <label class="form-label text-sm mb-8">Select Teacher <span class="text-danger">*</span></label>
-                        <select class="form-control form-control-sm js-s2-ajax" name="teacher_id" id="teacherSelect"
-                            data-url="{{ route('teacher.teachers.select2') }}" data-placeholder="Select Teacher">
-                            @if ($spotSale->teacher)
-                                <option value="{{ $spotSale->teacher_id }}" selected>{{ $spotSale->teacher->teacher_name }}</option>
-                            @endif
-                        </select>
-                        <div class="invalid-feedback d-block teacher_id-error" style="display:none"></div>
+                    <div class="col-12" id="teacherWrap" style="{{ $customerType === 'teacher' ? '' : 'display:none;' }}">
+                        <div class="row g-3">
+                            <div class="col-md-4 mb-12">
+                                <label class="form-label text-sm mb-8">Teacher Name <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control form-control-sm radius-8" name="teacher_name" id="teacherName"
+                                    value="{{ old('teacher_name', $teacherName) }}" placeholder="Enter teacher name">
+                                <div class="invalid-feedback d-block teacher_name-error name-error" style="display:none"></div>
+                            </div>
+                            <div class="col-md-4 mb-12">
+                                <label class="form-label text-sm mb-8">Phone Number</label>
+                                <input type="text" class="form-control form-control-sm radius-8" name="teacher_phone" id="teacherPhone"
+                                    value="{{ old('teacher_phone', $teacherPhone) }}" placeholder="Enter phone number">
+                                <div class="invalid-feedback d-block teacher_phone-error phone-error" style="display:none"></div>
+                            </div>
+                            <div class="col-md-4 mb-12">
+                                <label class="form-label text-sm mb-8">Institution</label>
+                                <select class="form-control form-control-sm js-s2-ajax" name="teacher_institution_id" id="teacherInstitutionSelect"
+                                    data-url="{{ route('institution.institutions.select2') }}" data-placeholder="Select Institution">
+                                    @if ($teacherInstitution)
+                                        <option value="{{ $teacherInstitution->id }}" selected>{{ $teacherInstitution->institution_name }}</option>
+                                    @endif
+                                </select>
+                                <div class="invalid-feedback d-block teacher_institution_id-error institution_id-error" style="display:none"></div>
+                            </div>
+                        </div>
                     </div>
 
                     {{-- Library Wrap --}}
-                    <div class="col-md-12 mb-12" id="libraryWrap" style="{{ $customerType === 'library' ? '' : 'display:none;' }}">
-                        <label class="form-label text-sm mb-8">Select Library <span class="text-danger">*</span></label>
-                        <select class="form-control form-control-sm js-s2-ajax" name="library_id" id="librarySelect"
-                            data-url="{{ route('library.libraries.select2') }}" data-placeholder="Select Library">
-                            @if ($spotSale->library)
-                                <option value="{{ $spotSale->library_id }}" selected>{{ $spotSale->library->library_name ?? $spotSale->library->name }}</option>
-                            @endif
-                        </select>
-                        <div class="invalid-feedback d-block library_id-error" style="display:none"></div>
+                    <div class="col-12" id="libraryWrap" style="{{ $customerType === 'library' ? '' : 'display:none;' }}">
+                        <div class="row g-3">
+                            <div class="col-md-4 mb-12">
+                                <label class="form-label text-sm mb-8">Library Name <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control form-control-sm radius-8" name="library_name" id="libraryName"
+                                    value="{{ old('library_name', $libraryName) }}" placeholder="Enter library name">
+                                <div class="invalid-feedback d-block library_name-error name-error" style="display:none"></div>
+                            </div>
+                            <div class="col-md-4 mb-12">
+                                <label class="form-label text-sm mb-8">Phone Number</label>
+                                <input type="text" class="form-control form-control-sm radius-8" name="library_phone" id="libraryPhone"
+                                    value="{{ old('library_phone', $libraryPhone) }}" placeholder="Enter phone number">
+                                <div class="invalid-feedback d-block library_phone-error phone-error" style="display:none"></div>
+                            </div>
+                            <div class="col-md-4 mb-12">
+                                <label class="form-label text-sm mb-8">Address / Market</label>
+                                <input type="text" class="form-control form-control-sm radius-8" name="library_address" id="libraryAddress"
+                                    value="{{ old('library_address', $libraryAddress) }}" placeholder="Enter library address / market">
+                                <div class="invalid-feedback d-block library_address-error address-error" style="display:none"></div>
+                            </div>
+                        </div>
                     </div>
 
                     {{-- Student Wrap --}}
                     <div class="col-12" id="studentWrap" style="{{ $customerType === 'student' ? '' : 'display:none;' }}">
                         <div class="row g-3">
-                            <div class="col-md-4 mb-12">
+                            <div class="col-md-3 mb-12">
                                 <label class="form-label text-sm mb-8">Student Name <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control form-control-sm radius-8" name="student_name" id="studentName"
-                                    value="{{ old('student_name', $student?->student_name) }}" placeholder="Enter student name">
-                                <div class="invalid-feedback d-block student_name-error" style="display:none"></div>
+                                    value="{{ old('student_name', $studentName) }}" placeholder="Enter student name">
+                                <div class="invalid-feedback d-block student_name-error name-error" style="display:none"></div>
                             </div>
-                            <div class="col-md-4 mb-12">
+                            <div class="col-md-3 mb-12">
+                                <label class="form-label text-sm mb-8">Phone Number</label>
+                                <input type="text" class="form-control form-control-sm radius-8" name="student_phone" id="studentPhone"
+                                    value="{{ old('student_phone', $studentPhone) }}" placeholder="Enter phone number">
+                                <div class="invalid-feedback d-block student_phone-error phone-error" style="display:none"></div>
+                            </div>
+                            <div class="col-md-3 mb-12">
                                 <label class="form-label text-sm mb-8">Course Class <span class="text-danger">*</span></label>
-                                <select class="form-select form-select-sm radius-8" name="course_class_id" id="courseClassSelect">
+                                <select class="form-select form-select-sm radius-8" name="student_course_class_id" id="courseClassSelect">
                                     <option value="">Select Class</option>
                                     @foreach ($classes ?? [] as $class)
-                                        <option value="{{ $class->id }}" @selected(old('course_class_id', $student?->course_class_id) == $class->id)>{{ $class->name }}</option>
+                                        <option value="{{ $class->id }}" @selected(old('student_course_class_id', $studentCourseClassId) == $class->id)>{{ $class->name }}</option>
                                     @endforeach
                                 </select>
-                                <div class="invalid-feedback d-block course_class_id-error" style="display:none"></div>
+                                <div class="invalid-feedback d-block student_course_class_id-error course_class_id-error" style="display:none"></div>
                             </div>
-                            <div class="col-md-4 mb-12">
+                            <div class="col-md-3 mb-12">
                                 <label class="form-label text-sm mb-8">Institution <span class="text-danger">*</span></label>
-                                <select class="form-control form-control-sm js-s2-ajax" name="institution_id" id="institutionSelect"
+                                <select class="form-control form-control-sm js-s2-ajax" name="student_institution_id" id="studentInstitutionSelect"
                                     data-url="{{ route('institution.institutions.select2') }}" data-placeholder="Select Institution">
-                                    @if ($student?->institution)
-                                        <option value="{{ $student->institution_id }}" selected>{{ $student->institution->institution_name }}</option>
+                                    @if ($studentInstitution)
+                                        <option value="{{ $studentInstitution->id }}" selected>{{ $studentInstitution->institution_name }}</option>
                                     @endif
                                 </select>
-                                <div class="invalid-feedback d-block institution_id-error" style="display:none"></div>
+                                <div class="invalid-feedback d-block student_institution_id-error institution_id-error" style="display:none"></div>
                             </div>
                         </div>
                     </div>
@@ -144,7 +191,12 @@
         </div>
 
         {{-- 2. REUSABLE POS PRODUCT PICKER (With Price, Preloaded Items & Grand Total) --}}
-        @include('backend.modules.products.partial.product_item_picker', ['show_price' => true, 'items' => $spotSale->items])
+        @include('backend.modules.products.partial.product_item_picker', [
+            'show_price'    => true,
+            'items'         => $spotSale->items,
+            'copy_type'     => 'sale',
+            'user_selector' => '#spotSaleUserSelect',
+        ])
 
         {{-- Hidden Status Input --}}
         <input type="hidden" name="status" id="spotSaleStatus" value="{{ $spotSale->status }}">
@@ -174,24 +226,20 @@
                 $('#libraryWrap').toggle(type === 'library');
                 $('#studentWrap').toggle(type === 'student');
 
-                $('#teacherSelect').prop('required', type === 'teacher');
-                $('#librarySelect').prop('required', type === 'library');
+                // Toggle disabled attribute so inactive inputs are not submitted
+                $('#teacherWrap :input').prop('disabled', type !== 'teacher');
+                $('#libraryWrap :input').prop('disabled', type !== 'library');
+                $('#studentWrap :input').prop('disabled', type !== 'student');
+
+                $('#teacherName').prop('required', type === 'teacher');
+                $('#libraryName').prop('required', type === 'library');
                 $('#studentName').prop('required', type === 'student');
                 $('#courseClassSelect').prop('required', type === 'student');
-                $('#institutionSelect').prop('required', type === 'student');
+                $('#studentInstitutionSelect').prop('required', type === 'student');
             }
 
-            $('#customerType').on('change', function() {
-                const type = $(this).val();
-                if (type !== 'teacher') $('#teacherSelect').val(null).trigger('change');
-                if (type !== 'library') $('#librarySelect').val(null).trigger('change');
-                if (type !== 'student') {
-                    $('#studentName').val('');
-                    $('#courseClassSelect').val('');
-                    $('#institutionSelect').val(null).trigger('change');
-                }
-                toggleCustomer();
-            });
+            $('#customerType').on('change', toggleCustomer);
+            toggleCustomer();
 
             // Auto-init Select2 helpers
             if (window.S2 && typeof window.S2.auto === 'function') {

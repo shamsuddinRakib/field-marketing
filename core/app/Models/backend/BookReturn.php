@@ -14,10 +14,16 @@ class BookReturn extends Model
         'rejected' => 'Rejected',
     ];
 
+    public const TYPES = [
+        'specimen' => 'Specimen Copy',
+        'sale'     => 'Sale Copy',
+    ];
+
     protected $fillable = [
         'marketing_representative_id',
         'institution_id',
         'product_id',
+        'return_type',
         'issued_quantity',
         'returned_quantity',
         'note',
@@ -50,5 +56,10 @@ class BookReturn extends Model
     public function statusLabel(): string
     {
         return self::STATUSES[$this->status] ?? ucfirst((string) $this->status);
+    }
+
+    public function typeLabel(): string
+    {
+        return self::TYPES[$this->return_type] ?? 'Specimen Copy';
     }
 }

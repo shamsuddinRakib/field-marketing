@@ -109,7 +109,10 @@
             </span>
           </div>
           <h4 class="mb-0 fw-bold text-success-700">{{ number_format($totalInHand) }}</h4>
-          <small class="text-success-600">Current active stock</small>
+          <div class="d-flex align-items-center gap-1 mt-1 flex-wrap">
+            <span class="badge bg-info-subtle text-info-700 border border-info-subtle text-xs px-6 py-2" title="Specimen Copy Stock">Specimen: {{ number_format($totalSpecimenInHand ?? 0) }}</span>
+            <span class="badge bg-primary-subtle text-primary-700 border border-primary-subtle text-xs px-6 py-2" title="Sale Copy Stock">Sale: {{ number_format($totalSaleInHand ?? 0) }}</span>
+          </div>
         </div>
       </div>
     </div>
@@ -214,6 +217,8 @@
               $sumSpot  = 0;
               $sumRet   = 0;
               $sumStock = 0;
+              $sumSpecStock = 0;
+              $sumSaleStock = 0;
             @endphp
             @forelse ($products as $idx => $product)
               @php
@@ -222,12 +227,16 @@
                 $spot  = (int) $product->spot_sold_qty;
                 $ret   = (int) $product->returned_qty;
                 $stock = (int) $product->current_stock;
+                $specStock = (int) ($product->specimen_stock ?? 0);
+                $saleStock = (int) ($product->sale_stock ?? 0);
 
                 $sumDist  += $dist;
                 $sumAsgn  += $asgn;
                 $sumSpot  += $spot;
                 $sumRet   += $ret;
                 $sumStock += $stock;
+                $sumSpecStock += $specStock;
+                $sumSaleStock += $saleStock;
 
                 $badgeClass = $stock > 0 ? 'bg-success-600 text-white' : 'bg-secondary text-white';
               @endphp
@@ -254,9 +263,15 @@
                   <span class="fw-semibold text-warning fs-6">{{ number_format($ret) }}</span>
                 </td>
                 <td class="text-center">
-                  <span class="badge text-sm fw-semibold {{ $badgeClass }} px-16 py-6 radius-4">
-                    {{ number_format($stock) }}
-                  </span>
+                  <div class="d-flex flex-column align-items-center gap-1">
+                    <span class="badge text-sm fw-semibold {{ $badgeClass }} px-12 py-4 radius-4">
+                      Total: {{ number_format($stock) }}
+                    </span>
+                    <div class="d-flex align-items-center gap-1" style="font-size:11px;">
+                      <span class="badge bg-info-subtle text-info-700 border border-info-subtle" title="Specimen Copy Stock">Spec: {{ number_format($specStock) }}</span>
+                      <span class="badge bg-primary-subtle text-primary-700 border border-primary-subtle" title="Sale Copy Stock">Sale: {{ number_format($saleStock) }}</span>
+                    </div>
+                  </div>
                 </td>
               </tr>
             @empty
@@ -280,9 +295,15 @@
                 <td class="text-center text-success fs-6 fw-bold">{{ number_format($sumSpot) }}</td>
                 <td class="text-center text-warning fs-6 fw-bold">{{ number_format($sumRet) }}</td>
                 <td class="text-center">
-                  <span class="badge fs-6 fw-bold bg-success-700 text-white px-16 py-8 radius-4">
-                    {{ number_format($sumStock) }}
-                  </span>
+                  <div class="d-flex flex-column align-items-center gap-1">
+                    <span class="badge fs-6 fw-bold bg-success-700 text-white px-12 py-4 radius-4">
+                      Total: {{ number_format($sumStock) }}
+                    </span>
+                    <div class="d-flex align-items-center gap-1" style="font-size:11px;">
+                      <span class="badge bg-info-subtle text-info-700 border border-info-subtle">Spec: {{ number_format($sumSpecStock) }}</span>
+                      <span class="badge bg-primary-subtle text-primary-700 border border-primary-subtle">Sale: {{ number_format($sumSaleStock) }}</span>
+                    </div>
+                  </div>
                 </td>
               </tr>
             </tfoot>

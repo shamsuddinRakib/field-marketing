@@ -6,12 +6,22 @@ use Illuminate\Database\Eloquent\Model;
 
 class ProductDistribution extends Model
 {
-   protected $table = 'product_distributions';
-   protected $guarded = [
-    'id',
-    'created_at',
-    'updated_at'
-   ];
+    public const DISTRIBUTION_TYPES = [
+        'specimen' => 'Specimen Copy',
+        'sale' => 'Sale Copy',
+    ];
+
+    protected $table = 'product_distributions';
+    protected $guarded = [
+        'id',
+        'created_at',
+        'updated_at'
+    ];
+
+    public function distributionTypeLabel(): string
+    {
+        return self::DISTRIBUTION_TYPES[$this->distribution_type] ?? ucfirst((string) ($this->distribution_type ?? 'specimen'));
+    }
 
     public function items()
     {

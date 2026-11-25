@@ -31,7 +31,7 @@ class ProductDistributionController extends Controller
         $searchVal = trim($request->input('search.value', ''));
 
         $base = ProductDistribution::query()
-            ->select(['id', 'user_id', 'note', 'status', 'created_at'])
+            ->select(['id', 'user_id', 'distribution_type', 'note', 'status', 'created_at'])
             ->with(['user:id,name', 'items.product:id,name'])
             ->withSum('items as items_qty', 'quantity');
 
@@ -92,6 +92,10 @@ class ProductDistributionController extends Controller
                 ? $statusLabel
                 : '<a href="javascript:void(0)" class="AjaxModal" data-ajax-modal="' . route('product-distribution.statusModal', $b->id) . '" data-onsuccess="BranchesIndex.onSaved" data-size="sm">' . $statusLabel . '</a>';
 
+            $typeBadge = ($b->distribution_type ?? 'specimen') === 'sale'
+                ? '<span class="badge bg-success-focus text-success-main border border-success px-12 py-4 radius-4">Sale Copy</span>'
+                : '<span class="badge bg-info-focus text-info-main border border-info px-12 py-4 radius-4">Specimen Copy</span>';
+
             $actions = '<div class="d-inline-flex align-items-center gap-1">';
 
             $actions .= '<a href="#" class="w-32-px h-32-px rounded-circle d-inline-flex align-items-center justify-content-center bg-info-focus text-info-main AjaxModal" data-ajax-modal="' . route('product-distribution.show', $b->id) . '" data-size="lg" title="View Details"><iconify-icon icon="mdi:eye"></iconify-icon></a>';
@@ -106,6 +110,7 @@ class ProductDistributionController extends Controller
             $data[] = [
                 $b->id,
                 $nameCol,
+                $typeBadge,
                 $whenCol,
                 number_format((float) $qty),
                 e($b->note ?? '—'),
@@ -122,20 +127,46 @@ class ProductDistributionController extends Controller
         ]);
     }
 
-    public function create()
+    public function create(Request $req)
     {
-        return view('backend.modules.product_distribution.create');
+        $fromBookRequest = null;
+        $requestedItems = collect();
+
+        if ($req->filled('book_request_id')) {
+            $bookRequest = BookRequest::with([
+                'representative.user',
+                'items.product:id,name,category_id,subcategory_id,thumbnail_image,price',
+                'items.product.category:id,name',
+                'items.product.subcategory:id,name',
+            ])->find((int) $req->input('book_request_id'));
+
+            if ($bookRequest) {
+                $fromBookRequest = $bookRequest;
+                $requestedItems = $bookRequest->request_group_id
+                    ? BookRequest::with([
+                        'items.product:id,name,category_id,subcategory_id,thumbnail_image,price',
+                        'items.product.category:id,name',
+                        'items.product.subcategory:id,name',
+                    ])->where('request_group_id', $bookRequest->request_group_id)->get()
+                        ->flatMap(fn (BookRequest $request) => $request->items)->values()
+                    : $bookRequest->items;
+            }
+        }
+
+        return view('backend.modules.product_distribution.create', compact('fromBookRequest', 'requestedItems'));
     }
 
-    public function createModal()
+    public function createModal(Request $req)
     {
-        return $this->create();
+        return $this->create($req);
     }
 
     public function store(Request $req)
     {
         $data = $req->validate([
+            'book_request_id'     => ['nullable', 'integer', 'exists:book_requests,id'],
             'user_id'             => ['required', 'integer', 'exists:users,id'],
+            'distribution_type'   => ['required', 'string', 'in:specimen,sale'],
             'note'                => ['nullable', 'string', 'max:255'],
             'items'               => ['required', 'array', 'min:1'],
             'items.*.product_id'  => ['required', 'integer', 'exists:products,id'],
@@ -152,11 +183,12 @@ class ProductDistributionController extends Controller
         DB::beginTransaction();
         try {
             $distribution = ProductDistribution::create([
-                'user_id' => $data['user_id'],
-                'product_id' => $data['items'][0]['product_id'],
-                'quantity'   => collect($data['items'])->sum('quantity'),
-                'note'    => $data['note'] ?? null,
-                'status'  => 'pending',
+                'user_id'           => $data['user_id'],
+                'product_id'        => $data['items'][0]['product_id'],
+                'quantity'          => collect($data['items'])->sum('quantity'),
+                'distribution_type' => $data['distribution_type'] ?? 'specimen',
+                'note'              => $data['note'] ?? null,
+                'status'            => 'pending',
             ]);
 
             foreach ($merged as $productId => $qty) {
@@ -165,6 +197,23 @@ class ProductDistributionController extends Controller
                     'product_id'              => $productId,
                     'quantity'                => $qty,
                 ]);
+            }
+
+            if (!empty($data['book_request_id'])) {
+                $br = BookRequest::find($data['book_request_id']);
+                if ($br) {
+                    if ($br->request_group_id) {
+                        BookRequest::where('request_group_id', $br->request_group_id)->update([
+                            'product_distribution_id' => $distribution->id,
+                            'status' => 'approved',
+                        ]);
+                    } else {
+                        $br->update([
+                            'product_distribution_id' => $distribution->id,
+                            'status' => 'approved',
+                        ]);
+                    }
+                }
             }
 
             DB::commit();
@@ -226,6 +275,7 @@ class ProductDistributionController extends Controller
 
         $data = $req->validate([
             'user_id'             => ['required', 'integer', 'exists:users,id'],
+            'distribution_type'   => ['required', 'string', 'in:specimen,sale'],
             'note'                => ['nullable', 'string', 'max:255'],
             'items'               => ['required', 'array', 'min:1'],
             'items.*.product_id'  => ['required', 'integer', 'exists:products,id'],
@@ -241,8 +291,9 @@ class ProductDistributionController extends Controller
         DB::beginTransaction();
         try {
             $productDistribution->update([
-                'user_id' => $data['user_id'],
-                'note'    => $data['note'] ?? null,
+                'user_id'           => $data['user_id'],
+                'distribution_type' => $data['distribution_type'] ?? ($productDistribution->distribution_type ?? 'specimen'),
+                'note'              => $data['note'] ?? null,
             ]);
 
             $productDistribution->items()->delete();
@@ -317,18 +368,31 @@ class ProductDistributionController extends Controller
 
         DB::beginTransaction();
         try {
+            $distType = in_array($productDistribution->distribution_type, ['specimen', 'sale'])
+                ? $productDistribution->distribution_type
+                : 'specimen';
+
             foreach ($productDistribution->items as $item) {
                 $stock = CurrentStock::where('user_id', $productDistribution->user_id)
                     ->where('product_id', $item->product_id)
+                    ->lockForUpdate()
                     ->first();
 
                 if ($stock) {
-                    $stock->increment('current_stock', $item->quantity);
+                    if ($distType === 'sale') {
+                        $stock->increment('sale_stock', $item->quantity);
+                    } else {
+                        $stock->increment('specimen_stock', $item->quantity);
+                    }
+                    $stock->current_stock = (int) $stock->specimen_stock + (int) $stock->sale_stock;
+                    $stock->save();
                 } else {
                     CurrentStock::create([
-                        'user_id'       => $productDistribution->user_id,
-                        'product_id'    => $item->product_id,
-                        'current_stock' => $item->quantity,
+                        'user_id'        => $productDistribution->user_id,
+                        'product_id'     => $item->product_id,
+                        'specimen_stock' => $distType === 'specimen' ? $item->quantity : 0,
+                        'sale_stock'     => $distType === 'sale' ? $item->quantity : 0,
+                        'current_stock'  => $item->quantity,
                     ]);
                 }
 
@@ -336,6 +400,7 @@ class ProductDistributionController extends Controller
                     'ref_type'   => 'Distribution',
                     'ref_id'     => $productDistribution->id,
                     'product_id' => $item->product_id,
+                    'stock_type' => $distType,
                     'quantity'   => $item->quantity,
                     'direction'  => 'IN',
                     'note'       => $productDistribution->note ?? '',
@@ -349,7 +414,7 @@ class ProductDistributionController extends Controller
         } catch (\Throwable $e) {
             DB::rollBack();
 
-            return response()->json(['ok' => false, 'msg' => 'Something went wrong. Please try again.'], 500);
+            return response()->json(['ok' => false, 'msg' => $e->getMessage() ?: 'Something went wrong. Please try again.'], 500);
         }
 
         return response()->json(['ok' => true, 'msg' => 'Status Updated Successfully']);

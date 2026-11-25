@@ -45,7 +45,7 @@
         <input type="hidden" name="request_group_id" value="{{ $bookRequest->request_group_id }}">
         <input type="hidden" name="exclude_request_id" value="{{ $bookRequest->id }}">
         <div class="row">
-            <div class="col-md-6 mb-16">
+            <div class="col-md-4 mb-16">
                 <label class="form-label text-sm mb-6">Representative <span class="text-danger">*</span></label>
                 <select name="marketing_representative_id" class="form-control radius-8 js-representative-select"
                     required>
@@ -62,7 +62,17 @@
                 <div class="invalid-feedback d-block marketing_representative_id-error" style="display:none"></div>
             </div>
 
-            <div class="col-md-6 mb-16">
+            <div class="col-md-4 mb-16">
+                <label class="form-label text-sm mb-6">Request Type <span class="text-danger">*</span></label>
+                <select name="request_type" class="form-select radius-8" required>
+                    @foreach (\App\Models\backend\BookRequest::REQUEST_TYPES as $value => $label)
+                        <option value="{{ $value }}" @selected(old('request_type', $bookRequest->request_type ?? 'specimen') === $value)>{{ $label }}</option>
+                    @endforeach
+                </select>
+                <div class="invalid-feedback d-block request_type-error" style="display:none"></div>
+            </div>
+
+            <div class="col-md-4 mb-16">
                 <label class="form-label text-sm mb-6">Date <span class="text-danger">*</span></label>
                 <input type="date" name="request_date" class="form-control radius-8"
                     value="{{ old('request_date', $bookRequest->request_date?->format('Y-m-d')) }}" required>

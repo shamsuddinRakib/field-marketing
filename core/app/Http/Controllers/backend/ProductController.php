@@ -1153,33 +1153,58 @@ class ProductController extends Controller
     public function select2(Request $r)
     {
         $q    = trim($r->input('q', ''));
-        $base = Product::query()->where('has_variants', 0)->where('is_active', 1);
+        $base = Product::query()->where('products.has_variants', 0)->where('products.is_active', 1);
 
         if ($r->filled('category_id')) {
-            $base->where('category_id', $r->input('category_id'));
+            $base->where('products.category_id', $r->input('category_id'));
         }
 
         if ($r->filled('subcategory_id')) {
-            $base->where('subcategory_id', $r->input('subcategory_id'));
+            $base->where('products.subcategory_id', $r->input('subcategory_id'));
         }
 
         if ($q !== '') {
             $base->where(function ($x) use ($q) {
-                $x->where('name', 'like', "%{$q}%");
+                $x->where('products.name', 'like', "%{$q}%");
             });
+        }
+
+        $userId   = $r->input('user_id');
+        $copyType = $r->input('copy_type'); // 'specimen' or 'sale'
+
+        if ($r->filled('copy_type')) {
+            if (!$userId) {
+                return response()->json([
+                    'results' => [],
+                    'message' => 'Please select a Marketing Representative first.'
+                ]);
+            }
+
+            $resolvedUserId = \App\Models\backend\MarketingRepresentative::where('id', $userId)->value('user_id') ?? $userId;
+            $stockCol = $copyType === 'sale' ? 'sale_stock' : 'specimen_stock';
+
+            $base->join('current_stocks', function ($join) use ($resolvedUserId) {
+                $join->on('current_stocks.product_id', '=', 'products.id')
+                     ->where('current_stocks.user_id', '=', $resolvedUserId);
+            })
+            ->where("current_stocks.{$stockCol}", '>', 0)
+            ->select('products.id', 'products.name', 'products.thumbnail_image', 'products.price', "current_stocks.{$stockCol} as available_stock");
+        } else {
+            $base->select('products.id', 'products.name', 'products.thumbnail_image', 'products.price');
         }
 
         $limit = $r->filled('limit') ? min((int) $r->input('limit'), 200) : 20;
 
-        $items = $base->orderBy('id', 'desc')->orderBy('name')
-            ->limit($limit)->get(['id', 'name', 'thumbnail_image', 'price']);
+        $items = $base->orderBy('products.id', 'desc')->orderBy('products.name')
+            ->limit($limit)->get();
 
         return response()->json([
             'results' => $items->map(fn($t) => [
-                'id'    => $t->id,
-                'text'  => $t->name,
-                'image' => image($t->thumbnail_image),
-                'price' => (float) ($t->price ?? 0),
+                'id'              => $t->id,
+                'text'            => $t->name . (isset($t->available_stock) ? ' (Stock: ' . (int) $t->available_stock . ')' : ''),
+                'image'           => image($t->thumbnail_image),
+                'price'           => (float) ($t->price ?? 0),
+                'available_stock' => isset($t->available_stock) ? (int) $t->available_stock : null,
             ]),
         ]);
     }

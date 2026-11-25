@@ -17,6 +17,14 @@
                     <strong>{{ $bookRequest->representative?->employee_id ?? 'N/A' }}</strong>
                 </div>
                 <div class="col-md-6">
+                    <small class="text-muted d-block">Request Type</small>
+                    @if ($bookRequest->request_type === 'sale')
+                        <span class="badge text-sm fw-semibold bg-success-600 px-12 py-4 radius-4 text-white">Sale Copy</span>
+                    @else
+                        <span class="badge text-sm fw-semibold bg-info-600 px-12 py-4 radius-4 text-white">Specimen Copy</span>
+                    @endif
+                </div>
+                <div class="col-md-6">
                     <small class="text-muted d-block">Status</small>
                     @if ($bookRequest->status === 'approved')
                         <span class="badge text-sm fw-semibold bg-dark-success-gradient px-20 py-9 radius-4 text-white">Approved</span>
@@ -70,7 +78,19 @@
         </tfoot>
     </table>
 
-    <div class="d-flex justify-content-end gap-2 mt-16">
+    <div class="d-flex justify-content-between align-items-center gap-2 mt-16">
+        <div>
+            @if ($bookRequest->status === 'pending')
+                <a href="{{ route('product-distribution.create', ['book_request_id' => $bookRequest->id]) }}" class="btn btn-sm btn-primary d-inline-flex align-items-center gap-1">
+                    <iconify-icon icon="solar:box-delivery-bold" class="text-base"></iconify-icon>
+                    Create Distribution / Distribute Books
+                </a>
+            @elseif ($bookRequest->product_distribution_id)
+                <span class="badge bg-success-focus text-success-600 border border-success px-12 py-6 radius-4">
+                    Linked to Distribution #{{ $bookRequest->product_distribution_id }}
+                </span>
+            @endif
+        </div>
         <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Close</button>
     </div>
 </div>

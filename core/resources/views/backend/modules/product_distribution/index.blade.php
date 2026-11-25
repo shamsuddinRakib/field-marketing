@@ -54,6 +54,7 @@
               </div>
             </th>
             <th>Distributed To</th>
+            <th>Type</th>
             <th>When</th>
             <th>Total Qty</th>
             <th>Note</th>

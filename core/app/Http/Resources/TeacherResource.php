@@ -37,12 +37,18 @@ class TeacherResource extends JsonResource
             'department' => $this->department,
             'subject' => $this->subject,
             'class_name' => $this->class_name,
+            'assign_inst_type' => $this->autoDetectInstType($institution?->institution_name),
 
             'institution' => $institution ? [
                 'id' => $institution->id,
                 'name' => $institution->institution_name,
                 'code' => $institution->code,
+                'assign_inst_type' => $this->autoDetectInstType($institution->institution_name),
             ] : null,
+
+            'upazila_id' => $this->upazila_id ?: $institution?->upazila_id,
+            'district_id' => $this->district_id ?: $institution?->district_id,
+            'division_id' => $this->division_id ?: $institution?->division_id,
 
             'upazila' => [
                 'id' => $this->upazila_id ?: $institution?->upazila_id,
@@ -69,5 +75,28 @@ class TeacherResource extends JsonResource
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];
+    }
+
+    private function autoDetectInstType(?string $name): string
+    {
+        if (!$name) {
+            return 'school';
+        }
+
+        $lower = mb_strtolower($name);
+        if (str_contains($lower, 'college') || str_contains($lower, 'কলেজ')) {
+            return 'college';
+        }
+        if (str_contains($lower, 'school') || str_contains($lower, 'স্কুল') || str_contains($lower, 'বিদ্যালয়') || str_contains($lower, 'মাদ্রাসা') || str_contains($lower, 'madrasah')) {
+            return 'school';
+        }
+        if (str_contains($lower, 'coaching') || str_contains($lower, 'কোচিং')) {
+            return 'coaching';
+        }
+        if (str_contains($lower, 'batch') || str_contains($lower, 'ব্যাচ')) {
+            return 'batch';
+        }
+
+        return 'school';
     }
 }

@@ -30,36 +30,47 @@ class SpotSaleResource extends JsonResource
 
     public function toArray(Request $request): array
     {
-        $customerType = $this->student_id
-            ? 'student'
-            : ($this->library_id ? 'library' : 'teacher');
-
-        $customerId = match ($customerType) {
-            'student' => $this->student_id,
-            'library' => $this->library_id,
-            default => $this->teacher_id,
-        };
+        $customerType = $this->customerType();
+        $customerName = $this->customerName();
+        $customerPhone = $this->customerPhone();
 
         return [
             'id' => $this->id,
             'user_id' => $this->user_id,
 
-            'customer_type' => $customerType,
-            'customer_id' => $customerId,
+            'customer_type'  => $customerType,
+            'customer_id'    => $this->customer_id ?? ($this->teacher_id ?: ($this->library_id ?: $this->student_id)),
+            'customer_name'  => $customerName,
+            'customer_phone' => $customerPhone !== '—' ? $customerPhone : null,
 
             'teacher_id' => $this->teacher_id,
             'library_id' => $this->library_id,
             'student_id' => $this->student_id,
 
-            'total_amount' => $this->total,
-            'note' => $this->note,
-            'status' => $this->status,
-            'created_at' => $this->created_at,
-            'updated_at' => $this->updated_at,
+            'subtotal'     => $this->subtotal !== null ? (float) $this->subtotal : (float) $this->total,
+            'discount'     => (float) ($this->discount ?? 0),
+            'total_amount' => (float) $this->total,
+            'grand_total'  => (float) $this->total,
+            'note'         => $this->note,
+            'status'       => $this->status,
+            'created_at'   => $this->created_at,
+            'updated_at'   => $this->updated_at,
 
             'items' => SpotSaleItemResource::collection(
                 $this->whenLoaded('items')
             ),
+
+            'customer' => $this->customer ? [
+                'id'               => $this->customer->id,
+                'customer_type'    => $this->customer->customer_type,
+                'name'             => $this->customer->name,
+                'phone'            => $this->customer->phone,
+                'institution_id'   => $this->customer->institution_id,
+                'institution_name' => $this->customer->institution?->institution_name,
+                'course_class_id'  => $this->customer->course_class_id,
+                'class_name'       => $this->customer->courseClass?->name,
+                'address'          => $this->customer->address,
+            ] : null,
 
             'teacher' => $this->whenLoaded('teacher'),
             'library' => $this->whenLoaded('library'),
@@ -70,11 +81,11 @@ class SpotSaleResource extends JsonResource
                 }
 
                 return [
-                    'id' => $this->student->id,
-                    'student_name' => $this->student->student_name,
-                    'course_class_id' => $this->student->course_class_id,
-                    'class_name' => $this->student->courseClass?->name,
-                    'institution_id' => $this->student->institution_id,
+                    'id'               => $this->student->id,
+                    'student_name'     => $this->student->student_name,
+                    'course_class_id'  => $this->student->course_class_id,
+                    'class_name'       => $this->student->courseClass?->name,
+                    'institution_id'   => $this->student->institution_id,
                     'institution_name' => $this->student->institution?->institution_name,
                 ];
             }),

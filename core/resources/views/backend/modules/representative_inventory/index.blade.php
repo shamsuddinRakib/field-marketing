@@ -52,7 +52,10 @@
             </span>
           </div>
           <h4 class="mb-0 fw-bold text-success-700">{{ number_format($totalInField) }}</h4>
-          <small class="text-success-600">Total books with MRs</small>
+          <div class="d-flex align-items-center gap-1 mt-1 flex-wrap">
+            <span class="badge bg-info-subtle text-info-700 border border-info-subtle text-xs px-6 py-2" title="Specimen Copy Stock">Specimen: {{ number_format($totalSpecimenInField) }}</span>
+            <span class="badge bg-primary-subtle text-primary-700 border border-primary-subtle text-xs px-6 py-2" title="Sale Copy Stock">Sale: {{ number_format($totalSaleInField) }}</span>
+          </div>
         </div>
       </div>
     </div>

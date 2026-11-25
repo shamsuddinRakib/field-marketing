@@ -18,6 +18,8 @@ class RepresentativeInventoryController extends Controller
     {
         // KPI Summary Cards
         $totalInField = (int) CurrentStock::sum('current_stock');
+        $totalSpecimenInField = (int) CurrentStock::sum('specimen_stock');
+        $totalSaleInField = (int) CurrentStock::sum('sale_stock');
 
         $totalDistributed = (int) DB::table('product_distribution_items as pdi')
             ->join('product_distributions as pd', 'pd.id', '=', 'pdi.product_distribution_id')
@@ -40,6 +42,8 @@ class RepresentativeInventoryController extends Controller
 
         return view('backend.modules.representative_inventory.index', compact(
             'totalInField',
+            'totalSpecimenInField',
+            'totalSaleInField',
             'totalDistributed',
             'totalAssigned',
             'totalSpotSold',
@@ -103,7 +107,12 @@ class RepresentativeInventoryController extends Controller
             // 5. Current Stock Total In Hand
             ->leftJoinSub(
                 DB::table('current_stocks as cs')
-                    ->select('cs.user_id', DB::raw('SUM(cs.current_stock) as current_stock_total'))
+                    ->select(
+                        'cs.user_id',
+                        DB::raw('SUM(cs.current_stock) as current_stock_total'),
+                        DB::raw('SUM(cs.specimen_stock) as specimen_stock_total'),
+                        DB::raw('SUM(cs.sale_stock) as sale_stock_total')
+                    )
                     ->groupBy('cs.user_id'),
                 'stock_sum',
                 'stock_sum.user_id', '=', 'mr.user_id'
@@ -122,7 +131,9 @@ class RepresentativeInventoryController extends Controller
                 DB::raw('COALESCE(assign_sum.total_assigned, 0) as total_assigned'),
                 DB::raw('COALESCE(spot_sum.total_spot_sold, 0) as total_spot_sold'),
                 DB::raw('COALESCE(return_sum.total_returned, 0) as total_returned'),
-                DB::raw('COALESCE(stock_sum.current_stock_total, 0) as current_stock')
+                DB::raw('COALESCE(stock_sum.current_stock_total, 0) as current_stock'),
+                DB::raw('COALESCE(stock_sum.specimen_stock_total, 0) as specimen_stock'),
+                DB::raw('COALESCE(stock_sum.sale_stock_total, 0) as sale_stock')
             );
 
         $total = (clone $query)->count('mr.id');
@@ -199,9 +210,13 @@ class RepresentativeInventoryController extends Controller
                 ? 'bg-success-600 text-white'
                 : 'bg-secondary text-white';
 
-            $stockCol = '<div class="text-center"><span class="badge text-sm fw-semibold ' . $stockClass . ' px-16 py-6 radius-4">'
-                . number_format((int) $row->current_stock)
-                . '</span></div>';
+            $stockCol = '<div class="d-flex flex-column align-items-center gap-1">
+                <span class="badge text-sm fw-semibold ' . $stockClass . ' px-12 py-4 radius-4">Total: ' . number_format((int) $row->current_stock) . '</span>
+                <div class="d-flex align-items-center gap-1" style="font-size:11px;">
+                    <span class="badge bg-info-subtle text-info-700 border border-info-subtle" title="Specimen Copy Stock">Spec: ' . number_format((int) $row->specimen_stock) . '</span>
+                    <span class="badge bg-primary-subtle text-primary-700 border border-primary-subtle" title="Sale Copy Stock">Sale: ' . number_format((int) $row->sale_stock) . '</span>
+                </div>
+            </div>';
 
             $actionCol = '<div class="d-flex align-items-center justify-content-center w-100">
                 <a href="' . route('representative-inventory.show', $row->mr_id) . '"
@@ -238,16 +253,20 @@ class RepresentativeInventoryController extends Controller
         $representative->load(['user', 'mrDesignation', 'branch', 'upazila', 'territories.upazila']);
         $products = $this->getRepresentativeProducts($representative);
 
-        $totalInHand      = (int) $products->sum('current_stock');
-        $totalDistributed = (int) $products->sum('distributed_qty');
-        $totalAssigned    = (int) $products->sum('assigned_qty');
-        $totalSpotSold    = (int) $products->sum('spot_sold_qty');
-        $totalReturned    = (int) $products->sum('returned_qty');
+        $totalInHand          = (int) $products->sum('current_stock');
+        $totalSpecimenInHand  = (int) $products->sum('specimen_stock');
+        $totalSaleInHand      = (int) $products->sum('sale_stock');
+        $totalDistributed     = (int) $products->sum('distributed_qty');
+        $totalAssigned        = (int) $products->sum('assigned_qty');
+        $totalSpotSold        = (int) $products->sum('spot_sold_qty');
+        $totalReturned        = (int) $products->sum('returned_qty');
 
         return view('backend.modules.representative_inventory.show', compact(
             'representative',
             'products',
             'totalInHand',
+            'totalSpecimenInHand',
+            'totalSaleInHand',
             'totalDistributed',
             'totalAssigned',
             'totalSpotSold',
@@ -317,6 +336,8 @@ class RepresentativeInventoryController extends Controller
                 'p.name as product_name',
                 'p.product_code',
                 DB::raw('COALESCE(cs.current_stock, 0) as current_stock'),
+                DB::raw('COALESCE(cs.specimen_stock, 0) as specimen_stock'),
+                DB::raw('COALESCE(cs.sale_stock, 0) as sale_stock'),
                 DB::raw('COALESCE(dist.qty, 0) as distributed_qty'),
                 DB::raw('COALESCE(asgn.qty, 0) as assigned_qty'),
                 DB::raw('COALESCE(spot.qty, 0) as spot_sold_qty'),

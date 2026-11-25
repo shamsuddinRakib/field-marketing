@@ -44,7 +44,7 @@
                 <h6 class="mb-12 fw-semibold">Request Information</h6>
 
                 <div class="row g-3">
-                    <div class="col-md-4 mb-12">
+                    <div class="col-md-3 mb-12">
                         <label class="form-label text-sm mb-8">Representative <span class="text-danger">*</span></label>
                         @php
                             $userRep = auth()->user()->representative ?? \App\Models\backend\MarketingRepresentative::where('user_id', auth()->id())->first();
@@ -61,14 +61,24 @@
                         <div class="invalid-feedback d-block marketing_representative_id-error" style="display:none"></div>
                     </div>
 
-                    <div class="col-md-4 mb-12">
+                    <div class="col-md-3 mb-12">
+                        <label class="form-label text-sm mb-8">Request Type <span class="text-danger">*</span></label>
+                        <select name="request_type" class="form-select form-select-sm radius-8" required>
+                            @foreach (\App\Models\backend\BookRequest::REQUEST_TYPES as $value => $label)
+                                <option value="{{ $value }}" @selected(old('request_type', 'specimen') === $value)>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                        <div class="invalid-feedback d-block request_type-error" style="display:none"></div>
+                    </div>
+
+                    <div class="col-md-3 mb-12">
                         <label class="form-label text-sm mb-8">Date <span class="text-danger">*</span></label>
                         <input type="date" name="request_date" class="form-control form-control-sm radius-8"
                             value="{{ old('request_date', date('Y-m-d')) }}" required>
                         <div class="invalid-feedback d-block request_date-error" style="display:none"></div>
                     </div>
 
-                    <div class="col-md-4 mb-12">
+                    <div class="col-md-3 mb-12">
                         <label class="form-label text-sm mb-8">Status <span class="text-danger">*</span></label>
                         <select name="status" class="form-select form-select-sm radius-8" required>
                             @foreach (\App\Models\backend\BookRequest::STATUSES as $value => $label)

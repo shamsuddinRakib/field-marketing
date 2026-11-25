@@ -69,7 +69,7 @@ class TeacherController extends Controller
             $teacherName = trim($row['teacher_name'] ?? $row['name'] ?? '');
             $rawPhone = trim((string)($row['phone'] ?? $row['mobile'] ?? ''));
 
-            // Clean phone number (strip hyphens, spaces, leading 880)
+            // Clean phone number (strip hyphens, spaces, leading +880 / 880 / 00880)
             $phoneDigits = preg_replace('/[^\d]/', '', $rawPhone);
             if (str_starts_with($phoneDigits, '880') && strlen($phoneDigits) === 13) {
                 $phone = '0' . substr($phoneDigits, 3);
@@ -81,32 +81,207 @@ class TeacherController extends Controller
                 $phone = $phoneDigits;
             }
 
-            // Skip rows that don't have both teacher_name and phone
-            if ($teacherName === '' || $phone === '') {
+            // Skip entirely empty rows
+            if ($teacherName === '' && $rawPhone === '') {
                 continue;
-            }
-
-            // If teacher_name is blank but phone exists, fallback name
-            if ($teacherName === '' && $phone !== '') {
-                $teacherName = 'Teacher ' . substr($phone, -4);
             }
 
             $instName = trim($row['institution'] ?? $row['institute_name'] ?? $row['institution_name'] ?? $row['institute'] ?? '');
             $districtName = trim($row['district'] ?? '');
             $upazilaName = trim($row['upazila'] ?? $row['upazilla'] ?? '');
+            $divisionName = trim($row['division'] ?? '');
             $address = trim($row['address'] ?? '');
 
-            // Resolve District & Upazila for teacher location
-            $district = function_exists('resolve_district_by_name') ? resolve_district_by_name($districtName) : null;
+            // Resolve subjects: support multiple comma / plus / slash separated subjects
+            $subjectRaw = trim((string)($row['subject'] ?? ''));
+            $subject = null;
+            if ($subjectRaw !== '') {
+                $subParts = preg_split('/[,+\/]+/', $subjectRaw);
+                $subPartsClean = array_filter(array_map('trim', $subParts));
+                $subject = !empty($subPartsClean) ? implode(', ', $subPartsClean) : $subjectRaw;
+            }
+
+            // Resolve classes: support Excel date serial numbers (e.g. 45910 -> 9-10) and composite classes
+            $classRaw = trim((string)($row['class_name'] ?? $row['class'] ?? ''));
+            $className = null;
+            if ($classRaw !== '') {
+                if (is_numeric($classRaw) && (int)$classRaw >= 30000 && (int)$classRaw <= 60000) {
+                    $serial = (int)$classRaw;
+                    $ts = ($serial - 25569) * 86400;
+                    $m = (int)gmdate('n', $ts);
+                    $d = (int)gmdate('j', $ts);
+                    $className = "{$m}-{$d}";
+                } else {
+                    $clsParts = preg_split('/[,+\/]+/', $classRaw);
+                    $clsPartsClean = array_filter(array_map('trim', $clsParts));
+                    $className = !empty($clsPartsClean) ? implode(', ', $clsPartsClean) : $classRaw;
+                }
+            }
+
+            // Validation: Teacher Name is required
+            if ($teacherName === '') {
+                $skipped++;
+                $skippedItems[] = [
+                    'row'         => $rowNum,
+                    'name'        => '-',
+                    'phone'       => $phone ?: ($rawPhone ?: '-'),
+                    'institution' => $instName ?: '-',
+                    'subject'     => $subject ?: '-',
+                    'class'       => $className ?: '-',
+                    'upazila'     => $upazilaName ?: '-',
+                    'district'    => $districtName ?: '-',
+                    'address'     => $address ?: '-',
+                    'reason'      => 'Teacher name is required',
+                ];
+                continue;
+            }
+
+            // Validation: Phone is required
+            if ($phone === '') {
+                $skipped++;
+                $skippedItems[] = [
+                    'row'         => $rowNum,
+                    'name'        => $teacherName,
+                    'phone'       => '-',
+                    'institution' => $instName ?: '-',
+                    'subject'     => $subject ?: '-',
+                    'class'       => $className ?: '-',
+                    'upazila'     => $upazilaName ?: '-',
+                    'district'    => $districtName ?: '-',
+                    'address'     => $address ?: '-',
+                    'reason'      => 'Valid phone number is required',
+                ];
+                continue;
+            }
+
+            // 1. Resolve District (Like Institution import)
+            $district = $districtName !== '' && function_exists('resolve_district_by_name')
+                ? resolve_district_by_name($districtName)
+                : null;
             $districtId = $district ? $district->district_id : null;
             $divisionId = $district ? $district->district_division_id : null;
 
-            $upazila = function_exists('resolve_upazila_by_name') ? resolve_upazila_by_name($upazilaName, $districtId) : null;
+            // Strict Validation: If user specified a District in Excel, but it was not recognized in DB
+            if ($districtName !== '' && !$districtId) {
+                $skipped++;
+                $skippedItems[] = [
+                    'row'         => $rowNum,
+                    'name'        => $teacherName,
+                    'phone'       => $phone ?: '-',
+                    'institution' => $instName ?: '-',
+                    'subject'     => $subject ?: '-',
+                    'class'       => $className ?: '-',
+                    'upazila'     => $upazilaName ?: '-',
+                    'district'    => $districtName,
+                    'address'     => $address ?: '-',
+                    'reason'      => "District '{$districtName}' not recognized in database. Please check spelling.",
+                ];
+                continue;
+            }
+
+            // 2. Resolve Upazila (strictly scoped by districtId if district is known)
+            $upazila = $upazilaName !== '' && function_exists('resolve_upazila_by_name')
+                ? resolve_upazila_by_name($upazilaName, $districtId)
+                : null;
             $upazilaId = $upazila ? $upazila->id : null;
 
+            // Strict Validation: If user specified an Upazila in Excel
+            if ($upazilaName !== '') {
+                $locText = $district ? ($district->district_bn_name ?: $district->district_name) : $districtName;
+
+                if ($districtId && !$upazilaId) {
+                    $skipped++;
+                    $skippedItems[] = [
+                        'row'         => $rowNum,
+                        'name'        => $teacherName,
+                        'phone'       => $phone ?: '-',
+                        'institution' => $instName ?: '-',
+                        'subject'     => $subject ?: '-',
+                        'class'       => $className ?: '-',
+                        'upazila'     => $upazilaName,
+                        'district'    => $locText ?: '-',
+                        'address'     => $address ?: '-',
+                        'reason'      => "Upazila '{$upazilaName}' not found under District '{$locText}'.",
+                    ];
+                    continue;
+                }
+
+                if (!$districtId && !$upazilaId) {
+                    $skipped++;
+                    $skippedItems[] = [
+                        'row'         => $rowNum,
+                        'name'        => $teacherName,
+                        'phone'       => $phone ?: '-',
+                        'institution' => $instName ?: '-',
+                        'subject'     => $subject ?: '-',
+                        'class'       => $className ?: '-',
+                        'upazila'     => $upazilaName,
+                        'district'    => $districtName ?: '-',
+                        'address'     => $address ?: '-',
+                        'reason'      => "Upazila '{$upazilaName}' exists in multiple districts. District name is required in Excel.",
+                    ];
+                    continue;
+                }
+            }
+
+            // If district wasn't in Excel, but upazila was unique nationally: inherit district and division
             if (!$districtId && $upazila && $upazila->upazila_district) {
                 $districtId = $upazila->upazila_district->district_id;
                 $divisionId = $upazila->upazila_district->district_division_id;
+            }
+
+            // Fallback inheritance from default institution if row lacks location
+            if (!$districtId && $defaultInst && $defaultInst->district_id) {
+                $districtId = $defaultInst->district_id;
+                $divisionId = $defaultInst->division_id;
+            }
+            if (!$upazilaId && $defaultInst && $defaultInst->upazila_id) {
+                $upazilaId = $defaultInst->upazila_id;
+            }
+
+            // Validation: District & Upazila cannot be guessed/predicted; they must be provided or matched
+            if (!$districtId) {
+                $skipped++;
+                $skippedItems[] = [
+                    'row'         => $rowNum,
+                    'name'        => $teacherName,
+                    'phone'       => $phone ?: '-',
+                    'institution' => $instName ?: '-',
+                    'subject'     => $subject ?: '-',
+                    'class'       => $className ?: '-',
+                    'upazila'     => $upazilaName ?: '-',
+                    'district'    => $districtName ?: '-',
+                    'address'     => $address ?: '-',
+                    'reason'      => 'District is required for teacher location and cannot be predicted.',
+                ];
+                continue;
+            }
+
+            if (!$upazilaId) {
+                $skipped++;
+                $skippedItems[] = [
+                    'row'         => $rowNum,
+                    'name'        => $teacherName,
+                    'phone'       => $phone ?: '-',
+                    'institution' => $instName ?: '-',
+                    'subject'     => $subject ?: '-',
+                    'class'       => $className ?: '-',
+                    'upazila'     => $upazilaName ?: '-',
+                    'district'    => $district ? ($district->district_name) : ($districtName ?: '-'),
+                    'address'     => $address ?: '-',
+                    'reason'      => 'Upazila is required for teacher location and cannot be predicted.',
+                ];
+                continue;
+            }
+
+            // If division was passed and divisionId not resolved yet:
+            if (!$divisionId && $divisionName !== '') {
+                $div = \App\Models\backend\Division::where('name', 'like', "%{$divisionName}%")
+                    ->orWhere('bn_name', 'like', "%{$divisionName}%")
+                    ->first();
+                if ($div) {
+                    $divisionId = $div->id;
+                }
             }
 
             // Resolve or create Institution
@@ -167,24 +342,6 @@ class TeacherController extends Controller
                 }
             }
 
-            // Resolve subjects: support multiple comma / plus / slash separated subjects
-            $subjectRaw = trim($row['subject'] ?? '');
-            $subject = null;
-            if ($subjectRaw !== '') {
-                $subParts = preg_split('/[,+\/]+/', $subjectRaw);
-                $subPartsClean = array_filter(array_map('trim', $subParts));
-                $subject = !empty($subPartsClean) ? implode(', ', $subPartsClean) : $subjectRaw;
-            }
-
-            // Resolve classes: support multiple comma / slash / dash separated classes
-            $classRaw = trim($row['class_name'] ?? $row['class'] ?? '');
-            $className = null;
-            if ($classRaw !== '') {
-                $clsParts = preg_split('/[,+\/]+/', $classRaw);
-                $clsPartsClean = array_filter(array_map('trim', $clsParts));
-                $className = !empty($clsPartsClean) ? implode(', ', $clsPartsClean) : $classRaw;
-            }
-
             $designation = trim($row['designation'] ?? '');
             $department = trim($row['department'] ?? '');
             $statusRaw = trim($row['status'] ?? 'Active');
@@ -203,7 +360,7 @@ class TeacherController extends Controller
             }
 
             if ($existingTeacher) {
-
+                // If existing teacher is missing institution/location and incoming row has it, update & backfill
                 if (!$existingTeacher->institution_id && $institutionId) {
                     $existingTeacher->update([
                         'institution_id' => $institutionId,
@@ -225,6 +382,7 @@ class TeacherController extends Controller
                         'upazila'     => $upazila ? $upazila->upazila_name : ($upazilaName ?: '-'),
                         'district'    => $district ? $district->district_name : ($districtName ?: '-'),
                         'address'     => $address ?: '-',
+                        'action'      => 'updated',
                     ];
                     continue;
                 }
@@ -237,7 +395,10 @@ class TeacherController extends Controller
                     'institution' => $instName ?: ($existingTeacher->institution?->institution_name ?: '-'),
                     'subject'     => $subject ?: '-',
                     'class'       => $className ?: '-',
-                    'reason'      => $phone !== '' ? "Phone '{$phone}' already exists in database" : "Teacher '{$teacherName}' already exists",
+                    'upazila'     => $upazila ? $upazila->upazila_name : ($upazilaName ?: '-'),
+                    'district'    => $district ? $district->district_name : ($districtName ?: '-'),
+                    'address'     => $address ?: '-',
+                    'reason'      => $phone !== '' ? "Phone '{$phone}' already exists for Teacher '{$existingTeacher->teacher_name}'" : "Teacher '{$teacherName}' already exists",
                 ];
                 continue;
             }
@@ -268,6 +429,7 @@ class TeacherController extends Controller
                     'upazila'     => $upazila ? $upazila->upazila_name : ($upazilaName ?: '-'),
                     'district'    => $district ? $district->district_name : ($districtName ?: '-'),
                     'address'     => $address ?: '-',
+                    'action'      => 'inserted',
                 ];
             } catch (\Throwable $e) {
                 $errors[] = [

@@ -45,7 +45,7 @@
                 <h6 class="mb-12 fw-semibold">Distribution Information</h6>
 
                 <div class="row g-3">
-                    <div class="col-md-6 mb-12">
+                    <div class="col-md-4 mb-12">
                         <label class="form-label text-sm mb-8">Marketing Representative <span class="text-danger">*</span></label>
                         <select class="form-control form-control-sm js-s2-ajax" name="user_id" id="distRepSelect"
                             data-url="{{ route('marketing-representative.marketing-representatives.select2') }}"
@@ -56,7 +56,15 @@
                         </select>
                     </div>
 
-                    <div class="col-md-6 mb-12">
+                    <div class="col-md-4 mb-12">
+                        <label class="form-label text-sm mb-8">Distribution Type <span class="text-danger">*</span></label>
+                        <select name="distribution_type" class="form-select form-select-sm radius-8" required>
+                            <option value="specimen" @selected(old('distribution_type', $productDistribution->distribution_type ?? 'specimen') === 'specimen')>Specimen Copy</option>
+                            <option value="sale" @selected(old('distribution_type', $productDistribution->distribution_type ?? 'specimen') === 'sale')>Sale Copy</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-4 mb-12">
                         <label class="form-label text-sm mb-8">Note</label>
                         <input type="text" name="note" class="form-control form-control-sm radius-8"
                             value="{{ $productDistribution->note }}" placeholder="Optional note">

@@ -1,5 +1,7 @@
 @php
     $showPrice = !empty($show_price);
+    $copyType = $copy_type ?? null;
+    $userSelector = $user_selector ?? null;
     $existingItems = isset($items) ? $items : (isset($assignSpecimen->items) ? $assignSpecimen->items : collect());
     $firstExistingItem = $existingItems->first();
     $initCategory = $firstExistingItem?->product?->category;
@@ -313,17 +315,33 @@
                 </div>
 
                 {{-- Summary Footer --}}
-                <div class="p-16 border-top bg-neutral-50 d-flex justify-content-between align-items-center">
+                <div class="p-16 border-top bg-neutral-50 d-flex justify-content-between align-items-center flex-wrap gap-2">
                     <div>
                         <span class="text-xs text-muted d-block">Distinct Items: <strong id="posDistinctCountText">0</strong></span>
                         <span class="fw-semibold text-neutral-800 text-sm">Total Quantity</span>
+                        <h5 class="mb-0 fw-bold text-neutral-900" id="posTotalQuantityText">0</h5>
                     </div>
                     <div class="text-end">
-                        <h5 class="mb-0 fw-bold text-neutral-900" id="posTotalQuantityText">0</h5>
                         @if ($showPrice)
-                            <div class="mt-1">
-                                <span class="text-xs text-muted me-1">Grand Total:</span>
-                                <span class="fw-bold text-primary-600 fs-6 text-nowrap">৳&nbsp;<span id="posGrandTotalText">0.00</span></span>
+                            <div class="d-flex flex-column align-items-end gap-1">
+                                <div class="text-sm">
+                                    <span class="text-muted me-2">Subtotal:</span>
+                                    <span class="fw-semibold text-neutral-800 text-nowrap">৳&nbsp;<span id="posSubtotalText">0.00</span></span>
+                                    <input type="hidden" name="subtotal" id="posSubtotalInput" value="0.00">
+                                </div>
+                                <div class="d-flex align-items-center justify-content-end text-sm">
+                                    <label for="posDiscountInput" class="text-muted me-2 mb-0">Discount (৳):</label>
+                                    <input type="number" step="0.01" min="0" name="discount" id="posDiscountInput" 
+                                           class="form-control form-control-sm text-end fw-semibold py-1 px-8 radius-6" 
+                                           style="width: 110px; height: 28px;"
+                                           placeholder="0.00" 
+                                           value="{{ isset($spotSale) && $spotSale->discount !== null ? number_format((float) $spotSale->discount, 2, '.', '') : '0.00' }}">
+                                </div>
+                                <div class="border-top pt-1 mt-1">
+                                    <span class="text-xs text-muted me-1 fw-bold">Grand Total:</span>
+                                    <span class="fw-bold text-primary-600 fs-6 text-nowrap">৳&nbsp;<span id="posGrandTotalText">0.00</span></span>
+                                    <input type="hidden" name="total" id="posGrandTotalInput" value="0.00">
+                                </div>
                             </div>
                         @endif
                     </div>
@@ -343,6 +361,8 @@
 
         jQuery(function($) {
             const showPrice      = {{ $showPrice ? 'true' : 'false' }};
+            const copyType       = "{{ $copyType ?? '' }}";
+            const userSelector   = "{{ $userSelector ?? '' }}";
             const categoryUrl    = "{{ route('category.cat.select2') }}";
             const subcategoryUrl = "{{ route('subcategory.select2') }}";
             const productUrl     = "{{ route('product.select2') }}";
@@ -433,6 +453,20 @@
             function fetchProducts(categoryId, subcategoryId, searchQuery = '') {
                 if (!categoryId || !subcategoryId) return;
 
+                const userId = userSelector ? $(userSelector).val() : '';
+
+                if (copyType && !userId) {
+                    $listBox.html(`
+                        <div class="text-center py-40 text-muted">
+                            <iconify-icon icon="solar:user-speak-linear" class="text-4xl text-warning mb-2"></iconify-icon>
+                            <p class="m-0 text-sm fw-medium text-warning">Please select a Marketing Representative first to view their available stock.</p>
+                        </div>
+                    `);
+                    $statusBadge.text('Select Representative first')
+                        .removeClass('text-success text-danger').addClass('text-warning');
+                    return;
+                }
+
                 if (!searchQuery) {
                     $listBox.html(`
                         <div class="text-center py-40 text-primary">
@@ -450,6 +484,8 @@
                         category_id: categoryId,
                         subcategory_id: subcategoryId,
                         q: searchQuery,
+                        user_id: userId,
+                        copy_type: copyType,
                         limit: 100
                     },
                     success: function(res) {
@@ -461,7 +497,7 @@
                             ? (loadedProducts.length + ' matching products') 
                             : (loadedProducts.length + ' products found');
                         $statusBadge.text(countMsg)
-                            .removeClass('text-muted text-danger').addClass('text-success');
+                            .removeClass('text-muted text-danger text-warning').addClass('text-success');
                     },
                     error: function() {
                         $listBox.html(`
@@ -471,7 +507,18 @@
                             </div>
                         `);
                         $statusBadge.text('Error loading products')
-                            .removeClass('text-muted text-success').addClass('text-danger');
+                            .removeClass('text-muted text-success text-warning').addClass('text-danger');
+                    }
+                });
+            }
+
+            // Optional: Listen for MR selection change to automatically reload products
+            if (userSelector) {
+                $(document).on('change', userSelector, function() {
+                    const catId = $catSelect.val();
+                    const subcatId = $subcatSelect.val();
+                    if (catId && subcatId) {
+                        fetchProducts(catId, subcatId, $searchInput.val());
                     }
                 });
             }
@@ -482,7 +529,7 @@
                     $listBox.html(`
                         <div class="text-center py-40 text-muted">
                             <iconify-icon icon="solar:box-minimalistic-linear" class="text-4xl text-neutral-400 mb-2"></iconify-icon>
-                            <p class="m-0 text-sm">${searchQuery ? 'No products match your search.' : 'No products found for this subcategory.'}</p>
+                            <p class="m-0 text-sm">${searchQuery ? 'No products match your search.' : (copyType ? 'No available stock found for this representative.' : 'No products found for this subcategory.')}</p>
                         </div>
                     `);
                     return;
@@ -498,16 +545,23 @@
                     const pName = p.text || 'Product #' + pId;
                     const pImg = p.image || defaultBookImg;
                     const pPrice = parseFloat(p.price || 0);
+                    const pStock = (p.available_stock !== undefined && p.available_stock !== null) ? parseInt(p.available_stock, 10) : null;
                     const existingRow = $cartBody.find(`.pos-cart-row[data-product-id="${pId}"]`);
                     const inCart = existingRow.length > 0;
                     const currentQty = inCart ? existingRow.find('.pos-qty-input').val() : 0;
                     const priceBadge = showPrice 
                         ? `<span class="badge bg-primary-50 text-primary-600 text-xs radius-4 mt-1 fw-semibold">৳ ${pPrice.toFixed(2)}</span>` 
                         : '';
+                    const stockBadge = (pStock !== null)
+                        ? `<span class="badge ${pStock > 0 ? 'bg-info-subtle text-info-700 border border-info-subtle' : 'bg-danger-subtle text-danger-700 border border-danger-subtle'} text-xs radius-4 mt-1 fw-semibold d-inline-flex flex-row align-items-center gap-1 text-nowrap py-1 px-2" style="display:inline-flex !important; flex-direction:row !important; align-items:center !important; white-space:nowrap !important;">
+                             <iconify-icon icon="solar:box-minimalistic-bold" class="text-sm flex-shrink-0" style="vertical-align: middle; display:inline-block;"></iconify-icon>
+                             <span style="white-space:nowrap; display:inline-block;">Stock: <strong>${pStock}</strong></span>
+                           </span>`
+                        : '';
 
                     html += `
                         <div class="pos-product-item ${inCart ? 'in-cart' : ''}"
-                             data-id="${pId}" data-name="${escapeHtml(pName)}" data-meta="${escapeHtml(metaBadge)}" data-image="${escapeHtml(pImg)}" data-price="${pPrice}">
+                             data-id="${pId}" data-name="${escapeHtml(pName)}" data-meta="${escapeHtml(metaBadge)}" data-image="${escapeHtml(pImg)}" data-price="${pPrice}" data-stock="${pStock !== null ? pStock : ''}">
                             <div class="d-flex align-items-center gap-2 pe-2 flex-grow-1 overflow-hidden">
                                 <img src="${escapeHtml(pImg)}" class="pos-product-thumb" alt="Book" onerror="this.src='${defaultBookImg}';">
                                 <div class="overflow-hidden">
@@ -515,6 +569,7 @@
                                     <div class="d-flex align-items-center gap-2 mt-1 flex-wrap">
                                         ${metaBadge ? `<span class="badge bg-light text-secondary text-xs radius-4">${escapeHtml(metaBadge)}</span>` : ''}
                                         ${priceBadge}
+                                        ${stockBadge}
                                         <span class="badge bg-success-subtle text-success-700 text-xs in-cart-badge radius-4" style="display:${inCart ? 'inline-block' : 'none'};">In Cart: <strong class="in-cart-qty">${currentQty}</strong></span>
                                     </div>
                                 </div>
@@ -563,22 +618,32 @@
                 const pMeta = $item.attr('data-meta') || '';
                 const pImg = $item.attr('data-image') || defaultBookImg;
                 const pPrice = parseFloat($item.attr('data-price') || 0);
+                const stockAttr = $item.attr('data-stock');
+                const pStock = (stockAttr !== '' && stockAttr !== undefined) ? parseInt(stockAttr, 10) : null;
 
-                addToCart(pId, pName, pMeta, pImg, pPrice, 1);
+                addToCart(pId, pName, pMeta, pImg, pPrice, 1, pStock);
             });
 
-            function addToCart(pId, pName, pMeta, pImg, pPrice, qtyToAdd) {
+            function addToCart(pId, pName, pMeta, pImg, pPrice, qtyToAdd, maxStock = null) {
                 const $existingRow = $cartBody.find(`.pos-cart-row[data-product-id="${pId}"]`);
 
                 if ($existingRow.length > 0) {
                     const $qtyInput = $existingRow.find('.pos-qty-input');
-                    const newQty = parseInt($qtyInput.val() || 0, 10) + qtyToAdd;
+                    const curMax = $existingRow.attr('data-max-stock') ? parseInt($existingRow.attr('data-max-stock'), 10) : maxStock;
+                    let newQty = parseInt($qtyInput.val() || 0, 10) + qtyToAdd;
+                    if (curMax !== null && newQty > curMax) {
+                        newQty = curMax;
+                    }
                     $qtyInput.val(newQty);
 
                     $existingRow.css('background-color', '#e0f2fe');
                     setTimeout(() => $existingRow.css('background-color', ''), 400);
                 } else {
                     $emptyCartRow.hide();
+
+                    if (maxStock !== null && qtyToAdd > maxStock) {
+                        qtyToAdd = maxStock;
+                    }
 
                     const priceCellHtml = showPrice 
                         ? `<td class="text-end text-nowrap pos-cart-price-cell">
@@ -592,8 +657,11 @@
                            </td>` 
                         : '';
 
+                    const maxAttr = maxStock !== null ? `max="${maxStock}"` : '';
+                    const stockDataAttr = maxStock !== null ? `data-max-stock="${maxStock}"` : '';
+
                     const rowHtml = `
-                        <tr class="pos-cart-row" data-product-id="${pId}" data-product-name="${escapeHtml(pName)}" data-price="${pPrice}">
+                        <tr class="pos-cart-row" data-product-id="${pId}" data-product-name="${escapeHtml(pName)}" data-price="${pPrice}" ${stockDataAttr}>
                             <td>
                                 <input type="hidden" name="items[${nextItemIndex}][product_id]" value="${pId}">
                                 <div class="d-flex align-items-center gap-2">
@@ -608,7 +676,7 @@
                             <td class="text-center">
                                 <div class="pos-qty-stepper mx-auto">
                                     <button type="button" class="btn-step btn-step-minus">−</button>
-                                    <input type="number" step="1" min="1" value="${qtyToAdd}" name="items[${nextItemIndex}][quantity]" class="pos-qty-input" required>
+                                    <input type="number" step="1" min="1" ${maxAttr} value="${qtyToAdd}" name="items[${nextItemIndex}][quantity]" class="pos-qty-input" required>
                                     <button type="button" class="btn-step btn-step-plus">+</button>
                                 </div>
                             </td>
@@ -645,17 +713,26 @@
             // Stepper Plus
             $cartBody.off('click', '.btn-step-plus').on('click', '.btn-step-plus', function() {
                 const $input = $(this).siblings('.pos-qty-input');
+                const $row = $(this).closest('.pos-cart-row');
+                const maxStock = $row.attr('data-max-stock') ? parseInt($row.attr('data-max-stock'), 10) : null;
                 const current = parseInt($input.val() || 0, 10);
+                if (maxStock !== null && current >= maxStock) {
+                    return;
+                }
                 $input.val(current + 1).trigger('change');
             });
 
             // Manual Qty Input Change
             $cartBody.off('input change', '.pos-qty-input').on('input change', '.pos-qty-input', function() {
+                const $row = $(this).closest('.pos-cart-row');
+                const maxStock = $row.attr('data-max-stock') ? parseInt($row.attr('data-max-stock'), 10) : null;
                 let val = parseInt($(this).val() || 1, 10);
                 if (val < 1) val = 1;
+                if (maxStock !== null && val > maxStock) {
+                    val = maxStock;
+                }
                 $(this).val(val);
 
-                const $row = $(this).closest('.pos-cart-row');
                 const pId = $row.attr('data-product-id');
                 syncProductCatalogItem(pId);
                 updateCartSummary();
@@ -697,7 +774,7 @@
                 const $rows = $cartBody.find('.pos-cart-row');
                 const distinctCount = $rows.length;
                 let totalQty = 0;
-                let grandTotal = 0;
+                let subtotal = 0;
 
                 $rows.each(function() {
                     const qty = parseInt($(this).find('.pos-qty-input').val() || 0, 10);
@@ -706,7 +783,7 @@
                         const price = parseFloat($(this).attr('data-price') || 0);
                         const lineTotal = price * qty;
                         $(this).find('.pos-row-total-text').text(lineTotal.toFixed(2));
-                        grandTotal += lineTotal;
+                        subtotal += lineTotal;
                     }
                 });
 
@@ -722,8 +799,27 @@
                 $distinctText.text(distinctCount);
                 $totalQtyText.text(totalQty);
                 if (showPrice) {
+                    let discount = parseFloat($('#posDiscountInput').val() || 0);
+                    if (isNaN(discount) || discount < 0) {
+                        discount = 0;
+                    }
+                    if (discount > subtotal && subtotal > 0) {
+                        discount = subtotal;
+                        $('#posDiscountInput').val(discount.toFixed(2));
+                    }
+                    const grandTotal = Math.max(0, subtotal - discount);
+
+                    $('#posSubtotalText').text(subtotal.toFixed(2));
+                    $('#posSubtotalInput').val(subtotal.toFixed(2));
                     $('#posGrandTotalText').text(grandTotal.toFixed(2));
+                    $('#posGrandTotalInput').val(grandTotal.toFixed(2));
                 }
+            }
+
+            if (showPrice) {
+                $('#posDiscountInput').on('input change', function() {
+                    updateCartSummary();
+                });
             }
 
             // Category Change Event Listener

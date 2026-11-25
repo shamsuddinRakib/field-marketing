@@ -372,8 +372,8 @@
 
                 <ul class="sidebar-submenu">
 
-                    <li>
-                        <a href="http://localhost/field-marketing/book-request/book-requests">
+                    <li class="{{ Route::is('book-request.book-requests.*') ? 'active' : '' }}">
+                        <a href="{{ route('book-request.book-requests.index') }}">
                             <iconify-icon icon="mdi:book-arrow-right-outline" class="menu-icon"></iconify-icon>
                             <span>Book Requests</span>
                         </a>

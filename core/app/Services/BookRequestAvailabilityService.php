@@ -12,7 +12,8 @@ class BookRequestAvailabilityService
     public function forRepresentative(
         int $representativeId,
         ?string $excludeRequestGroupId = null,
-        ?int $excludeRequestId = null
+        ?int $excludeRequestId = null,
+        ?string $type = null
     ): array {
         $representative = MarketingRepresentative::find($representativeId);
         if (! $representative) {
@@ -20,20 +21,44 @@ class BookRequestAvailabilityService
         }
 
         // 1. Query item-level distributed quantities for DELIVERED distributions
-        $distributedFromItems = DB::table('product_distribution_items as pdi')
+        $distItemsQuery = DB::table('product_distribution_items as pdi')
             ->join('product_distributions as pd', 'pd.id', '=', 'pdi.product_distribution_id')
             ->where('pd.user_id', (string) $representative->user_id)
-            ->where('pd.status', 'delivered')
+            ->where('pd.status', 'delivered');
+
+        if ($type) {
+            $distItemsQuery->where(function ($q) use ($type) {
+                if ($type === 'specimen') {
+                    $q->where('pd.distribution_type', 'specimen')->orWhereNull('pd.distribution_type');
+                } else {
+                    $q->where('pd.distribution_type', $type);
+                }
+            });
+        }
+
+        $distributedFromItems = $distItemsQuery
             ->selectRaw('pdi.product_id, SUM(pdi.quantity) as distributed_quantity')
             ->groupBy('pdi.product_id')
             ->pluck('distributed_quantity', 'pdi.product_id');
 
         // 2. Fallback: also support legacy master records where items table was not used
-        $legacyDistributed = ProductDistribution::query()
+        $legacyDistQuery = ProductDistribution::query()
             ->where('user_id', (string) $representative->user_id)
             ->where('status', 'delivered')
             ->whereNotNull('product_id')
-            ->whereDoesntHave('items')
+            ->whereDoesntHave('items');
+
+        if ($type) {
+            $legacyDistQuery->where(function ($q) use ($type) {
+                if ($type === 'specimen') {
+                    $q->where('distribution_type', 'specimen')->orWhereNull('distribution_type');
+                } else {
+                    $q->where('distribution_type', $type);
+                }
+            });
+        }
+
+        $legacyDistributed = $legacyDistQuery
             ->selectRaw('product_id, SUM(quantity) as distributed_quantity')
             ->groupBy('product_id')
             ->pluck('distributed_quantity', 'product_id');
@@ -52,6 +77,15 @@ class BookRequestAvailabilityService
             ->where('br.marketing_representative_id', $representativeId)
             ->where('br.status', '!=', 'rejected')
             ->whereNull('br.product_distribution_id')
+            ->when($type, function ($query) use ($type) {
+                if ($type === 'specimen') {
+                    $query->where(function ($q) {
+                        $q->where('br.request_type', 'specimen')->orWhereNull('br.request_type');
+                    });
+                } else {
+                    $query->where('br.request_type', $type);
+                }
+            })
             ->when($excludeRequestGroupId, fn ($query) => $query->where(function ($builder) use ($excludeRequestGroupId) {
                 $builder->whereNull('br.request_group_id')
                     ->orWhere('br.request_group_id', '!=', $excludeRequestGroupId);

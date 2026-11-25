@@ -19,6 +19,7 @@ class AssignSpecimenItemResource extends JsonResource
             'assign_specimen_id' => $this->assign_specimen_id ? (int) $this->assign_specimen_id : null,
             'product_id'         => $this->product_id ? (int) $this->product_id : null,
             'quantity'           => $this->quantity !== null ? (int) $this->quantity : 0,
+            'current_stock'      => (int) (\App\Models\backend\CurrentStock::where('user_id', auth('sanctum')->id())->where('product_id', $this->product_id)->value('current_stock') ?? 0),
             'created_at'         => $this->created_at?->toIso8601String(),
             'updated_at'         => $this->updated_at?->toIso8601String(),
             'product'            => $this->whenLoaded('product', function () {
@@ -34,6 +35,7 @@ class AssignSpecimenItemResource extends JsonResource
                     'product_code'    => $this->product->product_code,
                     'edition'         => $this->product->edition,
                     'price'           => $this->product->price !== null ? (float) $this->product->price : null,
+                    'current_stock'   => (int) (\App\Models\backend\CurrentStock::where('user_id', auth('sanctum')->id())->where('product_id', $this->product_id)->value('current_stock') ?? 0),
                     'thumbnail_image' => $this->product->thumbnail_image,
                     'thumbnail_url'   => $this->product->thumbnail_image ? image($this->product->thumbnail_image) : null,
                     'brand_id'        => $this->product->brand_id ? (int) $this->product->brand_id : null,

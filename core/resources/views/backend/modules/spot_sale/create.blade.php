@@ -75,47 +75,78 @@
                     </div>
 
                     {{-- Teacher Wrap --}}
-                    <div class="col-md-12 mb-12" id="teacherWrap" style="display:none;">
-                        <label class="form-label text-sm mb-8">Select Teacher <span class="text-danger">*</span></label>
-                        <select class="form-control form-control-sm js-s2-ajax" name="teacher_id" id="teacherSelect"
-                            data-url="{{ route('teacher.teachers.select2') }}" data-placeholder="Select Teacher">
-                        </select>
-                        <div class="invalid-feedback d-block teacher_id-error" style="display:none"></div>
+                    <div class="col-12" id="teacherWrap" style="display:none;">
+                        <div class="row g-3">
+                            <div class="col-md-4 mb-12">
+                                <label class="form-label text-sm mb-8">Teacher Name <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control form-control-sm radius-8" name="teacher_name" id="teacherName" placeholder="Enter teacher name">
+                                <div class="invalid-feedback d-block teacher_name-error name-error" style="display:none"></div>
+                            </div>
+                            <div class="col-md-4 mb-12">
+                                <label class="form-label text-sm mb-8">Phone Number</label>
+                                <input type="text" class="form-control form-control-sm radius-8" name="teacher_phone" id="teacherPhone" placeholder="Enter phone number">
+                                <div class="invalid-feedback d-block teacher_phone-error phone-error" style="display:none"></div>
+                            </div>
+                            <div class="col-md-4 mb-12">
+                                <label class="form-label text-sm mb-8">Institution</label>
+                                <select class="form-control form-control-sm js-s2-ajax" name="teacher_institution_id" id="teacherInstitutionSelect"
+                                    data-url="{{ route('institution.institutions.select2') }}" data-placeholder="Select Institution">
+                                </select>
+                                <div class="invalid-feedback d-block teacher_institution_id-error institution_id-error" style="display:none"></div>
+                            </div>
+                        </div>
                     </div>
 
                     {{-- Library Wrap --}}
-                    <div class="col-md-12 mb-12" id="libraryWrap" style="display:none;">
-                        <label class="form-label text-sm mb-8">Select Library <span class="text-danger">*</span></label>
-                        <select class="form-control form-control-sm js-s2-ajax" name="library_id" id="librarySelect"
-                            data-url="{{ route('library.libraries.select2') }}" data-placeholder="Select Library">
-                        </select>
-                        <div class="invalid-feedback d-block library_id-error" style="display:none"></div>
+                    <div class="col-12" id="libraryWrap" style="display:none;">
+                        <div class="row g-3">
+                            <div class="col-md-4 mb-12">
+                                <label class="form-label text-sm mb-8">Library Name <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control form-control-sm radius-8" name="library_name" id="libraryName" placeholder="Enter library name">
+                                <div class="invalid-feedback d-block library_name-error name-error" style="display:none"></div>
+                            </div>
+                            <div class="col-md-4 mb-12">
+                                <label class="form-label text-sm mb-8">Phone Number</label>
+                                <input type="text" class="form-control form-control-sm radius-8" name="library_phone" id="libraryPhone" placeholder="Enter phone number">
+                                <div class="invalid-feedback d-block library_phone-error phone-error" style="display:none"></div>
+                            </div>
+                            <div class="col-md-4 mb-12">
+                                <label class="form-label text-sm mb-8">Address / Market</label>
+                                <input type="text" class="form-control form-control-sm radius-8" name="library_address" id="libraryAddress" placeholder="Enter library address / market">
+                                <div class="invalid-feedback d-block library_address-error address-error" style="display:none"></div>
+                            </div>
+                        </div>
                     </div>
 
                     {{-- Student Wrap --}}
                     <div class="col-12" id="studentWrap" style="display:none;">
                         <div class="row g-3">
-                            <div class="col-md-4 mb-12">
+                            <div class="col-md-3 mb-12">
                                 <label class="form-label text-sm mb-8">Student Name <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control form-control-sm radius-8" name="student_name" id="studentName" placeholder="Enter student name">
-                                <div class="invalid-feedback d-block student_name-error" style="display:none"></div>
+                                <div class="invalid-feedback d-block student_name-error name-error" style="display:none"></div>
                             </div>
-                            <div class="col-md-4 mb-12">
+                            <div class="col-md-3 mb-12">
+                                <label class="form-label text-sm mb-8">Phone Number</label>
+                                <input type="text" class="form-control form-control-sm radius-8" name="student_phone" id="studentPhone" placeholder="Enter phone number">
+                                <div class="invalid-feedback d-block student_phone-error phone-error" style="display:none"></div>
+                            </div>
+                            <div class="col-md-3 mb-12">
                                 <label class="form-label text-sm mb-8">Course Class <span class="text-danger">*</span></label>
-                                <select class="form-select form-select-sm radius-8" name="course_class_id" id="courseClassSelect">
+                                <select class="form-select form-select-sm radius-8" name="student_course_class_id" id="courseClassSelect">
                                     <option value="">Select Class</option>
                                     @foreach ($classes ?? [] as $class)
                                         <option value="{{ $class->id }}">{{ $class->name }}</option>
                                     @endforeach
                                 </select>
-                                <div class="invalid-feedback d-block course_class_id-error" style="display:none"></div>
+                                <div class="invalid-feedback d-block student_course_class_id-error course_class_id-error" style="display:none"></div>
                             </div>
-                            <div class="col-md-4 mb-12">
+                            <div class="col-md-3 mb-12">
                                 <label class="form-label text-sm mb-8">Institution <span class="text-danger">*</span></label>
-                                <select class="form-control form-control-sm js-s2-ajax" name="institution_id" id="institutionSelect"
+                                <select class="form-control form-control-sm js-s2-ajax" name="student_institution_id" id="studentInstitutionSelect"
                                     data-url="{{ route('institution.institutions.select2') }}" data-placeholder="Select Institution">
                                 </select>
-                                <div class="invalid-feedback d-block institution_id-error" style="display:none"></div>
+                                <div class="invalid-feedback d-block student_institution_id-error institution_id-error" style="display:none"></div>
                             </div>
                         </div>
                     </div>
@@ -131,7 +162,11 @@
         </div>
 
         {{-- 2. REUSABLE POS PRODUCT PICKER (With Price & Grand Total) --}}
-        @include('backend.modules.products.partial.product_item_picker', ['show_price' => true])
+        @include('backend.modules.products.partial.product_item_picker', [
+            'show_price'    => true,
+            'copy_type'     => 'sale',
+            'user_selector' => '#spotSaleUserSelect',
+        ])
 
         {{-- Hidden Status Input --}}
         <input type="hidden" name="status" id="spotSaleStatus" value="pending">
@@ -161,19 +196,16 @@
                 $('#libraryWrap').toggle(type === 'library');
                 $('#studentWrap').toggle(type === 'student');
 
-                $('#teacherSelect').prop('required', type === 'teacher');
-                $('#librarySelect').prop('required', type === 'library');
+                // Toggle disabled attribute so inactive inputs are not submitted
+                $('#teacherWrap :input').prop('disabled', type !== 'teacher');
+                $('#libraryWrap :input').prop('disabled', type !== 'library');
+                $('#studentWrap :input').prop('disabled', type !== 'student');
+
+                $('#teacherName').prop('required', type === 'teacher');
+                $('#libraryName').prop('required', type === 'library');
                 $('#studentName').prop('required', type === 'student');
                 $('#courseClassSelect').prop('required', type === 'student');
-                $('#institutionSelect').prop('required', type === 'student');
-
-                if (type !== 'teacher') $('#teacherSelect').val(null).trigger('change');
-                if (type !== 'library') $('#librarySelect').val(null).trigger('change');
-                if (type !== 'student') {
-                    $('#studentName').val('');
-                    $('#courseClassSelect').val('');
-                    $('#institutionSelect').val(null).trigger('change');
-                }
+                $('#studentInstitutionSelect').prop('required', type === 'student');
             }
 
             $('#customerType').on('change', toggleCustomer);

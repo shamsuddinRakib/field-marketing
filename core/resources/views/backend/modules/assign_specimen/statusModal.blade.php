@@ -24,6 +24,7 @@
             <select name="status" id="status" class="form-select">
                 <option value="pending" {{ $assignSpecimen->status == 'pending' ? 'selected' : '' }}>Pending</option>
                 <option value="approved" {{ $assignSpecimen->status == 'approved' ? 'selected' : '' }}>Approved</option>
+                <option value="cancel" {{ $assignSpecimen->status == 'cancel' ? 'selected' : '' }}>Cancel</option>
             </select>
         </div>
     </div>

@@ -40,6 +40,14 @@ class TeacherController extends Controller
             $query->where('institution_id', $request->institution_id);
         }
 
+        if ($request->filled('upazila_id')) {
+            $upazilaId = $request->upazila_id;
+            $query->where(function ($sub) use ($upazilaId) {
+                $sub->where('upazila_id', $upazilaId)
+                    ->orWhereHas('institution', fn($inst) => $inst->where('upazila_id', $upazilaId));
+            });
+        }
+
         // if ($request->filled('search')) {
         //     $search = $request->input('search');
         //     $query->where(function ($q) use ($search) {

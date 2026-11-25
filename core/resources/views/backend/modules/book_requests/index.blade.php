@@ -51,6 +51,7 @@
                             </div>
                         </th>
                         <th>Representative Name</th>
+                        <th>Type</th>
                         <th>Product Name</th>
                         <th>Quantity</th>
                         <th>Note</th>

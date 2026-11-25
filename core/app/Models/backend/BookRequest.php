@@ -15,8 +15,15 @@ class BookRequest extends Model
         'rejected' => 'Rejected',
     ];
 
+    public const REQUEST_TYPES = [
+        'specimen' => 'Specimen Copy',
+        'sale' => 'Sale Copy',
+    ];
+
     protected $fillable = [
         'marketing_representative_id',
+        'request_group_id',
+        'request_type',
         // 'product_id',
         // 'quantity',
         'note',
@@ -42,6 +49,11 @@ class BookRequest extends Model
     public function statusLabel(): string
     {
         return self::STATUSES[$this->status] ?? ucfirst((string) $this->status);
+    }
+
+    public function requestTypeLabel(): string
+    {
+        return self::REQUEST_TYPES[$this->request_type] ?? ucfirst((string) ($this->request_type ?? 'specimen'));
     }
 
     public function items(): HasMany

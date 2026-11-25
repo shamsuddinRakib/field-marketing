@@ -51,6 +51,22 @@ class InstitutionController extends Controller
             ->with(['upazila', 'district', 'division'])
             ->where('status', 1);
 
+        if ($request->filled('upazila_id')) {
+            $upazilaId = $request->upazila_id;
+            $query->where(function ($q) use ($upazilaId) {
+                $q->where('upazila_id', $upazilaId)
+                  ->orWhereHas('teachers', fn($t) => $t->where('upazila_id', $upazilaId));
+            });
+        }
+
+        if ($request->filled('district_id')) {
+            $query->where('district_id', $request->district_id);
+        }
+
+        if ($request->filled('division_id')) {
+            $query->where('division_id', $request->division_id);
+        }
+
         if ($request->filled('search')) {
             $search = trim($request->input('search'));
 

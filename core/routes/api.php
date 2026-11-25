@@ -62,6 +62,7 @@ Route::get('/swagger-test', function () {
 Route::get('/products', [ProductController::class, 'index'])->name('products.index');
 Route::get('/products/search', [ProductController::class, 'search'])->name('products.search');
 Route::get('/products/category/{category}', [ProductController::class, 'byCategory'])->name('products.category');
+Route::get('/products/subcategory/{subcategory}', [ProductController::class, 'bySubcategory'])->name('products.subcategory');
 Route::get('/products/{product}', [ProductController::class, 'show'])->name('products.show');
 
 

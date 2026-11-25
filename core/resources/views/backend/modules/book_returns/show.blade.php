@@ -58,18 +58,19 @@
                                 value="{{ $bookReturn->representative?->employee_id ?? 'N/A' }}">
                         </div>
                         <div class="col-md-6 mb-16">
-                            <label class="form-label text-sm mb-6">Institution Name</label>
-                            <input class="form-control" type="text" disabled
-                                value="{{ $bookReturn->institution?->institution_name ?: ($bookReturn->institution?->name ?? 'N/A') }}">
-                        </div>
-                        <div class="col-md-6 mb-16">
                             <label class="form-label text-sm mb-6">Product Name</label>
                             <input class="form-control" type="text" disabled
                                 value="{{ $bookReturn->product?->name ?? 'N/A' }}">
                         </div>
                         <div class="col-md-6 mb-16">
-                            <label class="form-label text-sm mb-6">Issued Quantity</label>
-                            <input class="form-control" type="text" disabled value="{{ $bookReturn->issued_quantity }}">
+                            <label class="form-label text-sm mb-6">Return Type</label>
+                            <div>
+                                @if ($bookReturn->return_type === 'sale')
+                                    <span class="badge bg-primary-subtle text-primary-700 border border-primary-subtle text-sm px-12 py-6">Sale Copy</span>
+                                @else
+                                    <span class="badge bg-info-subtle text-info-700 border border-info-subtle text-sm px-12 py-6">Specimen Copy</span>
+                                @endif
+                            </div>
                         </div>
                         <div class="col-md-6 mb-16">
                             <label class="form-label text-sm mb-6">Returned Quantity</label>
@@ -129,14 +130,11 @@
                     <p class="text-muted text-sm mb-0">
                         {{ $bookReturn->representative?->user?->name ?? 'N/A' }}
                     </p>
-                    <p class="text-muted text-sm mb-0">
-                        {{ $bookReturn->institution?->institution_name ?: ($bookReturn->institution?->name ?? '') }}
-                    </p>
                 </div>
                 <div class="card-footer">
                     <div class="d-flex justify-between text-sm mb-8">
-                        <span class="text-muted">Issued / Returned</span>
-                        <span>{{ $bookReturn->issued_quantity }} / {{ $bookReturn->returned_quantity }}</span>
+                        <span class="text-muted">Returned Quantity</span>
+                        <span class="fw-bold">{{ $bookReturn->returned_quantity }}</span>
                     </div>
                     <div class="d-flex justify-between text-sm mb-8">
                         <span class="text-muted">Created</span>
@@ -173,39 +171,61 @@
                     }
                 });
             });
-            $modal.find('.js-institution-select').each(function() {
-                const $select = $(this);
-                if ($select.hasClass('select2-hidden-accessible')) $select.select2('destroy');
-                $select.select2({
-                    dropdownParent: $modal,
-                    width: '100%',
-                    placeholder: 'Select institution',
-                    allowClear: true,
-                    ajax: {
-                        url: "{{ route('institution.institutions.select2') }}",
-                        dataType: 'json',
-                        delay: 200,
-                        data: params => ({ q: params.term || '' }),
-                        processResults: data => data
-                    }
+
+            function initProductSelect2() {
+                $modal.find('.js-product-select').each(function() {
+                    const $select = $(this);
+                    if ($select.hasClass('select2-hidden-accessible')) $select.select2('destroy');
+                    $select.select2({
+                        dropdownParent: $modal,
+                        width: '100%',
+                        placeholder: 'Select product from MR stock',
+                        allowClear: true,
+                        ajax: {
+                            url: "{{ route('product.select2') }}",
+                            dataType: 'json',
+                            delay: 200,
+                            data: function(params) {
+                                return {
+                                    q: params.term || '',
+                                    user_id: $modal.find('.js-representative-select').val() || '',
+                                    copy_type: $modal.find('.js-return-type-select').val() || 'specimen'
+                                };
+                            },
+                            processResults: function(data) {
+                                return {
+                                    results: Array.isArray(data?.results) ? data.results : []
+                                };
+                            }
+                        }
+                    });
                 });
+            }
+            initProductSelect2();
+
+            $modal.off('change.bookReturn').on('change.bookReturn', '.js-representative-select, .js-return-type-select', function() {
+                const $prod = $modal.find('.js-product-select');
+                $prod.val(null).trigger('change');
+                $modal.find('.js-stock-indicator').hide();
+                $modal.find('.js-return-qty-input').removeAttr('max');
             });
-            $modal.find('.js-product-select').each(function() {
-                const $select = $(this);
-                if ($select.hasClass('select2-hidden-accessible')) $select.select2('destroy');
-                $select.select2({
-                    dropdownParent: $modal,
-                    width: '100%',
-                    placeholder: 'Select product',
-                    allowClear: true,
-                    ajax: {
-                        url: "{{ route('product.select2') }}",
-                        dataType: 'json',
-                        delay: 200,
-                        data: params => ({ q: params.term || '' }),
-                        processResults: data => data
-                    }
-                });
+
+            $modal.off('select2:select.bookReturn').on('select2:select.bookReturn', '.js-product-select', function(e) {
+                const data = e.params?.data;
+                if (data && data.available_stock !== undefined && data.available_stock !== null) {
+                    const stock = parseInt(data.available_stock, 10);
+                    $modal.find('.js-stock-val').text(stock);
+                    $modal.find('.js-stock-indicator').show();
+                    $modal.find('.js-return-qty-input').attr('max', stock);
+                } else {
+                    $modal.find('.js-stock-indicator').hide();
+                    $modal.find('.js-return-qty-input').removeAttr('max');
+                }
+            });
+
+            $modal.off('select2:clear.bookReturn').on('select2:clear.bookReturn', '.js-product-select', function() {
+                $modal.find('.js-stock-indicator').hide();
+                $modal.find('.js-return-qty-input').removeAttr('max');
             });
         };
         window.BookReturnsIndex.onSaved = function() {

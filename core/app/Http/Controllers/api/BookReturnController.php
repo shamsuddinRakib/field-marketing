@@ -5,12 +5,14 @@ namespace App\Http\Controllers\api;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\BookReturnResource;
 use App\Models\backend\BookReturn;
+use App\Models\backend\CurrentStock;
 use App\Models\backend\MarketingRepresentative;
+use App\Models\backend\Product;
 use Illuminate\Http\Request;
 
 class BookReturnController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $mr = MarketingRepresentative::where('user_id', auth()->id())
             ->first();
@@ -23,10 +25,15 @@ class BookReturnController extends Controller
         }
 
         $bookReturns = BookReturn::with([
-            'institution:id,institution_name,email,phone,address,status',
             'product:id,name,slug,brand_id',
         ])
             ->where('marketing_representative_id', $mr->id)
+            ->when($request->filled('return_type'), function ($q) use ($request) {
+                $q->where('return_type', $request->return_type);
+            })
+            ->when($request->filled('status'), function ($q) use ($request) {
+                $q->where('status', $request->status);
+            })
             ->latest('id')
             ->get();
 
@@ -37,15 +44,13 @@ class BookReturnController extends Controller
         ]);
     }
 
-
     public function store(Request $request)
     {
         $request->validate([
-            'institution_id' => ['required', 'integer', 'exists:institutions,id'],
             'product_id' => ['required', 'integer', 'exists:products,id'],
-            'issued_quantity' => ['required', 'integer', 'min:1'],
-            'returned_quantity' => ['required', 'integer', 'min:1', 'lte:issued_quantity'],
-            'note' => ['nullable', 'string'],
+            'return_type' => ['required', 'string', 'in:specimen,sale'],
+            'returned_quantity' => ['required', 'integer', 'min:1'],
+            'note' => ['nullable', 'string', 'max:1000'],
         ]);
 
         $mr = MarketingRepresentative::where('user_id', auth()->id())
@@ -58,24 +63,38 @@ class BookReturnController extends Controller
             ], 404);
         }
 
+        // Validate available stock in MR's hand for this return type
+        $stockRecord = CurrentStock::where('user_id', auth()->id())
+            ->where('product_id', $request->product_id)
+            ->first();
+
+        $stockCol = $request->return_type === 'sale' ? 'sale_stock' : 'specimen_stock';
+        $stockLabel = $request->return_type === 'sale' ? 'sale' : 'specimen';
+        $availableStock = $stockRecord ? (int) $stockRecord->{$stockCol} : 0;
+
+        if ($availableStock < (int) $request->returned_quantity) {
+            $product = Product::find($request->product_id);
+            $pName = $product?->name ?? ('Product #' . $request->product_id);
+            return response()->json([
+                'success' => false,
+                'message' => "Insufficient {$stockLabel} stock for '{$pName}'. Available in hand: {$availableStock}, requested: {$request->returned_quantity}.",
+            ], 422);
+        }
+
         $bookReturn = BookReturn::create([
             'marketing_representative_id' => $mr->id,
-            'institution_id' => $request->institution_id,
+            'institution_id' => null,
             'product_id' => $request->product_id,
-            'issued_quantity' => $request->issued_quantity,
-            'returned_quantity' => $request->returned_quantity,
+            'return_type' => $request->return_type,
+            'issued_quantity' => (int) $request->returned_quantity,
+            'returned_quantity' => (int) $request->returned_quantity,
             'note' => $request->note,
-
-            // MR always creates as pending.
             'status' => 'pending',
-
-            // These will be set by Admin/Backend.
             'received_by' => null,
             'received_date' => null,
         ]);
 
         $bookReturn->load([
-            'institution:id,institution_name,email,phone,address,status',
             'product:id,name,slug,brand_id',
         ]);
 
@@ -85,7 +104,6 @@ class BookReturnController extends Controller
             'data' => new BookReturnResource($bookReturn),
         ], 201);
     }
-
 
     public function show($id)
     {
@@ -100,7 +118,6 @@ class BookReturnController extends Controller
         }
 
         $bookReturn = BookReturn::with([
-            'institution:id,institution_name,email,phone,address,status',
             'product:id,name,slug,brand_id',
         ])
             ->where('id', $id)
@@ -121,15 +138,13 @@ class BookReturnController extends Controller
         ]);
     }
 
-
     public function update(Request $request, $id)
     {
         $request->validate([
-            'institution_id' => ['required', 'integer', 'exists:institutions,id'],
             'product_id' => ['required', 'integer', 'exists:products,id'],
-            'issued_quantity' => ['required', 'integer', 'min:1'],
-            'returned_quantity' => ['required', 'integer', 'min:1', 'lte:issued_quantity'],
-            'note' => ['nullable', 'string'],
+            'return_type' => ['required', 'string', 'in:specimen,sale'],
+            'returned_quantity' => ['required', 'integer', 'min:1'],
+            'note' => ['nullable', 'string', 'max:1000'],
         ]);
 
         $mr = MarketingRepresentative::where('user_id', auth()->id())
@@ -161,16 +176,33 @@ class BookReturnController extends Controller
             ], 403);
         }
 
+        // Validate available stock in MR's hand for this return type
+        $stockRecord = CurrentStock::where('user_id', auth()->id())
+            ->where('product_id', $request->product_id)
+            ->first();
+
+        $stockCol = $request->return_type === 'sale' ? 'sale_stock' : 'specimen_stock';
+        $stockLabel = $request->return_type === 'sale' ? 'sale' : 'specimen';
+        $availableStock = $stockRecord ? (int) $stockRecord->{$stockCol} : 0;
+
+        if ($availableStock < (int) $request->returned_quantity) {
+            $product = Product::find($request->product_id);
+            $pName = $product?->name ?? ('Product #' . $request->product_id);
+            return response()->json([
+                'success' => false,
+                'message' => "Insufficient {$stockLabel} stock for '{$pName}'. Available in hand: {$availableStock}, requested: {$request->returned_quantity}.",
+            ], 422);
+        }
+
         $bookReturn->update([
-            'institution_id' => $request->institution_id,
             'product_id' => $request->product_id,
-            'issued_quantity' => $request->issued_quantity,
-            'returned_quantity' => $request->returned_quantity,
+            'return_type' => $request->return_type,
+            'issued_quantity' => (int) $request->returned_quantity,
+            'returned_quantity' => (int) $request->returned_quantity,
             'note' => $request->note,
         ]);
 
         $bookReturn->fresh()->load([
-            'institution:id,institution_name,email,phone,address,status',
             'product:id,name,slug,brand_id',
         ]);
 
@@ -180,7 +212,6 @@ class BookReturnController extends Controller
             'data' => new BookReturnResource($bookReturn),
         ]);
     }
-
 
     public function destroy($id)
     {

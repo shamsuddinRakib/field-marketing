@@ -8,21 +8,24 @@
 <div class="modal-body px-24 py-16">
 
     @php
-        $customerType = $spotSale->teacher_id
-            ? 'teacher'
-            : ($spotSale->library_id
-                ? 'library'
-                : ($spotSale->student_id
-                    ? 'student'
-                    : '—'));
-        $customerName = $spotSale->teacher_id
-            ? optional($spotSale->teacher)->teacher_name ?? '#' . $spotSale->teacher_id
-            : ($spotSale->library_id
-                ? (optional($spotSale->library)->library_name ?:
-                optional($spotSale->library)->name ?? '#' . $spotSale->library_id)
-                : ($spotSale->student_id
-                    ? optional($spotSale->student)->student_name ?? '#' . $spotSale->student_id
-                    : '—'));
+        $customerType = $spotSale->customerType() ?? '—';
+        $customerName = $spotSale->customerName();
+        $customerPhone = $spotSale->customerPhone();
+        $customer = $spotSale->customer;
+
+        $contextInfo = null;
+        if ($customerType === 'teacher') {
+            $inst = $customer?->institution?->institution_name ?? $spotSale->teacher?->institution?->institution_name;
+            if ($inst) $contextInfo = ['label' => 'Institution', 'value' => $inst];
+        } elseif ($customerType === 'library') {
+            $addr = $customer?->address ?? $spotSale->library?->address;
+            if ($addr) $contextInfo = ['label' => 'Address / Market', 'value' => $addr];
+        } elseif ($customerType === 'student') {
+            $cls = $customer?->courseClass?->name ?? $spotSale->student?->courseClass?->name;
+            $inst = $customer?->institution?->institution_name ?? $spotSale->student?->institution?->institution_name;
+            $parts = array_filter([$cls ? "Class: {$cls}" : null, $inst ? "Institution: {$inst}" : null]);
+            if (!empty($parts)) $contextInfo = ['label' => 'Student Info', 'value' => implode(' | ', $parts)];
+        }
     @endphp
 
     {{-- ================= SUMMARY ================= --}}
@@ -50,7 +53,16 @@
                 <div class="col-md-6">
                     <small class="text-muted d-block">Customer</small>
                     <strong>{{ $customerName }}</strong>
+                    @if ($customerPhone && $customerPhone !== '—')
+                        <div class="text-xs text-muted"><i class="ri-phone-line"></i> {{ $customerPhone }}</div>
+                    @endif
                 </div>
+                @if ($contextInfo)
+                    <div class="col-md-6">
+                        <small class="text-muted d-block">{{ $contextInfo['label'] }}</small>
+                        <span>{{ $contextInfo['value'] }}</span>
+                    </div>
+                @endif
                 <div class="col-md-6">
                     <small class="text-muted d-block">Note</small>
                     <span>{{ $spotSale->note ?? '—' }}</span>
@@ -91,10 +103,24 @@
             @endforelse
         </tbody>
         <tfoot>
+            @php
+                $rawSubtotal = $spotSale->subtotal !== null ? (float) $spotSale->subtotal : (float) $spotSale->items->sum('total');
+                $discount = (float) ($spotSale->discount ?? 0);
+            @endphp
             <tr>
-                <th colspan="3" class="text-end">Grand Total</th>
+                <th colspan="3" class="text-end">Subtotal:</th>
                 <th class="text-end">{{ number_format((int) $spotSale->items->sum('quantity')) }}</th>
-                <th class="text-end">{{ number_format((float) $spotSale->total, 2) }}</th>
+                <th class="text-end">৳ {{ number_format((float) $rawSubtotal, 2) }}</th>
+            </tr>
+            @if ($discount > 0)
+                <tr>
+                    <th colspan="4" class="text-end text-danger">Discount:</th>
+                    <th class="text-end text-danger">(-) ৳ {{ number_format($discount, 2) }}</th>
+                </tr>
+            @endif
+            <tr class="table-active">
+                <th colspan="4" class="text-end fw-bold">Grand Total:</th>
+                <th class="text-end fw-bold text-primary-600">৳ {{ number_format((float) $spotSale->total, 2) }}</th>
             </tr>
         </tfoot>
     </table>

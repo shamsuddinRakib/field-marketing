@@ -16,6 +16,14 @@
                     <strong>{{ optional($productDistribution->user)->name ?? ('#' . $productDistribution->user_id) }}</strong>
                 </div>
                 <div class="col-md-6">
+                    <small class="text-muted d-block">Distribution Type</small>
+                    @if (($productDistribution->distribution_type ?? 'specimen') === 'sale')
+                        <span class="badge text-sm fw-semibold bg-success-600 px-12 py-4 radius-4 text-white">Sale Copy</span>
+                    @else
+                        <span class="badge text-sm fw-semibold bg-info-600 px-12 py-4 radius-4 text-white">Specimen Copy</span>
+                    @endif
+                </div>
+                <div class="col-md-6">
                     <small class="text-muted d-block">Status</small>
                     @if ($productDistribution->status === 'delivered')
                         <span class="badge text-sm fw-semibold bg-dark-success-gradient px-20 py-9 radius-4 text-white">Delivered</span>

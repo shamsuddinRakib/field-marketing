@@ -11,6 +11,7 @@ use App\Models\backend\Institution;
 use App\Models\backend\Library;
 use App\Models\backend\Product;
 use App\Models\backend\SpotSale;
+use App\Models\backend\SpotSaleCustomer;
 use App\Models\backend\SpotSaleItem;
 use App\Models\backend\StockLedger;
 use App\Models\backend\Student;
@@ -34,9 +35,11 @@ class SpotSaleController extends Controller
         $searchVal = trim($request->input('search.value', ''));
 
         $base = SpotSale::query()
-            ->select(['id', 'user_id', 'total', 'teacher_id', 'library_id', 'student_id', 'status', 'note', 'created_at'])
+            ->select(['id', 'user_id', 'total', 'subtotal', 'discount', 'teacher_id', 'library_id', 'student_id', 'customer_id', 'status', 'note', 'created_at'])
             ->with([
                 'user:id,name',
+                'customer.institution:id,institution_name',
+                'customer.courseClass:id,name',
                 'teacher:id,teacher_name',
                 'library:id,library_name',
                 'student:id,student_name',
@@ -52,7 +55,14 @@ class SpotSaleController extends Controller
             $base->where(function ($q) use ($searchVal) {
                 $q->where('note', 'like', "%{$searchVal}%")
                     ->orWhere('id', $searchVal)
-                    ->orWhereHas('user', fn($u) => $u->where('name', 'like', "%{$searchVal}%"));
+                    ->orWhereHas('user', fn($u) => $u->where('name', 'like', "%{$searchVal}%"))
+                    ->orWhereHas('customer', function ($c) use ($searchVal) {
+                        $c->where('name', 'like', "%{$searchVal}%")
+                            ->orWhere('phone', 'like', "%{$searchVal}%");
+                    })
+                    ->orWhereHas('teacher', fn($t) => $t->where('teacher_name', 'like', "%{$searchVal}%"))
+                    ->orWhereHas('library', fn($l) => $l->where('library_name', 'like', "%{$searchVal}%"))
+                    ->orWhereHas('student', fn($s) => $s->where('student_name', 'like', "%{$searchVal}%"));
             });
         }
 
@@ -66,7 +76,7 @@ class SpotSaleController extends Controller
 
         $data = [];
         foreach ($rows as $b) {
-            $type = $b->teacher_id ? 'teacher' : ($b->library_id ? 'library' : ($b->student_id ? 'student' : '—'));
+            $type = $b->customerType() ?? '—';
             $typeBadge = $type === 'teacher'
                 ? '<span class="badge text-sm fw-semibold bg-primary px-12 py-6 radius-4">Teacher</span>'
                 : ($type === 'library'
@@ -74,12 +84,11 @@ class SpotSaleController extends Controller
                     : ($type === 'student'
                         ? '<span class="badge text-sm fw-semibold bg-success px-12 py-6 radius-4">Student</span>' : '—'));
 
-            $customer = $b->teacher_id
-                ? e(optional($b->teacher)->teacher_name ?? ('#' . $b->teacher_id))
-                : ($b->library_id
-                    ? e(optional($b->library)->library_name ?? ('#' . $b->library_id))
-                    : ($b->student_id
-                        ? e(optional($b->student)->student_name ?? ('#' . $b->student_id)) : '—'));
+            $customer = e($b->customerName());
+            $phone = $b->customerPhone();
+            if ($phone && $phone !== '—') {
+                $customer .= '<br><small class="text-muted"><i class="ri-phone-line"></i> ' . e($phone) . '</small>';
+            }
 
             $statusBadge = $b->status === 'approved'
                 ? '<span class="badge text-sm fw-semibold bg-dark-success-gradient px-20 py-9 radius-4 text-white">Approved</span>'
@@ -165,20 +174,90 @@ class SpotSaleController extends Controller
         $data = $req->validate([
             'user_id'               => 'required|integer|exists:users,id',
             'customer_type'         => 'required|in:teacher,library,student',
-            'teacher_id'            => 'nullable|integer|exists:teachers,id|required_if:customer_type,teacher',
-            'library_id'            => 'nullable|integer|exists:libraries,id|required_if:customer_type,library',
 
-            'student_name' => 'required_if:customer_type,student|nullable|string|max:255',
-            'course_class_id' => 'required_if:customer_type,student|nullable|integer|exists:course_class,id',
-            'institution_id' => 'required_if:customer_type,student|nullable|integer|exists:institutions,id',
+            'name'                  => 'nullable|string|max:255',
+            'phone'                 => 'nullable|string|max:50',
+            'address'               => 'nullable|string|max:255',
+            'institution_id'        => 'nullable|integer|exists:institutions,id',
+            'course_class_id'       => 'nullable|integer|exists:course_class,id',
+
+            'teacher_name'          => 'nullable|string|max:255',
+            'teacher_phone'         => 'nullable|string|max:50',
+            'teacher_institution_id'=> 'nullable|integer|exists:institutions,id',
+
+            'library_name'          => 'nullable|string|max:255',
+            'library_phone'         => 'nullable|string|max:50',
+            'library_address'       => 'nullable|string|max:255',
+
+            'student_name'          => 'nullable|string|max:255',
+            'student_phone'         => 'nullable|string|max:50',
+            'student_course_class_id'=> 'nullable|integer|exists:course_class,id',
+            'student_institution_id'=> 'nullable|integer|exists:institutions,id',
+
+            'teacher_id'            => 'nullable|integer|exists:teachers,id',
+            'library_id'            => 'nullable|integer|exists:libraries,id',
 
             'note'                  => 'nullable|string|max:255',
             'status'                => 'required|in:pending,approved',
+            'discount'              => 'nullable|numeric|min:0',
+            'subtotal'              => 'nullable|numeric|min:0',
 
             'items'                 => 'required|array|min:1',
             'items.*.product_id'    => 'required|integer|exists:products,id',
-            'items.*.quantity'       => 'required|integer|min:1',
+            'items.*.quantity'      => 'required|integer|min:1',
         ]);
+
+        $customerType = $data['customer_type'];
+        $customerName = trim((string) (
+            $req->input('name')
+            ?? $req->input($customerType . '_name')
+            ?? ($customerType === 'student' ? $req->input('student_name') : '')
+        ));
+
+        if ($customerName === '') {
+            $fieldKey = match ($customerType) {
+                'teacher' => 'teacher_name',
+                'library' => 'library_name',
+                'student' => 'student_name',
+                default   => 'name',
+            };
+            return response()->json([
+                'ok' => false,
+                'msg' => ucfirst($customerType) . ' name is required.',
+                'errors' => [
+                    $fieldKey => [ucfirst($customerType) . ' name is required.'],
+                    'name' => [ucfirst($customerType) . ' name is required.'],
+                ]
+            ], 422);
+        }
+
+        $phone = $req->input('phone') ?? $req->input($customerType . '_phone');
+        $address = $req->input('address') ?? $req->input($customerType . '_address');
+        $institutionId = $req->input('institution_id') ?? $req->input($customerType . '_institution_id');
+        $courseClassId = $req->input('course_class_id') ?? $req->input('student_course_class_id');
+
+        if ($customerType === 'student') {
+            if (!$courseClassId) {
+                return response()->json([
+                    'ok' => false,
+                    'msg' => 'Class is required for students.',
+                    'errors' => [
+                        'course_class_id' => ['Course class is required.'],
+                        'student_course_class_id' => ['Course class is required.']
+                    ]
+                ], 422);
+            }
+            if (!$institutionId) {
+                return response()->json([
+                    'ok' => false,
+                    'msg' => 'Institution is required for students.',
+                    'errors' => [
+                        'institution_id' => ['Institution is required.'],
+                        'student_institution_id' => ['Institution is required.']
+                    ]
+                ], 422);
+            }
+        }
 
         $productIds = collect($data['items'])->pluck('product_id')->unique()->values();
         $prices     = Product::whereIn('id', $productIds)->pluck('price', 'id');
@@ -204,26 +283,31 @@ class SpotSaleController extends Controller
         DB::beginTransaction();
 
         try {
-            $studentId = null;
+            $customer = SpotSaleCustomer::create([
+                'user_id'         => $data['user_id'],
+                'customer_type'   => $customerType,
+                'name'            => $customerName,
+                'phone'           => $phone ?: null,
+                'institution_id'  => $institutionId ?: null,
+                'course_class_id' => $courseClassId ?: null,
+                'address'         => $address ?: null,
+            ]);
 
-            if ($data['customer_type'] === 'student') {
-                $student = Student::create([
-                    'user_id'         => $data['user_id'],
-                    'student_name'    => $data['student_name'],
-                    'course_class_id' => $data['course_class_id'],
-                    'institution_id'  => $data['institution_id'],
-                ]);
-
-                $studentId = $student->id;
+            $subtotal = round($total, 2);
+            $discount = max(0, (float) $req->input('discount', 0));
+            if ($discount > $subtotal) {
+                $discount = $subtotal;
             }
+            $grandTotal = round(max(0, $subtotal - $discount), 2);
+
             $spotSale = SpotSale::create([
-                'user_id'    => $data['user_id'],
-                'total'      => (int) round($total),
-                'teacher_id' => $data['customer_type'] === 'teacher' ? $data['teacher_id'] : null,
-                'library_id' => $data['customer_type'] === 'library' ? $data['library_id'] : null,
-                'student_id' => $studentId,
-                'status'     => $data['status'],
-                'note'       => $data['note'] ?? null,
+                'user_id'     => $data['user_id'],
+                'customer_id' => $customer->id,
+                'subtotal'    => $subtotal,
+                'discount'    => $discount,
+                'total'       => $grandTotal,
+                'status'      => $data['status'],
+                'note'        => $data['note'] ?? null,
             ]);
 
             foreach ($lines as $line) {
@@ -260,10 +344,10 @@ class SpotSaleController extends Controller
             'items.product.category:id,name',
             'items.product.subcategory:id,name',
             'user:id,name',
+            'customer.institution:id,institution_name',
+            'customer.courseClass:id,name',
             'teacher:id,teacher_name',
             'library:id,name,library_name',
-
-            'student:id,user_id,student_name,course_class_id,institution_id',
             'student.courseClass:id,name',
             'student.institution:id,institution_name',
         ]);
@@ -285,10 +369,10 @@ class SpotSaleController extends Controller
         $spotSale->load([
             'items.product:id,name,price',
             'user:id,name',
+            'customer.institution:id,institution_name',
+            'customer.courseClass:id,name',
             'teacher:id,teacher_name',
             'library:id,name,library_name',
-
-            'student:id,user_id,student_name,course_class_id,institution_id',
             'student.courseClass:id,name',
             'student.institution:id,institution_name',
         ]);
@@ -305,20 +389,90 @@ class SpotSaleController extends Controller
         $data = $req->validate([
             'user_id'               => 'required|integer|exists:users,id',
             'customer_type'         => 'required|in:teacher,library,student',
-            'teacher_id'            => 'nullable|integer|exists:teachers,id|required_if:customer_type,teacher',
-            'library_id'            => 'nullable|integer|exists:libraries,id|required_if:customer_type,library',
 
-            'student_name'          => 'required_if:customer_type,student|nullable|string|max:255',
-            'course_class_id'       => 'required_if:customer_type,student|nullable|integer|exists:course_class,id',
-            'institution_id'        => 'required_if:customer_type,student|nullable|integer|exists:institutions,id',
+            'name'                  => 'nullable|string|max:255',
+            'phone'                 => 'nullable|string|max:50',
+            'address'               => 'nullable|string|max:255',
+            'institution_id'        => 'nullable|integer|exists:institutions,id',
+            'course_class_id'       => 'nullable|integer|exists:course_class,id',
+
+            'teacher_name'          => 'nullable|string|max:255',
+            'teacher_phone'         => 'nullable|string|max:50',
+            'teacher_institution_id'=> 'nullable|integer|exists:institutions,id',
+
+            'library_name'          => 'nullable|string|max:255',
+            'library_phone'         => 'nullable|string|max:50',
+            'library_address'       => 'nullable|string|max:255',
+
+            'student_name'          => 'nullable|string|max:255',
+            'student_phone'         => 'nullable|string|max:50',
+            'student_course_class_id'=> 'nullable|integer|exists:course_class,id',
+            'student_institution_id'=> 'nullable|integer|exists:institutions,id',
+
+            'teacher_id'            => 'nullable|integer|exists:teachers,id',
+            'library_id'            => 'nullable|integer|exists:libraries,id',
 
             'note'                  => 'nullable|string|max:255',
             'status'                => 'required|in:pending,approved',
+            'discount'              => 'nullable|numeric|min:0',
+            'subtotal'              => 'nullable|numeric|min:0',
 
             'items'                 => 'required|array|min:1',
             'items.*.product_id'    => 'required|integer|exists:products,id',
-            'items.*.quantity'       => 'required|integer|min:1',
+            'items.*.quantity'      => 'required|integer|min:1',
         ]);
+
+        $customerType = $data['customer_type'];
+        $customerName = trim((string) (
+            $req->input('name')
+            ?? $req->input($customerType . '_name')
+            ?? ($customerType === 'student' ? $req->input('student_name') : '')
+        ));
+
+        if ($customerName === '') {
+            $fieldKey = match ($customerType) {
+                'teacher' => 'teacher_name',
+                'library' => 'library_name',
+                'student' => 'student_name',
+                default   => 'name',
+            };
+            return response()->json([
+                'ok' => false,
+                'msg' => ucfirst($customerType) . ' name is required.',
+                'errors' => [
+                    $fieldKey => [ucfirst($customerType) . ' name is required.'],
+                    'name' => [ucfirst($customerType) . ' name is required.'],
+                ]
+            ], 422);
+        }
+
+        $phone = $req->input('phone') ?? $req->input($customerType . '_phone');
+        $address = $req->input('address') ?? $req->input($customerType . '_address');
+        $institutionId = $req->input('institution_id') ?? $req->input($customerType . '_institution_id');
+        $courseClassId = $req->input('course_class_id') ?? $req->input('student_course_class_id');
+
+        if ($customerType === 'student') {
+            if (!$courseClassId) {
+                return response()->json([
+                    'ok' => false,
+                    'msg' => 'Class is required for students.',
+                    'errors' => [
+                        'course_class_id' => ['Course class is required.'],
+                        'student_course_class_id' => ['Course class is required.']
+                    ]
+                ], 422);
+            }
+            if (!$institutionId) {
+                return response()->json([
+                    'ok' => false,
+                    'msg' => 'Institution is required for students.',
+                    'errors' => [
+                        'institution_id' => ['Institution is required.'],
+                        'student_institution_id' => ['Institution is required.']
+                    ]
+                ], 422);
+            }
+        }
 
         $productIds = collect($data['items'])->pluck('product_id')->unique()->values();
         $prices     = Product::whereIn('id', $productIds)->pluck('price', 'id');
@@ -344,40 +498,45 @@ class SpotSaleController extends Controller
         DB::beginTransaction();
 
         try {
-
-            $studentId = null;
-
-            if ($data['customer_type'] === 'student') {
-                if ($spotSale->student_id) {
-                    $student = Student::findOrFail($spotSale->student_id);
-
-                    $student->update([
-                        'user_id'         => $data['user_id'],
-                        'student_name'    => $data['student_name'],
-                        'course_class_id' => $data['course_class_id'],
-                        'institution_id'  => $data['institution_id'],
-                    ]);
-                } else {
-                    $student = Student::create([
-                        'user_id'         => $data['user_id'],
-                        'student_name'    => $data['student_name'],
-                        'course_class_id' => $data['course_class_id'],
-                        'institution_id'  => $data['institution_id'],
-                    ]);
-                }
-
-                $studentId = $student->id;
+            if ($spotSale->customer_id && $spotSale->customer) {
+                $spotSale->customer->update([
+                    'user_id'         => $data['user_id'],
+                    'customer_type'   => $customerType,
+                    'name'            => $customerName,
+                    'phone'           => $phone ?: null,
+                    'institution_id'  => $institutionId ?: null,
+                    'course_class_id' => $courseClassId ?: null,
+                    'address'         => $address ?: null,
+                ]);
+                $customerId = $spotSale->customer_id;
+            } else {
+                $customer = SpotSaleCustomer::create([
+                    'user_id'         => $data['user_id'],
+                    'customer_type'   => $customerType,
+                    'name'            => $customerName,
+                    'phone'           => $phone ?: null,
+                    'institution_id'  => $institutionId ?: null,
+                    'course_class_id' => $courseClassId ?: null,
+                    'address'         => $address ?: null,
+                ]);
+                $customerId = $customer->id;
             }
 
-            $spotSale->update([
-                'user_id'    => $data['user_id'],
-                'total'      => (int) round($total),
-                'teacher_id' => $data['customer_type'] === 'teacher' ? $data['teacher_id'] : null,
-                'library_id' => $data['customer_type'] === 'library' ? $data['library_id'] : null,
-                'student_id' => $studentId,
+            $subtotal = round($total, 2);
+            $discount = max(0, (float) $req->input('discount', 0));
+            if ($discount > $subtotal) {
+                $discount = $subtotal;
+            }
+            $grandTotal = round(max(0, $subtotal - $discount), 2);
 
-                'status'     => $data['status'],
-                'note'       => $data['note'] ?? null,
+            $spotSale->update([
+                'user_id'     => $data['user_id'],
+                'customer_id' => $customerId,
+                'subtotal'    => $subtotal,
+                'discount'    => $discount,
+                'total'       => $grandTotal,
+                'status'      => $data['status'],
+                'note'        => $data['note'] ?? null,
             ]);
 
             $spotSale->items()->delete();
@@ -412,6 +571,9 @@ class SpotSaleController extends Controller
         }
 
         $spotSale->items()->delete();
+        if ($spotSale->customer) {
+            $spotSale->customer->delete();
+        }
         $spotSale->delete();
 
         return response()->json(['ok' => true, 'msg' => 'Spot sale deleted']);
@@ -453,20 +615,23 @@ class SpotSaleController extends Controller
                 ->lockForUpdate()
                 ->first();
 
-            $available = $stock ? (int) $stock->current_stock : 0;
+            $available = $stock ? (int) $stock->sale_stock : 0;
             $requested = (int) $item->quantity;
 
             if ($available < $requested) {
                 $productName = $item->product?->name ?? ('Product #' . $item->product_id);
-                throw new \Exception("Insufficient stock for {$productName} (Available: {$available}, Requested: {$requested})");
+                throw new \Exception("Insufficient sale stock for {$productName} (Available: {$available}, Requested: {$requested})");
             }
 
-            $stock->decrement('current_stock', $item->quantity);
+            $stock->decrement('sale_stock', $item->quantity);
+            $stock->current_stock = (int) $stock->specimen_stock + (int) $stock->sale_stock;
+            $stock->save();
 
             StockLedger::create([
                 'ref_type'   => 'SpotSale',
                 'ref_id'     => $spotSale->id,
                 'product_id' => $item->product_id,
+                'stock_type' => 'sale',
                 'quantity'   => $item->quantity,
                 'direction'  => 'OUT',
                 'note'       => 'Spot Sale #' . $spotSale->id . ($spotSale->note ? ': ' . $spotSale->note : ''),

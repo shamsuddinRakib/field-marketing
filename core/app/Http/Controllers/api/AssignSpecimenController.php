@@ -9,6 +9,8 @@ use App\Models\backend\MarketingRepresentative;
 use App\Models\backend\Teacher;
 use App\Models\backend\Library;
 use App\Models\backend\Institution;
+use App\Models\backend\CurrentStock;
+use App\Models\backend\Product;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\DB;
@@ -151,6 +153,17 @@ class AssignSpecimenController extends Controller
             ]);
         }
 
+        // Normalize 0, "0", or empty string IDs to null for smooth mobile integration
+        $idFields = ['teacher_id', 'library_id', 'institution_id', 'upazila_id', 'district_id', 'division_id'];
+        foreach ($idFields as $field) {
+            if ($request->has($field)) {
+                $val = $request->input($field);
+                if ($val === 0 || $val === '0' || $val === '' || $val === null) {
+                    $request->merge([$field => null]);
+                }
+            }
+        }
+
         $data = $request->validate([
             'customer_type'      => ['nullable', 'string', 'in:teacher,library,institution'],
             'teacher_id'         => ['nullable', 'integer', Rule::exists('teachers', 'id')->whereNull('deleted_at')],
@@ -190,6 +203,11 @@ class AssignSpecimenController extends Controller
         $institutionId = !empty($data['institution_id']) ? $data['institution_id'] : null;
         $assignInstType = $teacherId ? ($data['assign_inst_type'] ?? null) : null;
 
+        if ($teacherId && empty($assignInstType)) {
+            $t = Teacher::with('institution')->find($teacherId);
+            $assignInstType = $this->autoDetectInstType($t?->institution?->institution_name);
+        }
+
         $upazilaId = $data['upazila_id'] ?? null;
         $districtId = $data['district_id'] ?? null;
         $divisionId = $data['division_id'] ?? null;
@@ -227,6 +245,31 @@ class AssignSpecimenController extends Controller
         foreach ($data['items'] as $item) {
             $pid = (int) $item['product_id'];
             $merged[$pid] = ($merged[$pid] ?? 0) + (int) $item['quantity'];
+        }
+
+        // Verify MR has sufficient stock in hand
+        $userId     = auth()->id();
+        $productIds = array_keys($merged);
+        $products   = Product::whereIn('id', $productIds)->get()->keyBy('id');
+
+        foreach ($merged as $productId => $quantity) {
+            $product     = $products->get($productId);
+            $productName = $product?->name ?? "Product #{$productId}";
+
+            $stockRecord    = CurrentStock::where('user_id', $userId)
+                ->where('product_id', $productId)
+                ->first();
+            $availableStock = $stockRecord ? (int) $stockRecord->specimen_stock : 0;
+
+            if ($availableStock < $quantity) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "Insufficient specimen stock for '{$productName}'. Available in hand: {$availableStock}, requested: {$quantity}.",
+                    'errors'  => [
+                        'quantity' => ["Insufficient specimen stock for '{$productName}' (Available: {$availableStock})."],
+                    ],
+                ], 422);
+            }
         }
 
         $specimen = DB::transaction(function () use ($data, $merged, $teacherId, $libraryId, $institutionId, $assignInstType, $upazilaId, $districtId, $divisionId, $address) {
@@ -325,6 +368,17 @@ class AssignSpecimenController extends Controller
             ]);
         }
 
+        // Normalize 0, "0", or empty string IDs to null for smooth mobile integration
+        $idFields = ['teacher_id', 'library_id', 'institution_id', 'upazila_id', 'district_id', 'division_id'];
+        foreach ($idFields as $field) {
+            if ($request->has($field)) {
+                $val = $request->input($field);
+                if ($val === 0 || $val === '0' || $val === '' || $val === null) {
+                    $request->merge([$field => null]);
+                }
+            }
+        }
+
         $data = $request->validate([
             'customer_type'      => ['nullable', 'string', 'in:teacher,library,institution'],
             'teacher_id'         => ['nullable', 'integer', Rule::exists('teachers', 'id')->whereNull('deleted_at')],
@@ -382,6 +436,11 @@ class AssignSpecimenController extends Controller
         $institutionId = !empty($data['institution_id']) ? $data['institution_id'] : null;
         $assignInstType = $teacherId ? ($data['assign_inst_type'] ?? null) : null;
 
+        if ($teacherId && empty($assignInstType)) {
+            $t = Teacher::with('institution')->find($teacherId);
+            $assignInstType = $this->autoDetectInstType($t?->institution?->institution_name);
+        }
+
         $upazilaId = $data['upazila_id'] ?? null;
         $districtId = $data['district_id'] ?? null;
         $divisionId = $data['division_id'] ?? null;
@@ -419,6 +478,31 @@ class AssignSpecimenController extends Controller
         foreach ($data['items'] as $item) {
             $pid = (int) $item['product_id'];
             $merged[$pid] = ($merged[$pid] ?? 0) + (int) $item['quantity'];
+        }
+
+        // Verify MR has sufficient stock in hand
+        $userId     = auth()->id();
+        $productIds = array_keys($merged);
+        $products   = Product::whereIn('id', $productIds)->get()->keyBy('id');
+
+        foreach ($merged as $productId => $quantity) {
+            $product     = $products->get($productId);
+            $productName = $product?->name ?? "Product #{$productId}";
+
+            $stockRecord    = CurrentStock::where('user_id', $userId)
+                ->where('product_id', $productId)
+                ->first();
+            $availableStock = $stockRecord ? (int) $stockRecord->specimen_stock : 0;
+
+            if ($availableStock < $quantity) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "Insufficient specimen stock for '{$productName}'. Available in hand: {$availableStock}, requested: {$quantity}.",
+                    'errors'  => [
+                        'quantity' => ["Insufficient specimen stock for '{$productName}' (Available: {$availableStock})."],
+                    ],
+                ], 422);
+            }
         }
 
         DB::transaction(function () use ($specimen, $data, $merged, $teacherId, $libraryId, $institutionId, $assignInstType, $upazilaId, $districtId, $divisionId, $address) {
@@ -528,5 +612,28 @@ class AssignSpecimenController extends Controller
         }
 
         return $relations;
+    }
+
+    private function autoDetectInstType(?string $name): string
+    {
+        if (!$name) {
+            return 'school';
+        }
+
+        $lower = mb_strtolower($name);
+        if (str_contains($lower, 'college') || str_contains($lower, 'কলেজ')) {
+            return 'college';
+        }
+        if (str_contains($lower, 'school') || str_contains($lower, 'স্কুল') || str_contains($lower, 'বিদ্যালয়') || str_contains($lower, 'মাদ্রাসা') || str_contains($lower, 'madrasah')) {
+            return 'school';
+        }
+        if (str_contains($lower, 'coaching') || str_contains($lower, 'কোচিং')) {
+            return 'coaching';
+        }
+        if (str_contains($lower, 'batch') || str_contains($lower, 'ব্যাচ')) {
+            return 'batch';
+        }
+
+        return 'school';
     }
 }

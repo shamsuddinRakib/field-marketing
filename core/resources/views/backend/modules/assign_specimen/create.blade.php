@@ -162,7 +162,9 @@
         </div>
 
         {{-- 2. REUSABLE POS PRODUCT PICKER COMPONENT --}}
-        @include('backend.modules.products.partial.product_item_picker')
+        @include('backend.modules.products.partial.product_item_picker', [
+            'copy_type'     => 'specimen', 'user_selector' => '#specimenRepSelect',
+        ])
 
         {{-- 3. ACTIONS --}}
         <div class="d-flex justify-content-end gap-2 mt-24 mb-32">

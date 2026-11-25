@@ -14,30 +14,21 @@ class BookReturnResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        // return parent::toArray($request);
         return [
             'id' => $this->id,
-
-            'institution' => [
-                'id' => $this->institution?->id,
-                'name' => $this->institution?->name,
-                'email' => $this->institution?->email,
-                'phone' => $this->institution?->phone,
-                'address' => $this->institution?->address,
-                'status' => $this->institution?->status,
-            ],
-
+            'marketing_representative_id' => $this->marketing_representative_id,
             'product' => [
                 'id' => $this->product?->id,
                 'name' => $this->product?->name,
                 'slug' => $this->product?->slug,
                 'brand_id' => $this->product?->brand_id,
             ],
-
-            'issued_quantity' => $this->issued_quantity,
-            'returned_quantity' => $this->returned_quantity,
+            'return_type' => $this->return_type ?? 'specimen',
+            'return_type_label' => $this->typeLabel(),
+            'returned_quantity' => (int) $this->returned_quantity,
             'note' => $this->note,
             'status' => $this->status,
+            'status_label' => $this->statusLabel(),
             'received_by' => $this->received_by,
             'received_date' => $this->received_date?->format('Y-m-d'),
             'created_at' => $this->created_at?->toISOString(),

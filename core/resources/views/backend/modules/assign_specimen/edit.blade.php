@@ -195,7 +195,9 @@
 
         {{-- 2. REUSABLE POS PRODUCT PICKER COMPONENT (Pre-populated with existing items) --}}
         @include('backend.modules.products.partial.product_item_picker', [
-            'items' => $assignSpecimen->items
+            'items'         => $assignSpecimen->items,
+            'copy_type'     => 'specimen',
+            'user_selector' => '#specimenRepSelect',
         ])
 
         {{-- 3. ACTIONS --}}

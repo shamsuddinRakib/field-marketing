@@ -26,7 +26,7 @@ class BookRequestController extends Controller
 
     public function createModal()
     {
-        return view('backend.modules.book_requests.create_modal');
+        return view('backend.modules.book_requests.modal.create_modal');
     }
 
     public function edit(BookRequest $bookRequest)
@@ -50,7 +50,21 @@ class BookRequestController extends Controller
 
     public function editModal(BookRequest $bookRequest)
     {
-        return $this->edit($bookRequest);
+        $bookRequest->load('representative.user');
+        $bookRequests = $bookRequest->request_group_id
+            ? BookRequest::with([
+                'items.product:id,name,category_id,subcategory_id,thumbnail_image',
+                'items.product.category:id,name',
+                'items.product.subcategory:id,name'
+            ])->where('request_group_id', $bookRequest->request_group_id)->get()
+                ->flatMap(fn (BookRequest $request) => $request->items)->values()
+            : $bookRequest->items()->with([
+                'product:id,name,category_id,subcategory_id,thumbnail_image',
+                'product.category:id,name',
+                'product.subcategory:id,name'
+            ])->get();
+
+        return view('backend.modules.book_requests.modal.edit_modal', compact('bookRequest', 'bookRequests'));
     }
 
     public function show(BookRequest $bookRequest)
@@ -66,10 +80,11 @@ class BookRequestController extends Controller
 
     public function listAjax(Request $request)
     {
-        $columns = ['id', 'representative_name', 'product_name', 'quantity', 'note', 'request_date', 'status'];
+        $columns = ['id', 'representative_name', 'request_type', 'product_name', 'quantity', 'note', 'request_date', 'status'];
         $sortable = [
             'id' => 'book_requests.id',
             'representative_name' => 'us.name',
+            'request_type' => 'book_requests.request_type',
             'product_name' => 'book_requests.product_name',
             'quantity' => 'book_requests.quantity',
             'note' => 'book_requests.note',
@@ -90,7 +105,17 @@ class BookRequestController extends Controller
                     ->whereNull('bri.deleted_at');
             })
             ->leftJoin('products as p', 'p.id', '=', 'bri.product_id')
-            ->selectRaw("\n                COALESCE(br.request_group_id, CONCAT('legacy-', br.id)) as group_key,\n                MIN(br.id) as id,\n                GROUP_CONCAT(CONCAT(COALESCE(p.name, CONCAT('#', bri.product_id)), ' (', bri.quantity, ')') ORDER BY bri.id SEPARATOR '|||') as product_name,\n                COALESCE(SUM(bri.quantity), 0) as quantity,\n                MAX(br.marketing_representative_id) as marketing_representative_id,\n                MAX(br.note) as note,\n                MAX(br.request_date) as request_date,\n                MAX(br.status) as status\n            ")
+            ->selectRaw("
+                COALESCE(br.request_group_id, CONCAT('legacy-', br.id)) as group_key,
+                MIN(br.id) as id,
+                COALESCE(MAX(br.request_type), 'specimen') as request_type,
+                GROUP_CONCAT(CONCAT(COALESCE(p.name, CONCAT('#', bri.product_id)), ' (', bri.quantity, ')') ORDER BY bri.id SEPARATOR '|||') as product_name,
+                COALESCE(SUM(bri.quantity), 0) as quantity,
+                MAX(br.marketing_representative_id) as marketing_representative_id,
+                MAX(br.note) as note,
+                MAX(br.request_date) as request_date,
+                MAX(br.status) as status
+            ")
             ->selectRaw('COUNT(bri.id) as product_count')
             ->groupByRaw("COALESCE(br.request_group_id, CONCAT('legacy-', br.id))");
 
@@ -110,6 +135,7 @@ class BookRequestController extends Controller
             $query->where(function ($builder) use ($search) {
                 $builder->where('us.name', 'like', "%{$search}%")
                     ->orWhere('mr.employee_id', 'like', "%{$search}%")
+                    ->orWhere('book_requests.request_type', 'like', "%{$search}%")
                     ->orWhere('book_requests.product_name', 'like', "%{$search}%")
                     ->orWhere('book_requests.note', 'like', "%{$search}%")
                     ->orWhere('book_requests.status', 'like', "%{$search}%")
@@ -133,8 +159,14 @@ class BookRequestController extends Controller
             $showUrl = route('book-request.book-requests.show', $bookRequest->id);
             $editUrl = route('book-request.book-requests.edit', $bookRequest->id);
             $deleteUrl = route('book-request.book-requests.destroy', $bookRequest->id);
+            $distributeUrl = route('product-distribution.create', ['book_request_id' => $bookRequest->id]);
+
+            $distributeBtn = $bookRequest->status === 'pending'
+                ? '<a href="' . $distributeUrl . '" class="w-32-px h-32-px rounded-circle d-inline-flex align-items-center justify-content-center bg-primary-focus text-primary-main" title="Create Distribution / Send Books"><iconify-icon icon="solar:box-delivery-bold"></iconify-icon></a>'
+                : '';
 
             $actions = '<div class="d-inline-flex align-items-center justify-content-end gap-1 w-100">'
+                . $distributeBtn
                 . '<a href="#" data-ajax-modal="' . $showUrl . '" data-size="lg" class="w-32-px h-32-px rounded-circle d-inline-flex align-items-center justify-content-center bg-info-focus text-info-main AjaxModal" title="View"><iconify-icon icon="lucide:eye"></iconify-icon></a>'
                 . '<a href="' . $editUrl . '" class="w-32-px h-32-px rounded-circle d-inline-flex align-items-center justify-content-center bg-success-focus text-success-main" title="Edit"><iconify-icon icon="lucide:edit"></iconify-icon></a>'
                 . '<a href="#" class="w-32-px h-32-px rounded-circle d-inline-flex align-items-center justify-content-center bg-danger-focus text-danger-main btn-book-request-delete" data-url="' . $deleteUrl . '" title="Delete"><iconify-icon icon="mdi:delete"></iconify-icon></a>'
@@ -148,9 +180,14 @@ class BookRequestController extends Controller
                 $productNameDisplay .= ' +' . $moreProductCount . ' more';
             }
 
+            $typeBadge = ($bookRequest->request_type ?? 'specimen') === 'sale'
+                ? '<span class="badge bg-success-focus text-success-main border border-success px-12 py-4 radius-4">Sale Copy</span>'
+                : '<span class="badge bg-info-focus text-info-main border border-info px-12 py-4 radius-4">Specimen Copy</span>';
+
             return [
                 (int) $bookRequest->id,
                 e($bookRequest->representative_name ?: '-'),
+                $typeBadge,
                 e($productNameDisplay ?: '-'),
                 (int) $bookRequest->quantity,
                 e($bookRequest->note ?: '-'),
@@ -247,8 +284,12 @@ class BookRequestController extends Controller
         if ($bookRequest->request_group_id) {
             BookRequest::where('request_group_id', $bookRequest->request_group_id)
                 ->get()
-                ->each(fn (BookRequest $request) => $request->delete());
+                ->each(function (BookRequest $request) {
+                    $request->items()->delete();
+                    $request->delete();
+                });
         } else {
+            $bookRequest->items()->delete();
             $bookRequest->delete();
         }
 
@@ -283,6 +324,7 @@ class BookRequestController extends Controller
     {
         $data = $request->validate([
             'marketing_representative_id' => ['required', 'integer', Rule::exists('marketing_representatives', 'id')],
+            'request_type' => ['required', Rule::in(['specimen', 'sale'])],
             'product_items' => ['required', 'array', 'min:1'],
             'product_items.*.product_id' => ['required', 'integer', 'distinct', Rule::exists('products', 'id')],
             'product_items.*.quantity' => ['required', 'integer', 'min:1', 'max:1000000'],

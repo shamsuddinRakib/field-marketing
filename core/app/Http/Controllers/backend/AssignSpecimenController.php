@@ -154,17 +154,18 @@ class AssignSpecimenController extends Controller
             $statusLabel = match ($b->status) {
                 'pending'   => '<span class="badge text-sm fw-semibold bg-info-600 px-20 py-9 radius-4 text-white">Pending</span>',
                 'approved'  => '<span class="badge text-sm fw-semibold bg-success-600 px-20 py-9 radius-4 text-white">Approved</span>',
+                'cancel'    => '<span class="badge text-sm fw-semibold bg-danger-600 px-20 py-9 radius-4 text-white">Cancel</span>',
                 default     => '<span class="badge text-sm fw-semibold bg-lilac-600 px-20 py-9 radius-4 text-white">' . e(ucfirst($b->status)) . '</span>',
             };
 
-            $statusBadge = $b->status === 'approved'
+            $statusBadge = ($b->status === 'approved' || $b->status === 'cancel')
                 ? $statusLabel
                 : '<a href="javascript:void(0)" class="AjaxModal" data-ajax-modal="' . route('assign-specimen.statusModal', $b->id) . '" data-onsuccess="BranchesIndex.onSaved" data-size="sm">' . $statusLabel . '</a>';
 
             $actions = '<div class="d-inline-flex align-items-center gap-1">';
             $actions .= '<a href="#" class="w-32-px h-32-px rounded-circle d-inline-flex align-items-center justify-content-center bg-info-focus text-info-main AjaxModal" data-ajax-modal="' . route('assign-specimen.show', $b->id) . '" data-size="lg" title="View Details"><iconify-icon icon="mdi:eye"></iconify-icon></a>';
 
-            if ($b->status !== 'approved') {
+            if ($b->status !== 'approved' && $b->status !== 'cancel') {
                 $actions .= '<a href="' . route('assign-specimen.edit', $b->id) . '" class="w-32-px h-32-px rounded-circle d-inline-flex align-items-center justify-content-center bg-success-focus text-success-main" title="Edit"><iconify-icon icon="lucide:edit"></iconify-icon></a>';
                 $actions .= '<a href="#" class="w-32-px h-32-px rounded-circle d-inline-flex align-items-center justify-content-center bg-danger-focus text-danger-main btn-branch-delete" data-id="' . $b->id . '" data-url="' . route('assign-specimen.destroy', $b->id) . '" title="Delete"><iconify-icon icon="mdi:delete"></iconify-icon></a>';
             }
@@ -293,8 +294,8 @@ class AssignSpecimenController extends Controller
 
     public function edit(AssignSpecimen $assignSpecimen)
     {
-        if ($assignSpecimen->status === 'approved') {
-            abort(403, 'Approved record cannot be edited');
+        if ($assignSpecimen->status !== 'pending') {
+            abort(403, 'Only pending records can be edited');
         }
 
         $assignSpecimen->load([
@@ -323,11 +324,11 @@ class AssignSpecimenController extends Controller
 
     public function update(AssignSpecimen $assignSpecimen, Request $req)
     {
-        if ($assignSpecimen->status === 'approved') {
+        if ($assignSpecimen->status !== 'pending') {
             if ($req->ajax() || $req->wantsJson()) {
-                return response()->json(['ok' => false, 'msg' => 'Approved record cannot be updated'], 422);
+                return response()->json(['ok' => false, 'msg' => 'Only pending records can be updated'], 422);
             }
-            return back()->with('error', 'Approved record cannot be updated');
+            return back()->with('error', 'Only pending records can be updated');
         }
 
         $data = $req->validate([
@@ -589,15 +590,26 @@ class AssignSpecimenController extends Controller
     public function updateStatus(AssignSpecimen $assignSpecimen, Request $req)
     {
         $data = $req->validate([
-            'status' => ['required', 'string', 'in:pending,approved'],
+            'status' => ['required', 'string', 'in:pending,approved,cancel'],
         ]);
 
         if ($assignSpecimen->status === 'approved') {
             return response()->json(['ok' => false, 'msg' => 'Approved record cannot be updated'], 422);
         }
 
+        if ($assignSpecimen->status === 'cancel') {
+            return response()->json(['ok' => false, 'msg' => 'Cancelled record cannot be updated'], 422);
+        }
+
         if ($data['status'] === 'pending') {
             return response()->json(['ok' => true, 'msg' => 'Status is already pending']);
+        }
+
+        if ($data['status'] === 'cancel') {
+            $assignSpecimen->status = 'cancel';
+            $assignSpecimen->save();
+
+            return response()->json(['ok' => true, 'msg' => 'Specimen assignment cancelled successfully.']);
         }
 
         $assignSpecimen->load('items.product');
@@ -614,20 +626,23 @@ class AssignSpecimenController extends Controller
                         ->lockForUpdate()
                         ->first();
 
-                    $available = $stock ? (int) $stock->current_stock : 0;
+                    $available = $stock ? (int) $stock->specimen_stock : 0;
                     $requested = (int) $item->quantity;
 
                     if ($available < $requested) {
                         $productName = $item->product?->name ?? ('Product #' . $item->product_id);
-                        throw new \Exception("Insufficient stock for {$productName} (Available: {$available}, Requested: {$requested})");
+                        throw new \Exception("Insufficient specimen stock for {$productName} (Available: {$available}, Requested: {$requested})");
                     }
 
-                    $stock->decrement('current_stock', $item->quantity);
+                    $stock->decrement('specimen_stock', $item->quantity);
+                    $stock->current_stock = (int) $stock->specimen_stock + (int) $stock->sale_stock;
+                    $stock->save();
 
                     StockLedger::create([
                         'ref_type'   => 'Assign',
                         'ref_id'     => $assignSpecimen->id,
                         'product_id' => $item->product_id,
+                        'stock_type' => 'specimen',
                         'quantity'   => $item->quantity,
                         'direction'  => 'OUT',
                         'note'       => $assignSpecimen->note ?? '',

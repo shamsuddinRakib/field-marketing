@@ -10,6 +10,7 @@ use App\Models\backend\CurrentStock;
 use App\Models\backend\Library;
 use App\Models\backend\Product;
 use App\Models\backend\SpotSale;
+use App\Models\backend\SpotSaleCustomer;
 use App\Models\backend\SpotSaleItem;
 use App\Models\backend\Student;
 use App\Models\backend\Teacher;
@@ -20,6 +21,8 @@ class SpotSaleController extends Controller
     {
         $query = SpotSale::with([
             'items.product',
+            'customer.institution',
+            'customer.courseClass',
             'teacher',
             'library',
             'student.courseClass',
@@ -37,13 +40,17 @@ class SpotSaleController extends Controller
         }
 
         if ($request->filled('customer_type')) {
-            if ($request->customer_type === 'teacher') {
-                $query->whereNotNull('teacher_id');
-            } elseif ($request->customer_type === 'library') {
-                $query->whereNotNull('library_id');
-            } elseif ($request->customer_type === 'student') {
-                $query->whereNotNull('student_id');
-            }
+            $ctype = $request->customer_type;
+            $query->where(function ($q) use ($ctype) {
+                $q->whereHas('customer', fn($c) => $c->where('customer_type', $ctype));
+                if ($ctype === 'teacher') {
+                    $q->orWhereNotNull('teacher_id');
+                } elseif ($ctype === 'library') {
+                    $q->orWhereNotNull('library_id');
+                } elseif ($ctype === 'student') {
+                    $q->orWhereNotNull('student_id');
+                }
+            });
         }
 
         if ($request->has('page') || $request->has('per_page')) {
@@ -58,6 +65,8 @@ class SpotSaleController extends Controller
     {
         $spotSale = SpotSale::with([
             'items.product',
+            'customer.institution',
+            'customer.courseClass',
             'teacher',
             'library',
             'student.courseClass',
@@ -83,7 +92,7 @@ class SpotSaleController extends Controller
 
     public function create(Request $request)
     {
-        // Normalization: allow items array or parallel product_id & quantity arrays
+        // 1. Normalization: allow items array or parallel product_id & quantity arrays
         if (!$request->has('product_id') && $request->has('items') && is_array($request->input('items'))) {
             $pids = [];
             $qtys = [];
@@ -99,16 +108,49 @@ class SpotSaleController extends Controller
             ]);
         }
 
+        // 2. Normalization: fallback for legacy field aliases
+        $ctype = $request->input('customer_type');
+        if (!$request->filled('name')) {
+            $resolvedName = $request->input('customer_name')
+                ?? $request->input($ctype . '_name')
+                ?? $request->input('student_name')
+                ?? $request->input('teacher_name')
+                ?? $request->input('library_name');
+            if ($resolvedName) {
+                $request->merge(['name' => $resolvedName]);
+            }
+        }
+        if (!$request->filled('phone')) {
+            $resolvedPhone = $request->input('customer_phone')
+                ?? $request->input($ctype . '_phone');
+            if ($resolvedPhone) {
+                $request->merge(['phone' => $resolvedPhone]);
+            }
+        }
+        if (!$request->filled('institution_id') && $request->filled($ctype . '_institution_id')) {
+            $request->merge(['institution_id' => $request->input($ctype . '_institution_id')]);
+        }
+        if (!$request->filled('course_class_id') && $request->filled('student_course_class_id')) {
+            $request->merge(['course_class_id' => $request->input('student_course_class_id')]);
+        }
+        if (!$request->filled('address') && $request->filled($ctype . '_address')) {
+            $request->merge(['address' => $request->input($ctype . '_address')]);
+        }
+
+        // 3. Clean standard validation
         $data = $request->validate([
+            'items'           => 'nullable|array',
             'product_id'      => 'required|array|min:1',
             'product_id.*'    => 'required|integer|exists:products,id',
             'quantity'        => 'required|array|min:1',
             'quantity.*'      => 'required|integer|min:1',
             'customer_type'   => 'required|string|in:teacher,library,student',
-            'customer_id'     => 'nullable|required_if:customer_type,teacher,library|integer',
-            'student_name'    => 'nullable|required_if:customer_type,student|string|max:255',
-            'course_class_id' => 'nullable|required_if:customer_type,student|integer|exists:course_class,id',
-            'institution_id'  => 'nullable|required_if:customer_type,student|integer|exists:institutions,id',
+            'name'            => 'required|string|max:255',
+            'phone'           => 'nullable|string|max:50',
+            'address'         => 'nullable|string|max:255',
+            'institution_id'  => 'nullable|integer|exists:institutions,id|required_if:customer_type,student',
+            'course_class_id' => 'nullable|integer|exists:course_class,id|required_if:customer_type,student',
+            'discount'        => 'nullable|numeric|min:0',
             'note'            => 'nullable|string|max:255',
         ]);
 
@@ -119,32 +161,32 @@ class SpotSaleController extends Controller
             ], 422);
         }
 
+        $customerType  = $data['customer_type'];
+        $customerName  = trim((string) $data['name']);
+        $phone         = $data['phone'] ?? null;
+        $address       = $data['address'] ?? null;
+        $institutionId = $data['institution_id'] ?? null;
+        $courseClassId = $data['course_class_id'] ?? null;
+
         $teacherId = null;
         $libraryId = null;
         $studentId = null;
 
-        if ($data['customer_type'] === 'teacher') {
-            $customer = Teacher::find($data['customer_id']);
-
-            if (!$customer) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Teacher not found.',
-                ], 422);
+        // Legacy lookup fallback if customer_id was passed
+        if ($customerType === 'teacher' && $request->filled('customer_id')) {
+            $teacher = Teacher::find($request->input('customer_id'));
+            if ($teacher) {
+                $teacherId = $teacher->id;
+                if (empty($phone)) $phone = $teacher->phone;
+                if (empty($institutionId)) $institutionId = $teacher->institution_id;
             }
-
-            $teacherId = $customer->id;
-        } elseif ($data['customer_type'] === 'library') {
-            $customer = Library::find($data['customer_id']);
-
-            if (!$customer) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Library not found.',
-                ], 422);
+        } elseif ($customerType === 'library' && $request->filled('customer_id')) {
+            $library = Library::find($request->input('customer_id'));
+            if ($library) {
+                $libraryId = $library->id;
+                if (empty($phone)) $phone = $library->phone;
+                if (empty($address)) $address = $library->address;
             }
-
-            $libraryId = $customer->id;
         }
 
         // Merge duplicate product IDs by summing quantities
@@ -175,14 +217,14 @@ class SpotSaleController extends Controller
             $stockRecord = CurrentStock::where('user_id', $userId)
                 ->where('product_id', $productId)
                 ->first();
-            $availableStock = $stockRecord ? (int) $stockRecord->current_stock : 0;
+            $availableStock = $stockRecord ? (int) $stockRecord->sale_stock : 0;
 
             if ($availableStock < $quantity) {
                 return response()->json([
                     'success' => false,
-                    'message' => "Insufficient stock for '{$product->name}'. Available in hand: {$availableStock}, requested: {$quantity}.",
+                    'message' => "Insufficient sale stock for '{$product->name}'. Available in hand: {$availableStock}, requested: {$quantity}.",
                     'errors'  => [
-                        'quantity' => ["Insufficient stock for '{$product->name}' (Available: {$availableStock})."],
+                        'quantity' => ["Insufficient sale stock for '{$product->name}' (Available: {$availableStock})."],
                     ],
                 ], 422);
             }
@@ -202,25 +244,34 @@ class SpotSaleController extends Controller
         DB::beginTransaction();
 
         try {
-            if ($data['customer_type'] === 'student') {
-                $student = Student::create([
-                    'user_id'         => $userId,
-                    'student_name'    => $data['student_name'],
-                    'course_class_id' => $data['course_class_id'],
-                    'institution_id'  => $data['institution_id'],
-                ]);
+            $customer = SpotSaleCustomer::create([
+                'user_id'         => $userId,
+                'customer_type'   => $customerType,
+                'name'            => $customerName,
+                'phone'           => $phone ?: null,
+                'institution_id'  => $institutionId ?: null,
+                'course_class_id' => $courseClassId ?: null,
+                'address'         => $address ?: null,
+            ]);
 
-                $studentId = $student->id;
+            $subtotal = round($total, 2);
+            $discount = max(0, (float) ($request->input('discount', 0)));
+            if ($discount > $subtotal) {
+                $discount = $subtotal;
             }
+            $grandTotal = round(max(0, $subtotal - $discount), 2);
 
             $spotSale = SpotSale::create([
-                'user_id'    => $userId,
-                'teacher_id' => $teacherId,
-                'library_id' => $libraryId,
-                'student_id' => $studentId,
-                'total'      => (int) round($total),
-                'status'     => 'pending',
-                'note'       => $data['note'] ?? null,
+                'user_id'     => $userId,
+                'customer_id' => $customer->id,
+                'teacher_id'  => $teacherId,
+                'library_id'  => $libraryId,
+                'student_id'  => $studentId,
+                'subtotal'    => $subtotal,
+                'discount'    => $discount,
+                'total'       => $grandTotal,
+                'status'      => 'pending',
+                'note'        => $data['note'] ?? null,
             ]);
 
             foreach ($lineItems as $item) {
@@ -237,6 +288,8 @@ class SpotSaleController extends Controller
 
             $spotSale->load([
                 'items.product',
+                'customer.institution',
+                'customer.courseClass',
                 'teacher',
                 'library',
                 'student.courseClass',
@@ -305,6 +358,7 @@ class SpotSaleController extends Controller
             'course_class_id' => 'nullable|required_if:customer_type,student|integer|exists:course_class,id',
             'institution_id'  => 'nullable|required_if:customer_type,student|integer|exists:institutions,id',
             'note'            => 'nullable|string|max:255',
+            'discount'        => 'nullable|numeric|min:0',
         ]);
 
         if (count($data['product_id']) !== count($data['quantity'])) {
@@ -369,14 +423,14 @@ class SpotSaleController extends Controller
             $stockRecord = CurrentStock::where('user_id', $userId)
                 ->where('product_id', $productId)
                 ->first();
-            $availableStock = $stockRecord ? (int) $stockRecord->current_stock : 0;
+            $availableStock = $stockRecord ? (int) $stockRecord->sale_stock : 0;
 
             if ($availableStock < $quantity) {
                 return response()->json([
                     'success' => false,
-                    'message' => "Insufficient stock for '{$product->name}'. Available in hand: {$availableStock}, requested: {$quantity}.",
+                    'message' => "Insufficient sale stock for '{$product->name}'. Available in hand: {$availableStock}, requested: {$quantity}.",
                     'errors'  => [
-                        'quantity' => ["Insufficient stock for '{$product->name}' (Available: {$availableStock})."],
+                        'quantity' => ["Insufficient sale stock for '{$product->name}' (Available: {$availableStock})."],
                     ],
                 ], 422);
             }
@@ -419,11 +473,20 @@ class SpotSaleController extends Controller
                 $studentId = $student->id;
             }
 
+            $subtotal = round($total, 2);
+            $discount = max(0, (float) ($request->input('discount', 0)));
+            if ($discount > $subtotal) {
+                $discount = $subtotal;
+            }
+            $grandTotal = round(max(0, $subtotal - $discount), 2);
+
             $spotSale->update([
                 'teacher_id' => $teacherId,
                 'library_id' => $libraryId,
                 'student_id' => $studentId,
-                'total'      => (int) round($total),
+                'subtotal'   => $subtotal,
+                'discount'   => $discount,
+                'total'      => $grandTotal,
                 'note'       => $data['note'] ?? null,
             ]);
 

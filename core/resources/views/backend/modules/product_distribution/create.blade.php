@@ -38,36 +38,63 @@
     <form id="productDistCreateForm" action="{{ route('product-distribution.store') }}" method="POST">
         @csrf
 
+        @if (!empty($fromBookRequest))
+            <input type="hidden" name="book_request_id" value="{{ $fromBookRequest->id }}">
+            <div class="alert alert-info d-flex align-items-center justify-content-between p-16 radius-8 mb-16">
+                <div class="d-flex align-items-center gap-2">
+                    <iconify-icon icon="solar:info-circle-bold" class="text-xl"></iconify-icon>
+                    <span>Generating Distribution for <strong>Book Request #{{ $fromBookRequest->id }}</strong> ({{ $fromBookRequest->requestTypeLabel() }}). The requested products have been pre-loaded into the cart below.</span>
+                </div>
+                <span class="badge bg-primary text-white px-12 py-6 radius-4">{{ $fromBookRequest->requestTypeLabel() }}</span>
+            </div>
+        @endif
+
         {{-- 1. DISTRIBUTION INFORMATION --}}
         <div class="card mb-16">
             <div class="card-body">
                 <h6 class="mb-12 fw-semibold">Distribution Information</h6>
 
                 <div class="row g-3">
-                    <div class="col-md-6 mb-12">
+                    <div class="col-md-4 mb-12">
                         <label class="form-label text-sm mb-8">Marketing Representative <span class="text-danger">*</span></label>
                         @php
-                            $userRep = auth()->user()->representative ?? \App\Models\backend\MarketingRepresentative::where('user_id', auth()->id())->first();
+                            $userRep = $fromBookRequest->representative ?? (auth()->user()->representative ?? \App\Models\backend\MarketingRepresentative::where('user_id', auth()->id())->first());
                         @endphp
                         <select class="form-control form-control-sm js-s2-ajax" name="user_id" id="distRepSelect"
                             data-url="{{ route('marketing-representative.marketing-representatives.select2') }}"
                             data-placeholder="Select Marketing Representative" required>
-                            @if ($userRep)
+                            @if (!empty($fromBookRequest?->representative))
+                                <option value="{{ $fromBookRequest->representative->user_id }}" selected>
+                                    {{ $fromBookRequest->representative->user?->name ?? 'Representative' }} ({{ $fromBookRequest->representative->employee_id }})
+                                </option>
+                            @elseif ($userRep)
                                 <option value="{{ $userRep->user_id ?? auth()->id() }}" selected>{{ $userRep->user?->name ?? auth()->user()->name }} ({{ $userRep->employee_id }})</option>
                             @endif
                         </select>
                     </div>
 
-                    <div class="col-md-6 mb-12">
+                    <div class="col-md-4 mb-12">
+                        <label class="form-label text-sm mb-8">Distribution Type <span class="text-danger">*</span></label>
+                        <select name="distribution_type" class="form-select form-select-sm radius-8" required>
+                            <option value="specimen" @selected(old('distribution_type', $fromBookRequest->request_type ?? 'specimen') === 'specimen')>Specimen Copy</option>
+                            <option value="sale" @selected(old('distribution_type', $fromBookRequest->request_type ?? '') === 'sale')>Sale Copy</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-4 mb-12">
                         <label class="form-label text-sm mb-8">Note</label>
-                        <input type="text" name="note" class="form-control form-control-sm radius-8" placeholder="Optional note">
+                        <input type="text" name="note" class="form-control form-control-sm radius-8"
+                            value="{{ old('note', !empty($fromBookRequest) ? 'Distribution for Request #' . $fromBookRequest->id . ($fromBookRequest->note ? ' - ' . $fromBookRequest->note : '') : '') }}"
+                            placeholder="Optional note">
                     </div>
                 </div>
             </div>
         </div>
 
         {{-- 2. REUSABLE POS PRODUCT PICKER COMPONENT --}}
-        @include('backend.modules.products.partial.product_item_picker')
+        @include('backend.modules.products.partial.product_item_picker', [
+            'items' => $requestedItems ?? collect()
+        ])
 
         {{-- 3. ACTIONS --}}
         <div class="d-flex justify-content-end gap-2 mt-24 mb-32">

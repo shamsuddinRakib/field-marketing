@@ -16,26 +16,11 @@ class BookRequestResource extends JsonResource
     {
         // return parent::toArray($request);
 
-        // return [
-        //     'id' => $this->id,
-        //     'quantity' => $this->quantity,
-        //     'note' => $this->note,
-        //     'request_date' => $this->request_date,
-        //     'status' => $this->status,
-
-        //     'product' => $this->whenLoaded('product', function () {
-        //         return [
-        //             'id' => $this->product->id,
-        //             'name' => $this->product->name,
-        //             'slug' => $this->product->slug,
-        //             'sku' => $this->product->sku,
-        //             'brand_id' => $this->product->brand_id,
-        //         ];
-        //     }),
-        // ];
-
         return [
             'id' => $this->id,
+            'request_group_id' => $this->request_group_id,
+            'request_type' => $this->request_type ?? 'specimen',
+            'request_type_label' => $this->requestTypeLabel(),
             'note' => $this->note,
             'request_date' => $this->request_date,
             'status' => $this->status,

@@ -54,10 +54,9 @@
                             </div>
                         </th>
                         <th>Representative Name</th>
-                        <th>Institution Name</th>
                         <th>Product Name</th>
-                        <th>Issued Quantity</th>
-                        <th>Returned Quantity</th>
+                        <th>Return Type</th>
+                        <th>Return Quantity</th>
                         <th>Note</th>
                         <th>Status</th>
                         <th>Received By</th>
@@ -96,43 +95,63 @@
                         }
                     });
                 });
-                $modal.find('.js-institution-select').each(function() {
-                    const $select = $(this);
-                    if ($select.hasClass('select2-hidden-accessible')) $select.select2('destroy');
-                    $select.select2({
-                        dropdownParent: $modal,
-                        width: '100%',
-                        placeholder: 'Select institution',
-                        allowClear: true,
-                        ajax: {
-                            url: "{{ route('institution.institutions.select2') }}",
-                            dataType: 'json',
-                            delay: 200,
-                            data: params => ({
-                                q: params.term || ''
-                            }),
-                            processResults: data => data
-                        }
+
+                function initProductSelect2() {
+                    $modal.find('.js-product-select').each(function() {
+                        const $select = $(this);
+                        if ($select.hasClass('select2-hidden-accessible')) $select.select2('destroy');
+                        $select.select2({
+                            dropdownParent: $modal,
+                            width: '100%',
+                            placeholder: 'Select product from MR stock',
+                            allowClear: true,
+                            ajax: {
+                                url: "{{ route('product.select2') }}",
+                                dataType: 'json',
+                                delay: 200,
+                                data: function(params) {
+                                    return {
+                                        q: params.term || '',
+                                        user_id: $modal.find('.js-representative-select').val() || '',
+                                        copy_type: $modal.find('.js-return-type-select').val() || 'specimen'
+                                    };
+                                },
+                                processResults: function(data) {
+                                    return {
+                                        results: Array.isArray(data?.results) ? data.results : []
+                                    };
+                                }
+                            }
+                        });
                     });
+                }
+                initProductSelect2();
+
+                // When Representative or Return Type changes, reset selected product & stock info
+                $modal.off('change.bookReturn').on('change.bookReturn', '.js-representative-select, .js-return-type-select', function() {
+                    const $prod = $modal.find('.js-product-select');
+                    $prod.val(null).trigger('change');
+                    $modal.find('.js-stock-indicator').hide();
+                    $modal.find('.js-return-qty-input').removeAttr('max');
                 });
-                $modal.find('.js-product-select').each(function() {
-                    const $select = $(this);
-                    if ($select.hasClass('select2-hidden-accessible')) $select.select2('destroy');
-                    $select.select2({
-                        dropdownParent: $modal,
-                        width: '100%',
-                        placeholder: 'Select product',
-                        allowClear: true,
-                        ajax: {
-                            url: "{{ route('product.select2') }}",
-                            dataType: 'json',
-                            delay: 200,
-                            data: params => ({
-                                q: params.term || ''
-                            }),
-                            processResults: data => data
-                        }
-                    });
+
+                // When product is selected, display available stock and cap max return quantity
+                $modal.off('select2:select.bookReturn').on('select2:select.bookReturn', '.js-product-select', function(e) {
+                    const data = e.params?.data;
+                    if (data && data.available_stock !== undefined && data.available_stock !== null) {
+                        const stock = parseInt(data.available_stock, 10);
+                        $modal.find('.js-stock-val').text(stock);
+                        $modal.find('.js-stock-indicator').show();
+                        $modal.find('.js-return-qty-input').attr('max', stock);
+                    } else {
+                        $modal.find('.js-stock-indicator').hide();
+                        $modal.find('.js-return-qty-input').removeAttr('max');
+                    }
+                });
+
+                $modal.off('select2:clear.bookReturn').on('select2:clear.bookReturn', '.js-product-select', function() {
+                    $modal.find('.js-stock-indicator').hide();
+                    $modal.find('.js-return-qty-input').removeAttr('max');
                 });
             },
             onSaved: function(res) {
